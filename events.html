@@ -667,11 +667,15 @@ var currentEventId = null;
   if (!s.data.session) { window.location.href = 'login.html'; return; }
   currentUser = s.data.session.user;
 
-  var p = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
+  var p = await sb.from('profiles').select('*').eq('id', currentUser.id).maybeSingle();
+  var meta = currentUser.user_metadata || {};
   if (p.data) {
     currentProfile = p.data;
-    document.getElementById('nav-name').textContent   = p.data.prenom || p.data.pseudo || 'Moi';
-    document.getElementById('nav-avatar').textContent = (p.data.prenom||'?')[0].toUpperCase();
+    document.getElementById('nav-name').textContent   = p.data.prenom || p.data.pseudo || meta.prenom || 'Moi';
+    document.getElementById('nav-avatar').textContent = ((p.data.prenom||p.data.pseudo||meta.prenom||'?')[0]).toUpperCase();
+  } else {
+    document.getElementById('nav-name').textContent   = meta.prenom || meta.pseudo || currentUser.email || 'Moi';
+    document.getElementById('nav-avatar').textContent = ((meta.prenom||meta.pseudo||currentUser.email||'?')[0]).toUpperCase();
   }
 
   startClock();
@@ -702,9 +706,29 @@ function pad(n){return n<10?'0'+n:n;}
 async function loadEvents() {
   var c = document.getElementById('events-container');
   c.innerHTML = '<div class="loading-grid"><div class="loading-spinner"></div></div>';
-  var r = await sb.from('events').select('*, profiles(prenom,nom,pseudo)').order('date_event',{ascending:sortAsc});
-  if (r.error) { c.innerHTML = '<div class="empty-state"><div class="ei">😕</div><p>Erreur de chargement</p></div>'; return; }
-  allEvents = r.data || [];
+
+  // Charge les events sans jointure (compatible même sans FK)
+  var r = await sb.from('events').select('*').order('date_event',{ascending:sortAsc});
+  if (r.error) {
+    console.error('loadEvents error:', r.error);
+    c.innerHTML = '<div class="empty-state"><div class="ei">😕</div><p>Erreur : '+r.error.message+'</p></div>';
+    return;
+  }
+  var events = r.data || [];
+
+  // Charge les profils séparément et les associe
+  if (events.length) {
+    var ids = [...new Set(events.map(function(e){ return e.created_by; }).filter(Boolean))];
+    var pRes = await sb.from('profiles').select('id,prenom,nom,pseudo').in('id', ids);
+    var profileMap = {};
+    (pRes.data||[]).forEach(function(p){ profileMap[p.id] = p; });
+    events = events.map(function(e){
+      e.profiles = profileMap[e.created_by] || null;
+      return e;
+    });
+  }
+
+  allEvents = events;
   renderEvents();
 }
 
@@ -949,7 +973,7 @@ async function submitEvent() {
   }
 
   btn.disabled=true; btn.innerHTML='<span class="spinner"></span>Création...';
-  var r = await sb.from('events').insert(payload).select().single();
+  var r = await sb.from('events').insert(payload).select();
   btn.disabled=false; btn.innerHTML='Créer l\'événement 🎉';
 
   if (r.error) {
@@ -969,7 +993,12 @@ async function openDetail(id) {
   document.getElementById('detail-modal-title').textContent = 'Chargement...';
   document.getElementById('detail-body').innerHTML = '<div style="text-align:center;padding:40px"><div class="loading-spinner" style="margin:0 auto"></div></div>';
 
-  var r = await sb.from('events').select('*, profiles(prenom,nom,pseudo)').eq('id',id).single();
+  // Charge l'event + son auteur séparément
+  var r = await sb.from('events').select('*').eq('id',id).maybeSingle();
+  if (!r.error && r.data && r.data.created_by) {
+    var pR = await sb.from('profiles').select('id,prenom,nom,pseudo').eq('id',r.data.created_by).maybeSingle();
+    r.data.profiles = pR.data || null;
+  }
   if (r.error || !r.data) return;
   var e = r.data;
 
@@ -988,8 +1017,16 @@ async function openDetail(id) {
   var total    = (votes.data||[]).length;
 
   // Commentaires
-  var comRes = await sb.from('event_comments').select('*, profiles(prenom,pseudo)').eq('event_id',id).order('created_at',{ascending:true});
+  var comRes = await sb.from('event_comments').select('*').eq('event_id',id).order('created_at',{ascending:true});
   var comments = comRes.data||[];
+  // Enrichit les commentaires avec les profils
+  if (comments.length) {
+    var cIds = [...new Set(comments.map(function(c){ return c.user_id; }).filter(Boolean))];
+    var cpRes = await sb.from('profiles').select('id,prenom,pseudo').in('id',cIds);
+    var cpMap = {};
+    (cpRes.data||[]).forEach(function(p){ cpMap[p.id]=p; });
+    comments = comments.map(function(c){ c.profiles=cpMap[c.user_id]||null; return c; });
+  }
 
   var dateStr = e.date_event ? new Date(e.date_event).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'}) : '';
 
