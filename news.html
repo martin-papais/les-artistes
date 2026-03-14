@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Les Artistes — Actualités</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --coral:   #FF6B6B;
+  --yellow:  #FFD93D;
+  --teal:    #4ECDC4;
+  --violet:  #C77DFF;
+  --pink:    #FF9EBC;
+  --lime:    #A8E063;
+  --deep:    #1A1025;
+  --surface: rgba(255,255,255,0.06);
+  --surface2:rgba(255,255,255,0.10);
+  --surface3:rgba(255,255,255,0.14);
+  --border:  rgba(255,255,255,0.12);
+  --text:    #fff;
+  --muted:   rgba(255,255,255,0.5);
+  --trans:   all 0.3s cubic-bezier(.4,0,.2,1);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'DM Sans',sans-serif;background:var(--deep);color:var(--text);min-height:100vh;overflow-x:hidden;}
+
+/* BG */
+.bg{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(ellipse 60% 50% at 15% 10%, rgba(199,125,255,.3) 0%,transparent 60%),
+    radial-gradient(ellipse 50% 60% at 85% 80%, rgba(78,205,196,.25) 0%,transparent 60%),
+    radial-gradient(ellipse 70% 40% at 50% 50%, rgba(255,107,107,.15) 0%,transparent 55%),
+    #1A1025;
+  animation:bgPulse 18s ease-in-out infinite alternate;
+}
+@keyframes bgPulse{0%{filter:hue-rotate(0deg)}100%{filter:hue-rotate(25deg)brightness(1.04)}}
+
+/* NAVBAR */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;height:64px;background:rgba(26,16,37,.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 24px;gap:16px;}
+.nav-logo{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:900;background:linear-gradient(135deg,var(--yellow),var(--coral),var(--violet));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;white-space:nowrap;text-decoration:none;}
+.nav-links{display:flex;gap:4px;align-items:center;}
+.nav-link{padding:7px 14px;border-radius:10px;color:var(--muted);font-size:.82rem;font-weight:600;text-decoration:none;transition:var(--trans);white-space:nowrap;}
+.nav-link:hover{color:var(--text);background:var(--surface2);}
+.nav-link.active{color:var(--text);background:var(--surface2);}
+.nav-link.active span{background:linear-gradient(135deg,var(--coral),var(--violet));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.nav-right{display:flex;align-items:center;gap:10px;}
+.nav-user{display:flex;align-items:center;gap:8px;padding:6px 12px;border-radius:10px;background:var(--surface);border:1px solid var(--border);font-size:.82rem;color:var(--muted);}
+.avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--coral),var(--violet));display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;color:#fff;}
+.btn-logout{padding:7px 14px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:.8rem;cursor:pointer;transition:var(--trans);font-family:'DM Sans',sans-serif;}
+.btn-logout:hover{background:rgba(255,107,107,.15);color:var(--coral);border-color:rgba(255,107,107,.3);}
+.hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;padding:8px;background:none;border:none;}
+.hamburger span{width:22px;height:2px;background:var(--muted);border-radius:2px;transition:var(--trans);}
+.mobile-menu{display:none;position:fixed;top:64px;left:0;right:0;z-index:99;background:rgba(26,16,37,.97);backdrop-filter:blur(20px);padding:16px;border-bottom:1px solid var(--border);flex-direction:column;gap:4px;}
+.mobile-menu.open{display:flex;}
+.mobile-menu .nav-link{font-size:.9rem;padding:10px 14px;}
+
+/* MAIN */
+main{padding-top:64px;position:relative;z-index:1;}
+
+/* HERO */
+.hero{padding:48px 24px 32px;text-align:center;}
+.hero h1{font-family:'Playfair Display',serif;font-size:clamp(2rem,5vw,3.2rem);font-weight:900;margin-bottom:10px;background:linear-gradient(135deg,var(--yellow),var(--pink),var(--violet));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.hero p{color:var(--muted);font-size:.95rem;margin-bottom:28px;}
+.btn-create-news{display:inline-flex;align-items:center;gap:8px;padding:14px 28px;border-radius:14px;border:none;background:linear-gradient(135deg,var(--violet),var(--pink));color:#fff;font-family:'DM Sans',sans-serif;font-size:1rem;font-weight:700;cursor:pointer;transition:var(--trans);box-shadow:0 6px 24px rgba(199,125,255,.4);}
+.btn-create-news:hover{transform:translateY(-2px);box-shadow:0 10px 32px rgba(199,125,255,.55);}
+
+/* TOOLBAR */
+.toolbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:0 24px 28px;max-width:860px;margin:0 auto;}
+.search-wrap{position:relative;flex:1;min-width:180px;}
+.search-wrap .si{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:.9rem;pointer-events:none;}
+.search-input{width:100%;padding:11px 16px 11px 40px;background:var(--surface);border:1.5px solid var(--border);border-radius:12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none;transition:var(--trans);}
+.search-input::placeholder{color:var(--muted);}
+.search-input:focus{border-color:var(--violet);background:var(--surface2);}
+.sort-btn{display:flex;align-items:center;gap:6px;padding:11px 16px;background:var(--surface);border:1.5px solid var(--border);border-radius:12px;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:.88rem;cursor:pointer;transition:var(--trans);white-space:nowrap;}
+.sort-btn:hover{background:var(--surface2);color:var(--text);}
+.sort-btn.asc .arr::after{content:'↑';}
+.sort-btn.desc .arr::after{content:'↓';}
+
+/* FEED */
+.feed{max-width:860px;margin:0 auto;padding:0 24px 80px;display:flex;flex-direction:column;gap:24px;}
+
+/* NEWS CARD */
+.news-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:24px;
+  overflow:hidden;transition:var(--trans);
+  animation:cardIn .4s ease both;
+}
+.news-card:hover{border-color:rgba(255,255,255,.2);box-shadow:0 12px 40px rgba(0,0,0,.3);}
+@keyframes cardIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+
+/* Cover image */
+.news-cover{width:100%;max-height:320px;object-fit:cover;display:block;}
+.news-cover-placeholder{height:6px;background:linear-gradient(90deg,var(--violet),var(--pink),var(--coral));display:block;}
+
+.news-body{padding:24px;}
+.news-meta-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;}
+.news-author-row{display:flex;align-items:center;gap:10px;}
+.news-av{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--coral),var(--violet));display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:700;flex-shrink:0;}
+.news-author-info{}
+.news-author-name{font-size:.88rem;font-weight:700;}
+.news-date{font-size:.75rem;color:var(--muted);}
+.news-actions-top{display:flex;gap:6px;}
+.btn-icon{width:32px;height:32px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.85rem;transition:var(--trans);color:var(--muted);}
+.btn-icon:hover{background:var(--surface3);color:var(--text);}
+.btn-icon.edit:hover{background:rgba(78,205,196,.15);color:var(--teal);border-color:rgba(78,205,196,.3);}
+.btn-icon.del:hover{background:rgba(255,107,107,.15);color:var(--coral);border-color:rgba(255,107,107,.3);}
+
+/* Titre + contenu */
+.news-title{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:900;margin-bottom:12px;line-height:1.3;}
+.news-content{font-size:.92rem;line-height:1.7;color:rgba(255,255,255,.85);}
+.news-content h2{font-family:'Playfair Display',serif;font-size:1.3rem;margin:16px 0 8px;}
+.news-content h3{font-size:1.05rem;font-weight:700;margin:14px 0 6px;color:var(--teal);}
+.news-content strong{font-weight:700;color:#fff;}
+.news-content em{font-style:italic;color:var(--yellow);}
+.news-content u{text-decoration:underline;}
+.news-content s{text-decoration:line-through;opacity:.6;}
+.news-content ul,.news-content ol{padding-left:20px;margin:8px 0;}
+.news-content li{margin-bottom:4px;}
+.news-content blockquote{border-left:3px solid var(--violet);padding-left:16px;margin:12px 0;color:var(--muted);font-style:italic;}
+.news-content a{color:var(--teal);text-decoration:underline;}
+.news-content img{max-width:100%;border-radius:12px;margin:8px 0;}
+.news-content hr{border:none;border-top:1px solid var(--border);margin:16px 0;}
+.news-content .text-left{text-align:left;}
+.news-content .text-center{text-align:center;}
+.news-content .text-right{text-align:right;}
+.news-content mark{background:rgba(255,217,61,.25);color:var(--yellow);padding:1px 3px;border-radius:3px;}
+
+/* Tags */
+.news-tags{display:flex;flex-wrap:wrap;gap:6px;margin:14px 0 0;}
+.tag{padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:700;background:rgba(199,125,255,.15);border:1px solid rgba(199,125,255,.3);color:var(--violet);}
+
+/* Footer card */
+.news-footer{padding:14px 24px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.news-reactions{display:flex;align-items:center;gap:8px;}
+.reaction-btn{display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:10px;border:1.5px solid var(--border);background:transparent;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:.83rem;color:var(--muted);transition:var(--trans);}
+.reaction-btn:hover{background:var(--surface2);color:var(--text);}
+.reaction-btn.liked{background:rgba(255,107,107,.12);border-color:rgba(255,107,107,.4);color:var(--coral);}
+.reaction-btn .emoji{font-size:1rem;}
+.comment-toggle{display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:10px;border:1.5px solid var(--border);background:transparent;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:.83rem;color:var(--muted);transition:var(--trans);}
+.comment-toggle:hover{background:var(--surface2);color:var(--text);}
+
+/* Section commentaires */
+.comments-section{padding:0 24px 20px;border-top:1px solid var(--border);display:none;}
+.comments-section.open{display:block;}
+.comments-title{font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin:16px 0 12px;display:flex;align-items:center;gap:6px;}
+.comments-title::after{content:'';flex:1;height:1px;background:var(--border);}
+.comment{display:flex;gap:10px;margin-bottom:10px;}
+.c-av{width:30px;height:30px;min-width:30px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--violet));display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;}
+.c-bubble{background:var(--surface2);border-radius:0 12px 12px 12px;padding:8px 12px;flex:1;}
+.c-author{font-size:.75rem;font-weight:700;margin-bottom:3px;}
+.c-text{font-size:.85rem;color:rgba(255,255,255,.8);line-height:1.4;}
+.c-time{font-size:.7rem;color:var(--muted);margin-top:3px;}
+.c-delete{background:none;border:none;cursor:pointer;color:var(--muted);font-size:.75rem;padding:2px 6px;border-radius:4px;transition:var(--trans);}
+.c-delete:hover{color:var(--coral);}
+.comment-input-row{display:flex;gap:8px;margin-top:12px;}
+.comment-input-row input{flex:1;padding:10px 14px;background:var(--surface);border:1.5px solid var(--border);border-radius:11px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.85rem;outline:none;transition:var(--trans);}
+.comment-input-row input:focus{border-color:var(--violet);background:var(--surface2);}
+.comment-input-row input::placeholder{color:var(--muted);}
+.btn-send{padding:0 16px;border-radius:11px;border:none;background:linear-gradient(135deg,var(--violet),var(--pink));color:#fff;font-size:1rem;cursor:pointer;transition:var(--trans);}
+.btn-send:hover{opacity:.85;}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.75);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);display:none;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;}
+.modal-overlay.open{display:flex;}
+.modal{background:#1a1130;border:1px solid var(--border);border-radius:24px;width:min(780px,100%);margin:auto;animation:modalIn .35s cubic-bezier(.4,0,.2,1) both;position:relative;}
+@keyframes modalIn{from{opacity:0;transform:scale(.95)translateY(20px)}to{opacity:1;transform:scale(1)translateY(0)}}
+.modal-header{padding:22px 24px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);position:sticky;top:0;background:#1a1130;z-index:2;border-radius:24px 24px 0 0;}
+.modal-title{font-family:'Playfair Display',serif;font-size:1.25rem;font-weight:700;}
+.modal-close{width:32px;height:32px;border-radius:8px;background:var(--surface);border:1px solid var(--border);cursor:pointer;font-size:1rem;color:var(--muted);display:flex;align-items:center;justify-content:center;transition:var(--trans);}
+.modal-close:hover{background:rgba(255,107,107,.15);color:var(--coral);}
+.modal-body{padding:20px 24px 24px;}
+
+/* ÉDITEUR */
+.editor-field{margin-bottom:16px;}
+.editor-field label{display:block;font-size:.75rem;font-weight:700;color:var(--muted);margin-bottom:6px;letter-spacing:.5px;text-transform:uppercase;}
+.minput{width:100%;padding:11px 14px;background:var(--surface);border:1.5px solid var(--border);border-radius:11px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none;transition:var(--trans);-webkit-appearance:none;appearance:none;}
+.minput:focus{border-color:var(--violet);background:var(--surface2);box-shadow:0 0 0 3px rgba(199,125,255,.15);}
+.minput::placeholder{color:rgba(255,255,255,.25);}
+
+/* Toolbar éditeur */
+.editor-toolbar{display:flex;flex-wrap:wrap;gap:4px;padding:10px 12px;background:rgba(0,0,0,.3);border:1.5px solid var(--border);border-bottom:none;border-radius:11px 11px 0 0;}
+.tb-btn{width:30px;height:30px;border-radius:7px;background:transparent;border:none;cursor:pointer;color:var(--muted);font-size:.85rem;display:flex;align-items:center;justify-content:center;transition:var(--trans);font-family:'DM Sans',sans-serif;font-weight:700;}
+.tb-btn:hover{background:var(--surface2);color:var(--text);}
+.tb-btn.active{background:rgba(199,125,255,.2);color:var(--violet);}
+.tb-sep{width:1px;height:20px;background:var(--border);margin:0 4px;align-self:center;}
+.tb-select{padding:4px 8px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.78rem;outline:none;cursor:pointer;}
+.tb-color{width:26px;height:26px;border-radius:6px;border:1px solid var(--border);cursor:pointer;padding:2px;}
+
+/* Zone de contenu éditable */
+.editor-content{
+  min-height:220px;max-height:420px;overflow-y:auto;
+  padding:14px;
+  background:var(--surface);
+  border:1.5px solid var(--border);border-top:none;
+  border-radius:0 0 11px 11px;
+  color:var(--text);font-family:'DM Sans',sans-serif;font-size:.92rem;line-height:1.7;
+  outline:none;
+  transition:var(--trans);
+}
+.editor-content:focus{border-color:var(--violet);background:var(--surface2);}
+.editor-content:empty::before{content:attr(data-placeholder);color:rgba(255,255,255,.25);pointer-events:none;}
+.editor-content::-webkit-scrollbar{width:4px;}
+.editor-content::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+
+/* Cover upload */
+.cover-upload{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.cover-preview{width:80px;height:52px;border-radius:8px;object-fit:cover;border:1px solid var(--border);display:none;}
+.cover-preview.show{display:block;}
+.btn-upload{padding:8px 16px;border-radius:9px;background:var(--surface2);border:1.5px solid var(--border);color:var(--muted);font-family:'DM Sans',sans-serif;font-size:.82rem;cursor:pointer;transition:var(--trans);}
+.btn-upload:hover{background:var(--surface3);color:var(--text);}
+
+/* Modal footer */
+.modal-footer{padding:14px 24px 22px;display:flex;gap:10px;justify-content:flex-end;border-top:1px solid var(--border);}
+.btn-sec{padding:11px 20px;border-radius:12px;border:1.5px solid var(--border);background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:.9rem;cursor:pointer;transition:var(--trans);}
+.btn-sec:hover{background:var(--surface2);color:var(--text);}
+.btn-prim{padding:11px 24px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--violet),var(--pink));color:#fff;font-family:'DM Sans',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;transition:var(--trans);box-shadow:0 4px 16px rgba(199,125,255,.3);}
+.btn-prim:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(199,125,255,.45);}
+.btn-prim:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+
+/* Alert */
+.malert{padding:10px 14px;border-radius:10px;font-size:.82rem;margin-bottom:14px;display:none;}
+.malert.error{background:rgba(255,107,107,.15);border:1px solid rgba(255,107,107,.4);color:#ff9b9b;display:block;}
+.malert.success{background:rgba(78,205,196,.15);border:1px solid rgba(78,205,196,.4);color:var(--teal);display:block;}
+
+/* Spinner / loading */
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;vertical-align:middle;margin-right:6px;}
+@keyframes sp{to{transform:rotate(360deg)}}
+.loading-wrap{display:flex;justify-content:center;padding:60px;}
+.loading-spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--violet);border-radius:50%;animation:sp .8s linear infinite;}
+.empty-state{text-align:center;padding:60px 20px;color:var(--muted);}
+.empty-state .ei{font-size:3rem;margin-bottom:12px;}
+
+/* Responsive */
+@media(max-width:768px){
+  nav{padding:0 16px;}
+  .nav-links{display:none;}
+  .hamburger{display:flex;}
+  .hero{padding:32px 16px 20px;}
+  .toolbar{padding:0 16px 20px;}
+  .feed{padding:0 16px 60px;}
+  .modal{border-radius:20px 20px 0 0;margin:auto 0 0;}
+  .modal-overlay{align-items:flex-end;padding:0;}
+  .editor-toolbar{gap:2px;}
+  .tb-btn{width:26px;height:26px;}
+}
+</style>
+</head>
+<body>
+<div class="bg"></div>
+
+<!-- NAVBAR -->
+<nav>
+  <a href="events.html" class="nav-logo">🎨 Les Artistes</a>
+  <div class="nav-links">
+    <a href="events.html"   class="nav-link">🎉 Événements</a>
+    <a href="news.html"     class="nav-link active"><span>📰 Actualités</span></a>
+    <a href="photos.html"   class="nav-link">📸 Photos</a>
+    <a href="games.html"    class="nav-link">🎮 Jeux</a>
+    <a href="shop.html"     class="nav-link">🛍️ Boutique</a>
+    <a href="annuaire.html" class="nav-link">📒 Annuaire</a>
+  </div>
+  <div class="nav-right">
+    <div class="nav-user">
+      <div class="avatar" id="nav-avatar">?</div>
+      <span id="nav-name">...</span>
+    </div>
+    <button class="btn-logout" onclick="handleLogout()">Déconnexion</button>
+  </div>
+  <button class="hamburger" onclick="toggleMenu()" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+<div class="mobile-menu" id="mobile-menu">
+  <a href="events.html"   class="nav-link">🎉 Événements</a>
+  <a href="news.html"     class="nav-link active">📰 Actualités</a>
+  <a href="photos.html"   class="nav-link">📸 Photos</a>
+  <a href="games.html"    class="nav-link">🎮 Jeux</a>
+  <a href="shop.html"     class="nav-link">🛍️ Boutique</a>
+  <a href="annuaire.html" class="nav-link">📒 Annuaire</a>
+</div>
+
+<main>
+  <section class="hero">
+    <h1>Les Actualités 📰</h1>
+    <p>Partage tes news, tes aventures, tes grandes annonces !</p>
+    <button class="btn-create-news" onclick="openCreateModal()">✍️ Écrire une actualité</button>
+  </section>
+
+  <div class="toolbar">
+    <div class="search-wrap">
+      <span class="si">🔍</span>
+      <input type="text" class="search-input" id="search-input" placeholder="Rechercher...">
+    </div>
+    <button class="sort-btn desc" id="sort-btn" onclick="toggleSort()">
+      <span>Date</span><span class="arr"></span>
+    </button>
+  </div>
+
+  <div class="feed" id="feed">
+    <div class="loading-wrap"><div class="loading-spinner"></div></div>
+  </div>
+</main>
+
+<!-- ═══════════ MODAL CRÉATION / ÉDITION ═══════════ -->
+<div class="modal-overlay" id="modal-editor">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="editor-title">✍️ Nouvelle actualité</div>
+      <button class="modal-close" onclick="closeEditor()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="malert" id="editor-alert"></div>
+
+      <!-- Titre -->
+      <div class="editor-field">
+        <label>Titre *</label>
+        <input type="text" class="minput" id="f-titre" placeholder="Le titre de ton actu...">
+      </div>
+
+      <!-- Image de couverture -->
+      <div class="editor-field">
+        <label>Image de couverture <span style="opacity:.5">(optionnel)</span></label>
+        <div class="cover-upload">
+          <img id="cover-preview" class="cover-preview" src="" alt="preview">
+          <label class="btn-upload" for="cover-file">🖼️ Choisir une image</label>
+          <input type="file" id="cover-file" accept="image/*" style="display:none" onchange="handleCoverFile(this)">
+          <input type="text" class="minput" id="f-cover-url" placeholder="...ou colle une URL d'image" style="flex:1;min-width:160px" oninput="handleCoverUrl(this.value)">
+          <button class="btn-upload" id="btn-remove-cover" onclick="removeCover()" style="display:none">✕ Retirer</button>
+        </div>
+      </div>
+
+      <!-- Éditeur riche -->
+      <div class="editor-field">
+        <label>Contenu *</label>
+        <div class="editor-toolbar" id="editor-toolbar">
+          <!-- Titres -->
+          <select class="tb-select" onchange="execCmd('formatBlock',this.value);this.value=''" title="Style de texte">
+            <option value="">Aa Style</option>
+            <option value="h2">Titre</option>
+            <option value="h3">Sous-titre</option>
+            <option value="p">Paragraphe</option>
+          </select>
+          <div class="tb-sep"></div>
+          <!-- Formatage -->
+          <button class="tb-btn" onclick="execCmd('bold')"          title="Gras"><strong>B</strong></button>
+          <button class="tb-btn" onclick="execCmd('italic')"        title="Italique"><em>I</em></button>
+          <button class="tb-btn" onclick="execCmd('underline')"     title="Souligné"><u>U</u></button>
+          <button class="tb-btn" onclick="execCmd('strikeThrough')" title="Barré"><s>S</s></button>
+          <div class="tb-sep"></div>
+          <!-- Couleur -->
+          <input type="color" class="tb-color" id="txt-color" value="#FFD93D" title="Couleur du texte" onchange="execCmd('foreColor',this.value)">
+          <input type="color" class="tb-color" id="bg-color"  value="#C77DFF" title="Surlignage"       onchange="execCmd('hiliteColor',this.value)">
+          <div class="tb-sep"></div>
+          <!-- Alignement -->
+          <button class="tb-btn" onclick="execCmd('justifyLeft')"   title="Gauche">⬅</button>
+          <button class="tb-btn" onclick="execCmd('justifyCenter')" title="Centre">↔</button>
+          <button class="tb-btn" onclick="execCmd('justifyRight')"  title="Droite">➡</button>
+          <div class="tb-sep"></div>
+          <!-- Listes -->
+          <button class="tb-btn" onclick="execCmd('insertUnorderedList')" title="Liste">• ≡</button>
+          <button class="tb-btn" onclick="execCmd('insertOrderedList')"   title="Liste numérotée">1≡</button>
+          <div class="tb-sep"></div>
+          <!-- Spéciaux -->
+          <button class="tb-btn" onclick="insertBlockquote()"  title="Citation">❝</button>
+          <button class="tb-btn" onclick="insertHR()"          title="Séparateur">—</button>
+          <button class="tb-btn" onclick="insertEmoji()"       title="Emoji">😊</button>
+          <button class="tb-btn" onclick="insertImage()"       title="Image URL">🖼</button>
+          <button class="tb-btn" onclick="insertLink()"        title="Lien">🔗</button>
+          <div class="tb-sep"></div>
+          <button class="tb-btn" onclick="execCmd('undo')"     title="Annuler">↩</button>
+          <button class="tb-btn" onclick="execCmd('redo')"     title="Rétablir">↪</button>
+          <button class="tb-btn" onclick="clearFormat()"       title="Effacer style" style="font-size:.7rem">T✕</button>
+        </div>
+        <div class="editor-content" id="editor-content" contenteditable="true" data-placeholder="Commence à écrire ton actualité ici... utilise la barre d'outils pour la personnaliser !"></div>
+      </div>
+
+      <!-- Tags -->
+      <div class="editor-field">
+        <label>Tags <span style="opacity:.5">(séparés par des virgules, optionnel)</span></label>
+        <input type="text" class="minput" id="f-tags" placeholder="voyage, fiançailles, déménagement...">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-sec" onclick="closeEditor()">Annuler</button>
+      <button class="btn-prim" id="btn-publish" onclick="publishNews()">Publier 🚀</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ EMOJI PICKER ═══════════ -->
+<div id="emoji-picker" style="display:none;position:fixed;z-index:300;background:#1e1230;border:1px solid var(--border);border-radius:16px;padding:12px;box-shadow:0 20px 60px rgba(0,0,0,.6);max-width:300px;flex-wrap:wrap;gap:4px;">
+  <div style="font-size:.72rem;color:var(--muted);margin-bottom:8px;width:100%">Clique pour insérer</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+var SUPABASE_URL  = 'https://ldchxxkmvepvbvhdokot.supabase.co';
+var SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkY2h4eGttdmVwdmJ2aGRva290Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0NDQwNTMsImV4cCI6MjA4OTAyMDA1M30.HJw5-GsHCildEQ28HAB30_YKdiZOdeRJIml5wgLvHos';
+var sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+var currentUser    = null;
+var currentProfile = null;
+var allNews        = [];
+var sortAsc        = false;
+var editingId      = null;
+var coverDataUrl   = null;
+
+// ── INIT ────────────────────────────────────────────
+(async function init() {
+  var s = await sb.auth.getSession();
+  if (!s.data.session) { window.location.href = 'login.html'; return; }
+  currentUser = s.data.session.user;
+
+  var p = await sb.from('profiles').select('*').eq('id', currentUser.id).maybeSingle();
+  var meta = currentUser.user_metadata || {};
+  if (p.data) {
+    currentProfile = p.data;
+    document.getElementById('nav-name').textContent   = p.data.prenom || p.data.pseudo || 'Moi';
+    document.getElementById('nav-avatar').textContent = ((p.data.prenom||p.data.pseudo||'?')[0]).toUpperCase();
+  } else {
+    document.getElementById('nav-name').textContent   = meta.prenom || meta.pseudo || currentUser.email || 'Moi';
+    document.getElementById('nav-avatar').textContent = ((meta.prenom||meta.pseudo||currentUser.email||'?')[0]).toUpperCase();
+  }
+  loadNews();
+})();
+
+// ── LOAD NEWS ────────────────────────────────────────
+async function loadNews() {
+  var feed = document.getElementById('feed');
+  feed.innerHTML = '<div class="loading-wrap"><div class="loading-spinner"></div></div>';
+
+  var r = await sb.from('news').select('*').order('created_at', { ascending: sortAsc });
+  if (r.error) { feed.innerHTML = '<div class="empty-state"><div class="ei">😕</div><p>Erreur de chargement</p></div>'; return; }
+  var items = r.data || [];
+
+  // Profils auteurs
+  if (items.length) {
+    var ids = [];
+    items.forEach(function(n){ if(n.created_by && ids.indexOf(n.created_by)===-1) ids.push(n.created_by); });
+    var pRes = await sb.from('profiles').select('id,prenom,nom,pseudo').in('id', ids);
+    var pm = {};
+    (pRes.data||[]).forEach(function(p){ pm[p.id]=p; });
+    items = items.map(function(n){ n.profiles = pm[n.created_by]||null; return n; });
+  }
+
+  // Likes
+  if (items.length) {
+    var nIds = items.map(function(n){ return n.id; });
+    var lRes = await sb.from('news_likes').select('news_id,user_id').in('news_id', nIds);
+    var lMap = {};
+    (lRes.data||[]).forEach(function(l){
+      if (!lMap[l.news_id]) lMap[l.news_id] = [];
+      lMap[l.news_id].push(l.user_id);
+    });
+    items = items.map(function(n){ n._likes = lMap[n.id]||[]; return n; });
+  }
+
+  // Commentaires count
+  if (items.length) {
+    var nIds2 = items.map(function(n){ return n.id; });
+    var cRes = await sb.from('news_comments').select('news_id').in('news_id', nIds2);
+    var cMap = {};
+    (cRes.data||[]).forEach(function(c){
+      cMap[c.news_id] = (cMap[c.news_id]||0) + 1;
+    });
+    items = items.map(function(n){ n._comment_count = cMap[n.id]||0; return n; });
+  }
+
+  allNews = items;
+  renderNews();
+}
+
+function renderNews() {
+  var q    = document.getElementById('search-input').value.toLowerCase();
+  var list = allNews.filter(function(n){
+    return !q || (n.titre||'').toLowerCase().includes(q) || (n.contenu||'').toLowerCase().includes(q) || (n.tags||'').toLowerCase().includes(q);
+  });
+  var feed = document.getElementById('feed');
+  if (!list.length) {
+    feed.innerHTML = '<div class="empty-state"><div class="ei">📝</div><p>Aucune actualité pour l\'instant.<br>Sois le premier à partager une news !</p></div>';
+    return;
+  }
+  feed.innerHTML = list.map(function(n){ return buildNewsCard(n); }).join('');
+}
+
+function buildNewsCard(n) {
+  var p = n.profiles;
+  var authorName = p ? ((p.prenom&&p.nom) ? p.prenom+' '+p.nom : p.prenom||p.pseudo||'?') : '?';
+  var authorInit = authorName[0].toUpperCase();
+  var isOwner    = n.created_by === currentUser.id;
+  var dateStr    = new Date(n.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  var myLike     = n._likes && n._likes.indexOf(currentUser.id) !== -1;
+  var likeCount  = n._likes ? n._likes.length : 0;
+  var commentCount = n._comment_count || 0;
+
+  var tags = '';
+  if (n.tags) {
+    tags = '<div class="news-tags">' + n.tags.split(',').map(function(t){
+      return '<span class="tag">#'+esc(t.trim())+'</span>';
+    }).join('') + '</div>';
+  }
+
+  var cover = n.cover_url
+    ? '<img class="news-cover" src="'+esc(n.cover_url)+'" alt="cover" onerror="this.style.display=\'none\'">'
+    : '<div class="news-cover-placeholder"></div>';
+
+  var ownerBtns = isOwner
+    ? '<button class="btn-icon edit" onclick="openEditModal(\''+n.id+'\')" title="Modifier">✏️</button>'
+    + '<button class="btn-icon del"  onclick="deleteNews(\''+n.id+'\')"     title="Supprimer">🗑️</button>'
+    : '';
+
+  // Contenu tronqué si trop long
+  var content = n.contenu || '';
+  var isLong  = content.length > 600;
+  var displayed = isLong
+    ? '<div class="news-content" id="content-'+n.id+'">' + content.substring(0,600) + '...</div>'
+      + '<button onclick="toggleContent(\''+n.id+'\',this)" style="background:none;border:none;color:var(--violet);cursor:pointer;font-size:.83rem;margin-top:4px;font-family:DM Sans,sans-serif;">Lire la suite ↓</button>'
+    : '<div class="news-content">' + content + '</div>';
+
+  return '<div class="news-card" id="card-'+n.id+'">'
+    + cover
+    + '<div class="news-body">'
+    +   '<div class="news-meta-top">'
+    +     '<div class="news-author-row">'
+    +       '<div class="news-av">'+esc(authorInit)+'</div>'
+    +       '<div class="news-author-info">'
+    +         '<div class="news-author-name">'+esc(authorName)+'</div>'
+    +         '<div class="news-date">'+dateStr+'</div>'
+    +       '</div>'
+    +     '</div>'
+    +     '<div class="news-actions-top">'+ownerBtns+'</div>'
+    +   '</div>'
+    +   '<div class="news-title">'+esc(n.titre)+'</div>'
+    +   displayed
+    +   tags
+    + '</div>'
+    + '<div class="news-footer">'
+    +   '<div class="news-reactions">'
+    +     '<button class="reaction-btn'+(myLike?' liked':'')+'" onclick="toggleLike(\''+n.id+'\')" id="like-btn-'+n.id+'">'
+    +       '<span class="emoji">❤️</span><span id="like-count-'+n.id+'">'+likeCount+'</span>'
+    +     '</button>'
+    +   '</div>'
+    +   '<button class="comment-toggle" onclick="toggleComments(\''+n.id+'\')">'
+    +     '💬 <span id="cc-'+n.id+'">'+commentCount+'</span> commentaire'+(commentCount!==1?'s':'')
+    +   '</button>'
+    + '</div>'
+    + '<div class="comments-section" id="comments-'+n.id+'">'
+    +   '<div class="comments-title">Commentaires</div>'
+    +   '<div id="comments-list-'+n.id+'"><div style="color:var(--muted);font-size:.83rem">Chargement...</div></div>'
+    +   '<div class="comment-input-row">'
+    +     '<input type="text" id="ci-'+n.id+'" placeholder="Ton commentaire..." onkeydown="if(event.key===\'Enter\')sendComment(\''+n.id+'\')">'
+    +     '<button class="btn-send" onclick="sendComment(\''+n.id+'\')">➤</button>'
+    +   '</div>'
+    + '</div>'
+    + '</div>';
+}
+
+// Afficher contenu complet
+function toggleContent(newsId, btn) {
+  var n = allNews.find(function(x){ return x.id===newsId; });
+  if (!n) return;
+  var el = document.getElementById('content-'+newsId);
+  if (!el) return;
+  el.innerHTML = n.contenu || '';
+  btn.style.display = 'none';
+}
+
+// ── LIKES ────────────────────────────────────────────
+async function toggleLike(newsId) {
+  var n = allNews.find(function(x){ return x.id===newsId; });
+  if (!n) return;
+  n._likes = n._likes || [];
+  var idx = n._likes.indexOf(currentUser.id);
+
+  if (idx !== -1) {
+    // Déjà liké → unlike
+    await sb.from('news_likes').delete().eq('news_id',newsId).eq('user_id',currentUser.id);
+    n._likes.splice(idx,1);
+  } else {
+    await sb.from('news_likes').insert({ news_id:newsId, user_id:currentUser.id });
+    n._likes.push(currentUser.id);
+  }
+
+  // Mise à jour UI sans recharger
+  var btn = document.getElementById('like-btn-'+newsId);
+  var cnt = document.getElementById('like-count-'+newsId);
+  if (btn) btn.className = 'reaction-btn' + (n._likes.indexOf(currentUser.id)!==-1?' liked':'');
+  if (cnt) cnt.textContent = n._likes.length;
+}
+
+// ── COMMENTAIRES ─────────────────────────────────────
+async function toggleComments(newsId) {
+  var section = document.getElementById('comments-'+newsId);
+  if (!section) return;
+  var isOpen = section.classList.contains('open');
+  section.classList.toggle('open');
+  if (!isOpen) loadComments(newsId);
+}
+
+async function loadComments(newsId) {
+  var listEl = document.getElementById('comments-list-'+newsId);
+  if (!listEl) return;
+
+  var r = await sb.from('news_comments').select('*').eq('news_id',newsId).order('created_at',{ascending:true});
+  var comments = r.data || [];
+
+  // Enrichit avec profils
+  if (comments.length) {
+    var ids = [];
+    comments.forEach(function(c){ if(c.user_id && ids.indexOf(c.user_id)===-1) ids.push(c.user_id); });
+    var pRes = await sb.from('profiles').select('id,prenom,nom,pseudo').in('id',ids);
+    var pm = {};
+    (pRes.data||[]).forEach(function(p){ pm[p.id]=p; });
+    comments = comments.map(function(c){ c.profiles=pm[c.user_id]||null; return c; });
+  }
+
+  // Met à jour le compteur
+  var n = allNews.find(function(x){ return x.id===newsId; });
+  if (n) {
+    n._comment_count = comments.length;
+    var ccEl = document.getElementById('cc-'+newsId);
+    if (ccEl) ccEl.textContent = comments.length;
+  }
+
+  if (!comments.length) {
+    listEl.innerHTML = '<div style="color:var(--muted);font-size:.83rem;padding:8px 0">Aucun commentaire. Sois le premier !</div>';
+    return;
+  }
+
+  listEl.innerHTML = comments.map(function(c){
+    var cp = c.profiles;
+    var cName = cp ? ((cp.prenom&&cp.nom)?cp.prenom+' '+cp.nom:cp.prenom||cp.pseudo||'?') : '?';
+    var cInit = cName[0].toUpperCase();
+    var cTime = new Date(c.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+    var canDel = c.user_id === currentUser.id;
+    return '<div class="comment">'
+      + '<div class="c-av">'+esc(cInit)+'</div>'
+      + '<div class="c-bubble">'
+      +   '<div style="display:flex;justify-content:space-between;align-items:center">'
+      +     '<span class="c-author">'+esc(cName)+'</span>'
+      +     (canDel ? '<button class="c-delete" onclick="deleteComment(\''+c.id+'\',\''+newsId+'\')">🗑</button>' : '')
+      +   '</div>'
+      +   '<div class="c-text">'+esc(c.contenu)+'</div>'
+      +   '<div class="c-time">'+cTime+'</div>'
+      + '</div></div>';
+  }).join('');
+}
+
+async function sendComment(newsId) {
+  var inp = document.getElementById('ci-'+newsId);
+  var txt = inp ? inp.value.trim() : '';
+  if (!txt) return;
+  var r = await sb.from('news_comments').insert({ news_id:newsId, user_id:currentUser.id, contenu:txt });
+  if (r.error) { console.error('comment error:', r.error.message); return; }
+  if (inp) inp.value = '';
+  loadComments(newsId);
+}
+
+async function deleteComment(commentId, newsId) {
+  if (!confirm('Supprimer ce commentaire ?')) return;
+  await sb.from('news_comments').delete().eq('id', commentId);
+  loadComments(newsId);
+}
+
+// ── ÉDITEUR ──────────────────────────────────────────
+function execCmd(cmd, val) {
+  document.getElementById('editor-content').focus();
+  document.execCommand(cmd, false, val || null);
+}
+
+function insertBlockquote() {
+  execCmd('formatBlock', 'blockquote');
+}
+
+function insertHR() {
+  document.getElementById('editor-content').focus();
+  document.execCommand('insertHTML', false, '<hr>');
+}
+
+function insertImage() {
+  var url = prompt('URL de l\'image :');
+  if (url) document.execCommand('insertHTML', false, '<img src="'+url+'" style="max-width:100%;border-radius:12px;margin:8px 0">');
+}
+
+function insertLink() {
+  var url = prompt('URL du lien :');
+  if (url) document.execCommand('createLink', false, url);
+}
+
+function clearFormat() {
+  document.execCommand('removeFormat', false, null);
+}
+
+// Emoji picker
+var EMOJIS = ['😀','😂','🥰','😍','🤩','😎','🥳','🎉','🎊','🍾','🥂','❤️','🔥','✨','🌟','💫','🎈','🎂','🏖️','✈️','🗺️','📸','💍','🏠','🎮','🍕','🍻','👏','🙌','💪','🤝','👋','😅','😭','🤔','🙄','😤','🥹','❄️','🌈','🌸','🦋'];
+
+function insertEmoji() {
+  var picker = document.getElementById('emoji-picker');
+  if (picker.style.display === 'flex') { picker.style.display = 'none'; return; }
+
+  if (!picker.dataset.built) {
+    var emojisHtml = EMOJIS.map(function(e){
+      return '<button onclick="pasteEmoji(\''+e+'\')" style="background:none;border:none;cursor:pointer;font-size:1.3rem;width:36px;height:36px;border-radius:8px;transition:background .2s" onmouseover="this.style.background=\'rgba(255,255,255,.1)\'" onmouseout="this.style.background=\'none\'">'+e+'</button>';
+    }).join('');
+    picker.innerHTML += '<div style="display:flex;flex-wrap:wrap;gap:2px">'+emojisHtml+'</div>';
+    picker.dataset.built = '1';
+  }
+
+  // Positionnement
+  var tb = document.getElementById('editor-toolbar');
+  var rect = tb.getBoundingClientRect();
+  picker.style.top  = (rect.bottom + window.scrollY + 4) + 'px';
+  picker.style.left = Math.min(rect.left, window.innerWidth - 320) + 'px';
+  picker.style.display = 'flex';
+  picker.style.flexDirection = 'column';
+}
+
+function pasteEmoji(emoji) {
+  document.getElementById('emoji-picker').style.display = 'none';
+  document.getElementById('editor-content').focus();
+  document.execCommand('insertText', false, emoji);
+}
+
+document.addEventListener('click', function(e) {
+  var picker = document.getElementById('emoji-picker');
+  if (!picker.contains(e.target) && !e.target.closest('[onclick="insertEmoji()"]')) {
+    picker.style.display = 'none';
+  }
+});
+
+// Cover image
+function handleCoverFile(input) {
+  if (!input.files || !input.files[0]) return;
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    coverDataUrl = ev.target.result;
+    document.getElementById('f-cover-url').value = '';
+    var preview = document.getElementById('cover-preview');
+    preview.src = coverDataUrl;
+    preview.classList.add('show');
+    document.getElementById('btn-remove-cover').style.display = 'inline-flex';
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+function handleCoverUrl(url) {
+  if (!url) { removeCover(); return; }
+  coverDataUrl = null;
+  var preview = document.getElementById('cover-preview');
+  preview.src = url;
+  preview.classList.add('show');
+  document.getElementById('btn-remove-cover').style.display = 'inline-flex';
+}
+
+function removeCover() {
+  coverDataUrl = null;
+  document.getElementById('f-cover-url').value = '';
+  document.getElementById('cover-file').value  = '';
+  var preview = document.getElementById('cover-preview');
+  preview.src = '';
+  preview.classList.remove('show');
+  document.getElementById('btn-remove-cover').style.display = 'none';
+}
+
+// ── MODAL ────────────────────────────────────────────
+function openCreateModal() {
+  editingId = null;
+  document.getElementById('editor-title').textContent = '✍️ Nouvelle actualité';
+  document.getElementById('f-titre').value = '';
+  document.getElementById('editor-content').innerHTML = '';
+  document.getElementById('f-tags').value = '';
+  document.getElementById('btn-publish').textContent = 'Publier 🚀';
+  document.getElementById('editor-alert').className = 'malert';
+  removeCover();
+  openModal('modal-editor');
+}
+
+async function openEditModal(newsId) {
+  var n = allNews.find(function(x){ return x.id===newsId; });
+  if (!n) return;
+  editingId = newsId;
+  document.getElementById('editor-title').textContent = '✏️ Modifier';
+  document.getElementById('f-titre').value = n.titre || '';
+  document.getElementById('editor-content').innerHTML = n.contenu || '';
+  document.getElementById('f-tags').value = n.tags || '';
+  document.getElementById('btn-publish').textContent = 'Enregistrer ✏️';
+  document.getElementById('editor-alert').className = 'malert';
+
+  if (n.cover_url) {
+    document.getElementById('f-cover-url').value = n.cover_url;
+    handleCoverUrl(n.cover_url);
+  } else {
+    removeCover();
+  }
+  openModal('modal-editor');
+}
+
+function closeEditor() {
+  closeModal('modal-editor');
+  document.getElementById('emoji-picker').style.display = 'none';
+}
+
+// ── PUBLIER / MODIFIER ────────────────────────────────
+async function publishNews() {
+  var btn     = document.getElementById('btn-publish');
+  var alertEl = document.getElementById('editor-alert');
+  alertEl.className = 'malert';
+
+  var titre   = document.getElementById('f-titre').value.trim();
+  var contenu = document.getElementById('editor-content').innerHTML.trim();
+  var tags    = document.getElementById('f-tags').value.trim();
+  var coverUrl = document.getElementById('f-cover-url').value.trim() || null;
+
+  // Si image uploadée en base64, on l'utilise directement (Supabase Storage non configuré)
+  if (coverDataUrl) coverUrl = coverDataUrl;
+
+  if (!titre)   { alertEl.textContent='⚠️ Le titre est obligatoire.'; alertEl.className='malert error'; return; }
+  if (!contenu || contenu === '<br>') { alertEl.textContent='⚠️ Le contenu est vide.'; alertEl.className='malert error'; return; }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>' + (editingId ? 'Sauvegarde...' : 'Publication...');
+
+  var payload = { titre:titre, contenu:contenu, tags:tags||null, cover_url:coverUrl };
+
+  var r;
+  if (editingId) {
+    r = await sb.from('news').update(payload).eq('id', editingId);
+  } else {
+    payload.created_by = currentUser.id;
+    r = await sb.from('news').insert(payload);
+  }
+
+  btn.disabled = false;
+  btn.textContent = editingId ? 'Enregistrer ✏️' : 'Publier 🚀';
+
+  if (r.error) {
+    alertEl.textContent = '❌ Erreur : ' + r.error.message;
+    alertEl.className = 'malert error';
+  } else {
+    closeEditor();
+    loadNews();
+  }
+}
+
+// ── SUPPRIMER ─────────────────────────────────────────
+async function deleteNews(newsId) {
+  if (!confirm('Supprimer cette actualité définitivement ?')) return;
+  await sb.from('news_likes').delete().eq('news_id', newsId);
+  await sb.from('news_comments').delete().eq('news_id', newsId);
+  await sb.from('news').delete().eq('id', newsId);
+  loadNews();
+}
+
+// ── SORT / SEARCH ─────────────────────────────────────
+document.getElementById('search-input').addEventListener('input', renderNews);
+
+function toggleSort() {
+  sortAsc = !sortAsc;
+  var btn = document.getElementById('sort-btn');
+  btn.className = 'sort-btn ' + (sortAsc ? 'asc' : 'desc');
+  allNews.sort(function(a,b){
+    return sortAsc ? new Date(a.created_at)-new Date(b.created_at) : new Date(b.created_at)-new Date(a.created_at);
+  });
+  renderNews();
+}
+
+// ── UTILITAIRES ──────────────────────────────────────
+function openModal(id)  { document.getElementById(id).classList.add('open'); document.body.style.overflow='hidden'; }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); document.body.style.overflow=''; }
+
+document.getElementById('modal-editor').addEventListener('click', function(e){
+  if (e.target === this) closeEditor();
+});
+
+function toggleMenu() { document.getElementById('mobile-menu').classList.toggle('open'); }
+
+async function handleLogout() { await sb.auth.signOut(); window.location.href = 'login.html'; }
+
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+document.addEventListener('click', function(e) {
+  var menu = document.getElementById('mobile-menu');
+  var hamb = document.querySelector('.hamburger');
+  if (menu && menu.classList.contains('open') && !menu.contains(e.target) && hamb && !hamb.contains(e.target)) {
+    menu.classList.remove('open');
+  }
+});
+</script>
+</body>
+</html>
