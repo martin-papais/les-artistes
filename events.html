@@ -1177,34 +1177,37 @@ async function openDetail(id) {
 //  VOTES
 // ═══════════════════════════════════════════════════
 async function castVote(eventId, val) {
-  // Vérifie si déjà voté → update, sinon insert
-  var existing = await sb.from('event_votes').select('id,present').eq('event_id',eventId).eq('user_id',currentUser.id).maybeSingle();
-  if (existing.data) {
-    if (existing.data.present === val) {
-      // Reclique sur le même vote → annule le vote
-      await sb.from('event_votes').delete().eq('id', existing.data.id);
+  var existing = await sb.from('event_votes').select('id,present').eq('event_id',eventId).eq('user_id',currentUser.id);
+  var vote = (existing.data && existing.data.length) ? existing.data[0] : null;
+  var r;
+  if (vote) {
+    if (vote.present === val) {
+      r = await sb.from('event_votes').delete().eq('id', vote.id);
     } else {
-      await sb.from('event_votes').update({ present: val }).eq('id', existing.data.id);
+      r = await sb.from('event_votes').update({ present: val }).eq('id', vote.id);
     }
   } else {
-    await sb.from('event_votes').insert({ event_id:eventId, user_id:currentUser.id, present:val });
+    r = await sb.from('event_votes').insert({ event_id: eventId, user_id: currentUser.id, present: val });
   }
-  // Rafraîchit la carte ET le détail
+  if (r && r.error) console.error('vote error:', r.error.message, r.error.code);
   await reloadEventVotes(eventId);
   openDetail(eventId);
 }
 
 async function castFoodVote(eventId, val) {
-  var existing = await sb.from('event_food_votes').select('id,mange').eq('event_id',eventId).eq('user_id',currentUser.id).maybeSingle();
-  if (existing.data) {
-    if (existing.data.mange === val) {
-      await sb.from('event_food_votes').delete().eq('id', existing.data.id);
+  var existing = await sb.from('event_food_votes').select('id,mange').eq('event_id',eventId).eq('user_id',currentUser.id);
+  var vote = (existing.data && existing.data.length) ? existing.data[0] : null;
+  var r;
+  if (vote) {
+    if (vote.mange === val) {
+      r = await sb.from('event_food_votes').delete().eq('id', vote.id);
     } else {
-      await sb.from('event_food_votes').update({ mange: val }).eq('id', existing.data.id);
+      r = await sb.from('event_food_votes').update({ mange: val }).eq('id', vote.id);
     }
   } else {
-    await sb.from('event_food_votes').insert({ event_id:eventId, user_id:currentUser.id, mange:val });
+    r = await sb.from('event_food_votes').insert({ event_id: eventId, user_id: currentUser.id, mange: val });
   }
+  if (r && r.error) console.error('food vote error:', r.error.message, r.error.code);
   await reloadEventVotes(eventId);
   openDetail(eventId);
 }
@@ -1226,8 +1229,13 @@ async function sendComment(eventId) {
   var inp = document.getElementById('comment-input');
   var txt = inp.value.trim();
   if (!txt) return;
+  var r = await sb.from('event_comments').insert({ event_id: eventId, user_id: currentUser.id, contenu: txt });
+  if (r.error) {
+    console.error('comment error:', r.error.message, r.error.code);
+    alert('Erreur commentaire : ' + r.error.message);
+    return;
+  }
   inp.value = '';
-  await sb.from('event_comments').insert({ event_id:eventId, user_id:currentUser.id, contenu:txt });
   openDetail(eventId);
 }
 
