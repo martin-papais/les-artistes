@@ -630,7 +630,8 @@ textarea.minput{resize:vertical;min-height:80px;}
   <div class="modal">
     <div class="modal-header">
       <div class="modal-title" id="detail-modal-title">Détail</div>
-      <div style="display:flex;gap:8px">
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="modal-close" id="btn-edit-event"   style="color:var(--teal);display:none"  title="Modifier">✏️</button>
         <button class="modal-close" id="btn-delete-event" style="color:var(--coral);display:none" title="Supprimer">🗑️</button>
         <button class="modal-close" onclick="closeModal('modal-detail')">✕</button>
       </div>
@@ -728,6 +729,21 @@ async function loadEvents() {
     });
   }
 
+  // Charge les votes présence pour toutes les cartes (affichage temps réel)
+  if (events.length) {
+    var eIds = events.map(function(e){ return e.id; });
+    var vRes = await sb.from('event_votes').select('event_id,user_id,present').in('event_id', eIds);
+    var voteMap = {};
+    (vRes.data||[]).forEach(function(v){
+      if (!voteMap[v.event_id]) voteMap[v.event_id] = [];
+      voteMap[v.event_id].push(v);
+    });
+    events = events.map(function(e){
+      e._votes = voteMap[e.id] || [];
+      return e;
+    });
+  }
+
   allEvents = events;
   renderEvents();
 }
@@ -756,7 +772,12 @@ function buildCard(e) {
   }[e.categorie] || '📅';
 
   var dateStr = e.date_event ? new Date(e.date_event).toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'}) : '';
-  var author  = e.profiles ? (e.profiles.prenom||e.profiles.pseudo||'?') : '?';
+  // Nom complet de l'auteur
+  var author = '?';
+  if (e.profiles) {
+    if (e.profiles.prenom && e.profiles.nom) author = e.profiles.prenom + ' ' + e.profiles.nom;
+    else author = e.profiles.prenom || e.profiles.pseudo || '?';
+  }
 
   var chips = '';
   if (e.chez_qui)     chips += '<span class="meta-chip">📍 ' + esc(e.chez_qui)     + '</span>';
@@ -764,6 +785,27 @@ function buildCard(e) {
   if (e.lieu)         chips += '<span class="meta-chip">🗺️ ' + esc(e.lieu)         + '</span>';
   if (e.duree)        chips += '<span class="meta-chip">⏱️ ' + esc(e.duree)        + '</span>';
   if (e.anniversaire_qui) chips += '<span class="meta-chip">🥳 ' + esc(e.anniversaire_qui) + '</span>';
+
+  // Sondage présence temps réel sur la carte
+  var votes   = e._votes || [];
+  var yesVotes = votes.filter(function(v){ return v.present==='oui'; });
+  var noVotes  = votes.filter(function(v){ return v.present==='non'; });
+  var myVote   = votes.find(function(v){ return v.user_id===currentUser.id; });
+  var total    = votes.length;
+  var yPct = total ? Math.round(yesVotes.length/total*100) : 0;
+  var nPct = total ? Math.round(noVotes.length/total*100)  : 0;
+
+  var pollHtml = '<div style="width:100%">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">'
+    +   '<span style="font-size:.75rem;color:var(--muted)">🗳️ Présence</span>'
+    +   '<span style="font-size:.75rem;color:var(--muted)">' + yesVotes.length + '✅ · ' + noVotes.length + '❌</span>'
+    + '</div>'
+    + '<div style="display:flex;gap:3px;height:5px;border-radius:3px;overflow:hidden;background:rgba(255,255,255,.08)">'
+    +   (yPct ? '<div style="width:'+yPct+'%;background:linear-gradient(90deg,#4ECDC4,#A8E063);border-radius:3px 0 0 3px"></div>' : '')
+    +   (nPct ? '<div style="width:'+nPct+'%;background:linear-gradient(90deg,#FF6B6B,#FF9EBC)"></div>' : '')
+    + '</div>'
+    + (myVote ? '<div style="font-size:.72rem;color:var(--muted);margin-top:4px">Ton vote : '+(myVote.present==='oui'?'✅ Présent':'❌ Absent')+'</div>' : '<div style="font-size:.72rem;color:var(--muted);margin-top:4px">Tu n'as pas encore voté</div>')
+    + '</div>';
 
   return '<div class="event-card" onclick="openDetail(\'' + e.id + '\')">'
     + '<div class="card-header">'
@@ -773,10 +815,10 @@ function buildCard(e) {
     + '<div class="card-body">'
     +   '<div class="card-title">' + buildTitle(e) + '</div>'
     +   '<div class="card-meta">' + chips + '</div>'
+    +   pollHtml
     + '</div>'
     + '<div class="card-footer">'
-    +   '<div class="poll-preview">🗳️ <span>Sondage présence</span></div>'
-    +   '<div class="card-author">par ' + esc(author) + '</div>'
+    +   '<div class="card-author" style="font-size:.78rem;color:var(--muted)">Créé par <strong style="color:var(--text)">' + esc(author) + '</strong></div>'
     + '</div>'
     + '</div>';
 }
@@ -1002,10 +1044,14 @@ async function openDetail(id) {
   if (r.error || !r.data) return;
   var e = r.data;
 
-  // Btn supprimer si c'est le créateur
-  var delBtn = document.getElementById('btn-delete-event');
-  delBtn.style.display = (e.created_by === currentUser.id) ? 'flex' : 'none';
-  delBtn.onclick = function(){ if(confirm('Supprimer cet événement ?')) deleteEvent(id); };
+  // Btns supprimer + modifier si c'est le créateur
+  var isOwner = (e.created_by === currentUser.id);
+  var delBtn  = document.getElementById('btn-delete-event');
+  var editBtn = document.getElementById('btn-edit-event');
+  delBtn.style.display  = isOwner ? 'flex' : 'none';
+  editBtn.style.display = isOwner ? 'flex' : 'none';
+  delBtn.onclick  = function(){ if(confirm('Supprimer cet événement définitivement ?')) deleteEvent(id); };
+  editBtn.onclick = function(){ openEditModal(e); };
 
   document.getElementById('detail-modal-title').textContent = getEmoji(e.categorie) + ' ' + e.categorie;
 
@@ -1129,13 +1175,46 @@ async function openDetail(id) {
 //  VOTES
 // ═══════════════════════════════════════════════════
 async function castVote(eventId, val) {
-  await sb.from('event_votes').upsert({ event_id:eventId, user_id:currentUser.id, present:val }, { onConflict:'event_id,user_id' });
+  // Vérifie si déjà voté → update, sinon insert
+  var existing = await sb.from('event_votes').select('id,present').eq('event_id',eventId).eq('user_id',currentUser.id).maybeSingle();
+  if (existing.data) {
+    if (existing.data.present === val) {
+      // Reclique sur le même vote → annule le vote
+      await sb.from('event_votes').delete().eq('id', existing.data.id);
+    } else {
+      await sb.from('event_votes').update({ present: val }).eq('id', existing.data.id);
+    }
+  } else {
+    await sb.from('event_votes').insert({ event_id:eventId, user_id:currentUser.id, present:val });
+  }
+  // Rafraîchit la carte ET le détail
+  await reloadEventVotes(eventId);
   openDetail(eventId);
 }
 
 async function castFoodVote(eventId, val) {
-  await sb.from('event_food_votes').upsert({ event_id:eventId, user_id:currentUser.id, mange:val }, { onConflict:'event_id,user_id' });
+  var existing = await sb.from('event_food_votes').select('id,mange').eq('event_id',eventId).eq('user_id',currentUser.id).maybeSingle();
+  if (existing.data) {
+    if (existing.data.mange === val) {
+      await sb.from('event_food_votes').delete().eq('id', existing.data.id);
+    } else {
+      await sb.from('event_food_votes').update({ mange: val }).eq('id', existing.data.id);
+    }
+  } else {
+    await sb.from('event_food_votes').insert({ event_id:eventId, user_id:currentUser.id, mange:val });
+  }
+  await reloadEventVotes(eventId);
   openDetail(eventId);
+}
+
+// Met à jour les votes d'un événement dans allEvents (temps réel sur la carte)
+async function reloadEventVotes(eventId) {
+  var vRes = await sb.from('event_votes').select('event_id,user_id,present').eq('event_id', eventId);
+  var idx  = allEvents.findIndex(function(e){ return e.id === eventId; });
+  if (idx >= 0) {
+    allEvents[idx]._votes = vRes.data || [];
+    renderEvents();
+  }
 }
 
 // ═══════════════════════════════════════════════════
@@ -1160,6 +1239,90 @@ async function deleteEvent(id) {
   await sb.from('events').delete().eq('id',id);
   closeModal('modal-detail');
   loadEvents();
+}
+
+// ═══════════════════════════════════════════════════
+//  MODIFIER UN ÉVÉNEMENT
+// ═══════════════════════════════════════════════════
+function openEditModal(e) {
+  closeModal('modal-detail');
+  selectedCat = e.categorie;
+  document.getElementById('step-1').style.display = 'none';
+  document.getElementById('step-2').style.display = 'block';
+  document.getElementById('create-footer').style.display = 'flex';
+  document.getElementById('create-title').textContent = '✏️ Modifier · ' + e.categorie;
+  document.getElementById('create-alert').className = 'malert';
+  buildFormFields(e.categorie);
+  openModal('modal-create');
+
+  // Pré-remplit les champs après rendu
+  setTimeout(function(){
+    var set = function(id, val){ var el=document.getElementById(id); if(el&&val) el.value=val; };
+    set('f-date',   e.date_event);
+    set('f-heure',  e.heure);
+    set('f-chez',   e.chez_qui);
+    set('f-lieu',   e.lieu);
+    set('f-duree',  e.duree);
+    set('f-anniv-qui', e.anniversaire_qui);
+    set('f-cadeau', e.cadeau);
+    set('f-boisson',e.boisson);
+    set('f-apporter',e.apporter);
+    set('f-jeux-prevus', e.jeux_prevus);
+    set('f-heure-depart', e.heure_depart);
+    set('f-raison', e.raison);
+    set('f-note',   e.note);
+    // Radio buttons
+    if (e.dormir)       { var d=document.querySelector('[onclick*="f-dormir,''+e.dormir+''"]'); if(d){ document.querySelectorAll('[onclick*="f-dormir"]').forEach(function(b){b.classList.remove('sel');}); d.classList.add('sel'); document.getElementById('f-dormir').value=e.dormir; } }
+    if (e.manger_avant) { var m=document.querySelector('[onclick*="f-manger,''+e.manger_avant+''"]'); if(m){ document.querySelectorAll('[onclick*="f-manger"]').forEach(function(b){b.classList.remove('sel');}); m.classList.add('sel'); document.getElementById('f-manger').value=e.manger_avant; } }
+    // Change le bouton submit pour un update
+    var btn = document.getElementById('btn-submit-event');
+    btn.textContent = 'Enregistrer les modifications ✏️';
+    btn.onclick = function(){ submitEditEvent(e.id); };
+  }, 50);
+}
+
+async function submitEditEvent(eventId) {
+  var btn = document.getElementById('btn-submit-event');
+  var alertEl = document.getElementById('create-alert');
+  alertEl.className = 'malert';
+  var g = function(id){ var el=document.getElementById(id); return el?el.value.trim():''; };
+  var date = g('f-date');
+  if (!date) { alertEl.textContent='⚠️ La date est obligatoire.'; alertEl.className='malert error'; return; }
+
+  var payload = {
+    date_event:  date,
+    heure:       g('f-heure') || null,
+    chez_qui:    g('f-chez') || null,
+    lieu:        g('f-lieu') || null,
+    duree:       g('f-duree') || null,
+    anniversaire_qui: g('f-anniv-qui') || null,
+    cadeau:      g('f-cadeau') || null,
+    boisson:     g('f-boisson') || null,
+    manger_avant:g('f-manger') || null,
+    dormir:      g('f-dormir') || null,
+    apporter:    g('f-apporter') || null,
+    jeux_prevus: g('f-jeux-prevus') || null,
+    heure_depart:g('f-heure-depart') || null,
+    raison:      g('f-raison') || null,
+    note:        g('f-note') || null
+  };
+
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Sauvegarde...';
+  var r = await sb.from('events').update(payload).eq('id', eventId);
+  btn.disabled = false; btn.innerHTML = 'Enregistrer les modifications ✏️';
+
+  if (r.error) {
+    alertEl.textContent = '❌ Erreur : ' + r.error.message; alertEl.className = 'malert error';
+  } else {
+    closeModal('modal-create');
+    loadEvents();
+    // Reset le bouton pour la prochaine création
+    setTimeout(function(){
+      var b = document.getElementById('btn-submit-event');
+      b.textContent = 'Créer l'événement 🎉';
+      b.onclick = function(){ submitEvent(); };
+    }, 300);
+  }
 }
 
 // ═══════════════════════════════════════════════════
