@@ -454,6 +454,7 @@ textarea.minput{resize:vertical;min-height:70px;}
   <div class="lb-counter" id="lb-counter"></div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 var SUPABASE_URL  = 'https://ldchxxkmvepvbvhdokot.supabase.co';
@@ -465,7 +466,8 @@ var currentProfile = null;
 var allMedia       = [];
 var sortAsc        = false;
 var viewMode       = 'list';
-var selectedFiles  = [];
+var selectedFiles  = [];   // fichiers individuels
+var pendingFolders = {};   // { folderName: {files:[File], paths:[str]} }
 var editingId      = null;
 var lbIndex        = 0;
 var lbItems        = []; // items affichables en lightbox
@@ -670,31 +672,42 @@ function captureThumb(video) {
 
 // ── DROPZONE ──────────────────────────────────────────
 
-// Lit récursivement une FileSystemEntry (fichier ou dossier)
-function readEntry(entry) {
+// Lit récursivement une FileSystemEntry
+// Retourne { type:'file', file } ou { type:'folder', name, files:[], paths:[] }
+function readEntry(entry, basePath) {
+  basePath = basePath || '';
   return new Promise(function(resolve) {
     if (entry.isFile) {
-      entry.file(function(f) { resolve([f]); }, function() { resolve([]); });
+      entry.file(function(f) {
+        resolve({ type: 'file', file: f, path: basePath + f.name });
+      }, function() { resolve(null); });
     } else if (entry.isDirectory) {
+      var folderName = entry.name;
       var reader = entry.createReader();
       var allEntries = [];
       function readBatch() {
         reader.readEntries(function(entries) {
           if (!entries.length) {
-            Promise.all(allEntries.map(readEntry)).then(function(results) {
-              var files = [];
-              results.forEach(function(r){ if(Array.isArray(r)) r.forEach(function(f){ files.push(f); }); });
-              resolve(files);
-            });
+            var prefix = basePath + folderName + '/';
+            Promise.all(allEntries.map(function(e) { return readEntry(e, prefix); }))
+              .then(function(results) {
+                var files = [], paths = [];
+                results.forEach(function(r) {
+                  if (!r) return;
+                  if (r.type === 'file') { files.push(r.file); paths.push(r.path); }
+                  else if (r.type === 'folder') { r.files.forEach(function(f,i){ files.push(f); paths.push(r.paths[i]); }); }
+                });
+                resolve({ type: 'folder', name: folderName, files: files, paths: paths });
+              });
           } else {
             allEntries = allEntries.concat(Array.from(entries));
             readBatch();
           }
-        }, function() { resolve([]); });
+        }, function() { resolve(null); });
       }
       readBatch();
     } else {
-      resolve([]);
+      resolve(null);
     }
   });
 }
@@ -707,19 +720,26 @@ function setupDropzone() {
     e.preventDefault(); dz.classList.remove('dragover');
     var items = e.dataTransfer.items;
     if (items && items.length && items[0].webkitGetAsEntry) {
-      // Utilise FileSystemEntry API pour lire les dossiers récursivement
-      var filePromises = [];
+      var entryPromises = [];
       for (var i=0; i<items.length; i++) {
         var entry = items[i].webkitGetAsEntry();
-        if (entry) filePromises.push(readEntry(entry));
+        if (entry) entryPromises.push(readEntry(entry, ''));
       }
-      Promise.all(filePromises).then(function(results) {
-        var files = [];
-        results.forEach(function(r){ if (Array.isArray(r)) r.forEach(function(f){ files.push(f); }); else if(r) files.push(r); });
-        if (files.length) {
-          files.forEach(function(f){ selectedFiles.push(f); });
-          renderFilesPreview();
-        }
+      Promise.all(entryPromises).then(function(results) {
+        results.forEach(function(r) {
+          if (!r) return;
+          if (r.type === 'file') {
+            selectedFiles.push(r.file);
+          } else if (r.type === 'folder') {
+            // Stocker le dossier tel quel — il sera zippé à l'upload
+            pendingFolders[r.name] = { files: r.files, paths: r.paths };
+            // Représenter le dossier dans selectedFiles comme un marqueur
+            var marker = new File([''], r.name + '.folder-marker', { type: 'application/x-folder' });
+            marker._folderName = r.name;
+            selectedFiles.push(marker);
+          }
+        });
+        renderFilesPreview();
       });
     } else {
       handleFileSelect(e.dataTransfer.files);
@@ -728,19 +748,24 @@ function setupDropzone() {
 }
 
 function handleFileSelect(files) {
-  var added = 0;
-  for (var i=0; i<files.length; i++) {
-    var f = files[i];
-    // Ignorer les entrées de type dossier (size=0 ET pas de type MIME)
-    if (f.size === 0 && !f.type) continue;
-    selectedFiles.push(f);
-    added++;
-  }
-  if (added === 0 && files.length > 0) {
-    // Probablement un dossier drag&drop → utiliser le bouton "Sélectionner un dossier"
-    var alertEl = document.getElementById('upload-alert');
-    alertEl.textContent = '⚠️ Pour importer un dossier, utilise le bouton "Sélectionner un dossier entier" ci-dessus.';
-    alertEl.className = 'malert error';
+  // Gère l'input webkitdirectory : tous les fichiers ont webkitRelativePath
+  var hasRelPath = files.length > 0 && files[0].webkitRelativePath && files[0].webkitRelativePath.includes('/');
+  if (hasRelPath) {
+    // C'est un dossier entier sélectionné via input[webkitdirectory]
+    var folderName = files[0].webkitRelativePath.split('/')[0];
+    var fileArr = Array.from(files).filter(function(f){ return f.size > 0 || f.type; });
+    var paths   = fileArr.map(function(f){ return f.webkitRelativePath; });
+    pendingFolders[folderName] = { files: fileArr, paths: paths };
+    var marker = new File([''], folderName + '.folder-marker', { type: 'application/x-folder' });
+    marker._folderName = folderName;
+    selectedFiles.push(marker);
+  } else {
+    // Fichiers individuels normaux
+    for (var i=0; i<files.length; i++) {
+      var f = files[i];
+      if (f.size === 0 && !f.type) continue;
+      selectedFiles.push(f);
+    }
   }
   renderFilesPreview();
 }
@@ -749,39 +774,83 @@ function renderFilesPreview() {
   var container = document.getElementById('files-preview');
   if (!selectedFiles.length) { container.innerHTML=''; return; }
   container.innerHTML = selectedFiles.map(function(f, i){
-    var icon = getFileIcon(f.name);
-    var isImg = f.type.startsWith('image/');
-    var thumbHtml = isImg
-      ? '<img class="file-thumb" id="thumb-'+i+'" src="" alt="">'
-      : '<div class="file-thumb-icon">'+icon+'</div>';
-    var size = f.size < 1024*1024 ? Math.round(f.size/1024)+'KB' : (f.size/(1024*1024)).toFixed(1)+'MB';
+    var isFolder = f.type === 'application/x-folder';
+    var folderName = f._folderName || f.name.replace('.folder-marker','');
+    var icon, thumbHtml, sizeStr, nameStr;
+    if (isFolder) {
+      var fd = pendingFolders[folderName];
+      var fileCount = fd ? fd.files.length : '?';
+      var totalBytes = fd ? fd.files.reduce(function(s,x){ return s+x.size; },0) : 0;
+      sizeStr = totalBytes < 1024*1024 ? Math.round(totalBytes/1024)+'KB' : (totalBytes/(1024*1024)).toFixed(1)+'MB';
+      nameStr = '&#128193; ' + esc(folderName) + ' <span style="color:var(--muted);font-size:.72rem">('+fileCount+' fichiers → sera zippé)</span>';
+      thumbHtml = '<div class="file-thumb-icon" style="background:rgba(255,217,61,.15)">&#128193;</div>';
+    } else {
+      icon = getFileIcon(f.name);
+      var isImg = f.type && f.type.startsWith('image/');
+      thumbHtml = isImg
+        ? '<img class="file-thumb" id="thumb-'+i+'" src="" alt="">'
+        : '<div class="file-thumb-icon">'+icon+'</div>';
+      sizeStr = f.size < 1024*1024 ? Math.round(f.size/1024)+'KB' : (f.size/(1024*1024)).toFixed(1)+'MB';
+      nameStr = esc(f.name);
+    }
     return '<div class="file-row">'
       + thumbHtml
-      + '<span class="file-name">'+esc(f.name)+'</span>'
-      + '<span class="file-size">'+size+'</span>'
-      + '<button class="file-remove" onclick="removeFile('+i+')">✕</button>'
+      + '<span class="file-name">'+nameStr+'</span>'
+      + '<span class="file-size">'+sizeStr+'</span>'
+      + '<button class="file-remove" onclick="removeFile('+i+')">&#10005;</button>'
       + '</div>';
   }).join('');
 
-  // Génère les thumbnails pour les images
+  // Thumbnails images
   selectedFiles.forEach(function(f, i){
-    if (f.type.startsWith('image/')) {
+    if (f.type && f.type.startsWith('image/')) {
       var reader = new FileReader();
-      reader.onload = function(e) {
-        var img = document.getElementById('thumb-'+i);
+      reader.onload = (function(idx){ return function(e) {
+        var img = document.getElementById('thumb-'+idx);
         if (img) img.src = e.target.result;
-      };
+      }; })(i);
       reader.readAsDataURL(f);
     }
   });
 }
 
 function removeFile(idx) {
+  var f = selectedFiles[idx];
+  if (f && f._folderName) {
+    delete pendingFolders[f._folderName];
+  }
   selectedFiles.splice(idx, 1);
   renderFilesPreview();
 }
 
 // ── UPLOAD ────────────────────────────────────────────
+// Zippe un dossier avec fflate et retourne un Blob zip
+async function zipFolder(folderName, files, paths) {
+  return new Promise(function(resolve, reject) {
+    // Lire tous les fichiers en ArrayBuffer
+    var promises = files.map(function(f) {
+      return new Promise(function(res, rej) {
+        var reader = new FileReader();
+        reader.onload  = function(e) { res(new Uint8Array(e.target.result)); };
+        reader.onerror = function()  { rej(new Error('Read failed')); };
+        reader.readAsArrayBuffer(f);
+      });
+    });
+    Promise.all(promises).then(function(buffers) {
+      var zipData = {};
+      buffers.forEach(function(buf, i) {
+        // Chemin relatif dans le zip = path complet (ex: "MonDossier/img1.jpg")
+        var p = paths[i] || (folderName + '/' + files[i].name);
+        zipData[p] = [buf, { level: 0 }]; // level:0 = store sans compression (rapide)
+      });
+      fflate.zip(zipData, { level: 0 }, function(err, data) {
+        if (err) { reject(err); return; }
+        resolve(new Blob([data], { type: 'application/zip' }));
+      });
+    }).catch(reject);
+  });
+}
+
 async function uploadMedia() {
   var btn     = document.getElementById('btn-upload');
   var alertEl = document.getElementById('upload-alert');
@@ -797,7 +866,7 @@ async function uploadMedia() {
   if (!selectedFiles.length) { alertEl.textContent='⚠️ Sélectionne au moins un fichier.'; alertEl.className='malert error'; return; }
 
   btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>Upload...';
+  btn.innerHTML = '<span class="spinner"></span>Préparation...';
   document.getElementById('upload-progress').style.display = 'block';
 
   var total = selectedFiles.length;
@@ -805,48 +874,98 @@ async function uploadMedia() {
 
   for (var i=0; i<selectedFiles.length; i++) {
     var file = selectedFiles[i];
-    document.getElementById('progress-text').textContent = 'Envoi de "'+file.name+'" ('+( i+1)+'/'+total+')...';
-    document.getElementById('progress-bar').style.width = Math.round((i/total)*100)+'%';
+    var isFolder = file.type === 'application/x-folder';
 
-    var fileType = getMediaType(file);
-    var ext      = file.name.split('.').pop();
-    var safeName = Date.now() + '_' + Math.random().toString(36).substr(2,8) + '.' + ext;
-    var path     = currentUser.id + '/' + safeName;
+    if (isFolder) {
+      // ── CAS DOSSIER : zipper puis uploader un seul .zip ──────────────────
+      var folderName = file._folderName || file.name.replace('.folder-marker','');
+      var fd = pendingFolders[folderName];
+      if (!fd || !fd.files.length) { done++; continue; }
 
-    // Upload dans Supabase Storage bucket "media"
-    var upRes = await sb.storage.from('media').upload(path, file, { upsert: false });
+      document.getElementById('progress-text').textContent =
+        'Compression de "' + folderName + '" (' + fd.files.length + ' fichiers)...';
+      document.getElementById('progress-bar').style.width = Math.round((i/total)*80)+'%';
 
-    var fileUrl = null;
-    if (!upRes.error) {
-      var urlRes = sb.storage.from('media').getPublicUrl(path);
-      fileUrl = urlRes.data ? urlRes.data.publicUrl : null;
+      var zipBlob;
+      try {
+        zipBlob = await zipFolder(folderName, fd.files, fd.paths);
+      } catch(e) {
+        console.error('Zip error:', e);
+        done++; continue;
+      }
+
+      document.getElementById('progress-text').textContent =
+        'Upload de "' + folderName + '.zip" (' + (zipBlob.size/(1024*1024)).toFixed(1) + ' MB)...';
+
+      var safeName = Date.now() + '_' + Math.random().toString(36).substr(2,8) + '_' + folderName + '.zip';
+      var path     = currentUser.id + '/' + safeName;
+      var upRes    = await sb.storage.from('media').upload(path, zipBlob, { upsert: false, contentType: 'application/zip' });
+
+      var fileUrl = null;
+      if (!upRes.error) {
+        var urlRes = sb.storage.from('media').getPublicUrl(path);
+        fileUrl = urlRes.data ? urlRes.data.publicUrl : null;
+      } else {
+        console.warn('Folder zip upload error:', upRes.error.message);
+      }
+
+      var payload = {
+        sujet:       sujet,
+        date_media:  dateMed,
+        pris_par:    prisPar || null,
+        description: (desc ? desc + ' — ' : '') + fd.files.length + ' fichiers zippés',
+        file_name:   folderName + '.zip',
+        file_url:    fileUrl,
+        file_size:   zipBlob.size,
+        mime_type:   'application/zip',
+        type:        'folder',
+        created_by:  currentUser.id
+      };
+      var dbRes = await sb.from('photos').insert(payload);
+      if (dbRes.error) console.error('DB insert folder error:', dbRes.error.message);
+
     } else {
-      console.warn('Storage upload error:', upRes.error.message, '— storing without URL');
+      // ── CAS FICHIER NORMAL ────────────────────────────────────────────────
+      document.getElementById('progress-text').textContent =
+        'Envoi de "' + file.name + '" (' + (i+1) + '/' + total + ')...';
+      document.getElementById('progress-bar').style.width = Math.round((i/total)*100)+'%';
+
+      var fileType = getMediaType(file);
+      var ext      = file.name.split('.').pop();
+      var safeName2 = Date.now() + '_' + Math.random().toString(36).substr(2,8) + '.' + ext;
+      var path2     = currentUser.id + '/' + safeName2;
+      var upRes2    = await sb.storage.from('media').upload(path2, file, { upsert: false });
+
+      var fileUrl2 = null;
+      if (!upRes2.error) {
+        var urlRes2 = sb.storage.from('media').getPublicUrl(path2);
+        fileUrl2 = urlRes2.data ? urlRes2.data.publicUrl : null;
+      } else {
+        console.warn('Storage upload error:', upRes2.error.message);
+      }
+
+      var payload2 = {
+        sujet:       sujet,
+        date_media:  dateMed,
+        pris_par:    prisPar || null,
+        description: desc || null,
+        file_name:   file.name,
+        file_url:    fileUrl2,
+        file_size:   file.size,
+        mime_type:   file.type,
+        type:        fileType,
+        created_by:  currentUser.id
+      };
+      var dbRes2 = await sb.from('photos').insert(payload2);
+      if (dbRes2.error) console.error('DB insert error:', dbRes2.error.message);
     }
 
-    // Insert en DB
-    var payload = {
-      sujet:       sujet,
-      date_media:  dateMed,
-      pris_par:    prisPar || null,
-      description: desc || null,
-      file_name:   file.name,
-      file_url:    fileUrl,
-      file_size:   file.size,
-      mime_type:   file.type,
-      type:        fileType,
-      created_by:  currentUser.id
-    };
-
-    var dbRes = await sb.from('photos').insert(payload);
-    if (dbRes.error) {
-      console.error('DB insert error:', dbRes.error.message);
-    }
     done++;
+    document.getElementById('progress-bar').style.width = Math.round(((i+1)/total)*100)+'%';
   }
 
   document.getElementById('progress-bar').style.width = '100%';
-  document.getElementById('progress-text').textContent = done + ' fichier(s) publié(s) !';
+  document.getElementById('progress-text').textContent = done + ' élément(s) publié(s) !';
 
   setTimeout(function() {
     closeModal('modal-upload');
@@ -877,6 +996,7 @@ function resetUploadForm() {
   var today = new Date().toISOString().split('T')[0];
   document.getElementById('f-date-media').value = today;
   document.getElementById('file-input').value = '';
+  pendingFolders = {};
 }
 
 // ── ÉDITION ───────────────────────────────────────────
