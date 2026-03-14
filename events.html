@@ -719,7 +719,8 @@ async function loadEvents() {
 
   // Charge les profils séparément et les associe
   if (events.length) {
-    var ids = [...new Set(events.map(function(e){ return e.created_by; }).filter(Boolean))];
+    var ids = [];
+    events.forEach(function(e){ if(e.created_by && ids.indexOf(e.created_by)===-1) ids.push(e.created_by); });
     var pRes = await sb.from('profiles').select('id,prenom,nom,pseudo').in('id', ids);
     var profileMap = {};
     (pRes.data||[]).forEach(function(p){ profileMap[p.id] = p; });
@@ -804,7 +805,7 @@ function buildCard(e) {
     +   (yPct ? '<div style="width:'+yPct+'%;background:linear-gradient(90deg,#4ECDC4,#A8E063);border-radius:3px 0 0 3px"></div>' : '')
     +   (nPct ? '<div style="width:'+nPct+'%;background:linear-gradient(90deg,#FF6B6B,#FF9EBC)"></div>' : '')
     + '</div>'
-    + (myVote ? '<div style="font-size:.72rem;color:var(--muted);margin-top:4px">Ton vote : '+(myVote.present==='oui'?'✅ Présent':'❌ Absent')+'</div>' : '<div style="font-size:.72rem;color:var(--muted);margin-top:4px">Tu n'as pas encore voté</div>')
+    + (myVote ? '<div style="font-size:.72rem;color:var(--muted);margin-top:4px">Ton vote : '+(myVote.present==='oui'?'\u2705 Pr\u00e9sent':'\u274c Absent')+'</div>' : '<div style="font-size:.72rem;color:var(--muted);margin-top:4px">Pas encore vot\u00e9</div>')
     + '</div>';
 
   return '<div class="event-card" onclick="openDetail(\'' + e.id + '\')">'
@@ -1067,7 +1068,8 @@ async function openDetail(id) {
   var comments = comRes.data||[];
   // Enrichit les commentaires avec les profils
   if (comments.length) {
-    var cIds = [...new Set(comments.map(function(c){ return c.user_id; }).filter(Boolean))];
+    var cIds = [];
+    comments.forEach(function(c){ if(c.user_id && cIds.indexOf(c.user_id)===-1) cIds.push(c.user_id); });
     var cpRes = await sb.from('profiles').select('id,prenom,pseudo').in('id',cIds);
     var cpMap = {};
     (cpRes.data||[]).forEach(function(p){ cpMap[p.id]=p; });
@@ -1271,9 +1273,28 @@ function openEditModal(e) {
     set('f-heure-depart', e.heure_depart);
     set('f-raison', e.raison);
     set('f-note',   e.note);
-    // Radio buttons
-    if (e.dormir)       { var d=document.querySelector('[onclick*="f-dormir,''+e.dormir+''"]'); if(d){ document.querySelectorAll('[onclick*="f-dormir"]').forEach(function(b){b.classList.remove('sel');}); d.classList.add('sel'); document.getElementById('f-dormir').value=e.dormir; } }
-    if (e.manger_avant) { var m=document.querySelector('[onclick*="f-manger,''+e.manger_avant+''"]'); if(m){ document.querySelectorAll('[onclick*="f-manger"]').forEach(function(b){b.classList.remove('sel');}); m.classList.add('sel'); document.getElementById('f-manger').value=e.manger_avant; } }
+    // Radio buttons dormir
+    if (e.dormir) {
+      document.querySelectorAll('[onclick*="f-dormir"]').forEach(function(b){ b.classList.remove('sel'); });
+      var dormirBtns = document.querySelectorAll('[onclick*="f-dormir"]');
+      dormirBtns.forEach(function(b){
+        if (b.getAttribute('onclick').indexOf("'" + e.dormir + "'") !== -1) {
+          b.classList.add('sel');
+          document.getElementById('f-dormir').value = e.dormir;
+        }
+      });
+    }
+    // Radio buttons manger
+    if (e.manger_avant) {
+      document.querySelectorAll('[onclick*="f-manger"]').forEach(function(b){ b.classList.remove('sel'); });
+      var mangerBtns = document.querySelectorAll('[onclick*="f-manger"]');
+      mangerBtns.forEach(function(b){
+        if (b.getAttribute('onclick').indexOf("'" + e.manger_avant + "'") !== -1) {
+          b.classList.add('sel');
+          document.getElementById('f-manger').value = e.manger_avant;
+        }
+      });
+    }
     // Change le bouton submit pour un update
     var btn = document.getElementById('btn-submit-event');
     btn.textContent = 'Enregistrer les modifications ✏️';
@@ -1319,7 +1340,7 @@ async function submitEditEvent(eventId) {
     // Reset le bouton pour la prochaine création
     setTimeout(function(){
       var b = document.getElementById('btn-submit-event');
-      b.textContent = 'Créer l'événement 🎉';
+      b.textContent = "Créer l'événement 🎉";
       b.onclick = function(){ submitEvent(); };
     }, 300);
   }
