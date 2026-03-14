@@ -1056,12 +1056,27 @@ async function openDetail(id) {
 
   document.getElementById('detail-modal-title').textContent = getEmoji(e.categorie) + ' ' + e.categorie;
 
-  // Votes présence
+  // Votes présence + enrichissement avec profils
   var votes = await sb.from('event_votes').select('*').eq('event_id',id);
-  var myVote = (votes.data||[]).find(function(v){ return v.user_id===currentUser.id; });
-  var yesVotes = (votes.data||[]).filter(function(v){ return v.present==='oui'; });
-  var noVotes  = (votes.data||[]).filter(function(v){ return v.present==='non'; });
-  var total    = (votes.data||[]).length;
+  var allVotesList = votes.data || [];
+
+  // Charge les profils des votants
+  if (allVotesList.length) {
+    var vIds = [];
+    allVotesList.forEach(function(v){ if(v.user_id && vIds.indexOf(v.user_id)===-1) vIds.push(v.user_id); });
+    var vpRes = await sb.from('profiles').select('id,prenom,nom,pseudo').in('id', vIds);
+    var vpMap = {};
+    (vpRes.data||[]).forEach(function(p){ vpMap[p.id]=p; });
+    allVotesList = allVotesList.map(function(v){
+      v.profiles = vpMap[v.user_id] || null;
+      return v;
+    });
+  }
+
+  var myVote   = allVotesList.find(function(v){ return v.user_id===currentUser.id; });
+  var yesVotes = allVotesList.filter(function(v){ return v.present==='oui'; });
+  var noVotes  = allVotesList.filter(function(v){ return v.present==='non'; });
+  var total    = allVotesList.length;
 
   // Commentaires
   var comRes = await sb.from('event_comments').select('*').eq('event_id',id).order('created_at',{ascending:true});
@@ -1105,6 +1120,20 @@ async function openDetail(id) {
   // Sondage présence
   var yPct = total ? Math.round(yesVotes.length/total*100) : 0;
   var nPct = total ? Math.round(noVotes.length/total*100)  : 0;
+
+  // Affiche les badges de noms des votants
+  function voteNames(list) {
+    if (!list.length) return '<em style="color:var(--muted);font-size:.78rem">Personne pour l\'instant</em>';
+    return list.map(function(v){
+      var p = v.profiles;
+      var name = p ? ((p.prenom && p.nom) ? p.prenom+' '+p.nom : (p.prenom||p.pseudo||'?')) : '?';
+      var isMe = v.user_id === currentUser.id;
+      var bg  = isMe ? 'rgba(78,205,196,.2)'  : 'rgba(255,255,255,.08)';
+      var brd = isMe ? 'rgba(78,205,196,.4)'  : 'rgba(255,255,255,.12)';
+      return '<span style="display:inline-flex;align-items:center;gap:3px;padding:3px 9px;border-radius:20px;font-size:.75rem;font-weight:600;background:'+bg+';border:1px solid '+brd+';">'+(isMe?'👤 ':'')+esc(name)+'</span>';
+    }).join(' ');
+  }
+
   html += '<div class="detail-section" id="poll-section">';
   html += '<h3>🗳️ Sondage présence</h3>';
   html += '<div class="poll-options">';
@@ -1112,14 +1141,16 @@ async function openDetail(id) {
     + '<span class="poll-label">✅ Présent(e)</span>'
     + '<div class="poll-bar-wrap"><div class="poll-bar yes" style="width:'+yPct+'%"></div></div>'
     + '<span class="poll-count">' + yesVotes.length + '</span></div>';
+  html += '<div style="padding:5px 4px 10px;display:flex;flex-wrap:wrap;gap:5px">' + voteNames(yesVotes) + '</div>';
   html += '<div class="poll-option ' + (myVote&&myVote.present==='non'?'voted-no':'') + '" id="poll-opt-no">'
     + '<span class="poll-label">❌ Absent(e)</span>'
     + '<div class="poll-bar-wrap"><div class="poll-bar no" style="width:'+nPct+'%"></div></div>'
     + '<span class="poll-count">' + noVotes.length + '</span></div>';
+  html += '<div style="padding:5px 4px 10px;display:flex;flex-wrap:wrap;gap:5px">' + voteNames(noVotes) + '</div>';
   html += '</div>';
   html += '<div class="my-vote-btn">'
-    + '<button class="vote-btn yes' + (myVote&&myVote.present==='oui'?' active':'') + '" onclick="castVote(\''+id+'\',\'oui\')">✅ Je serai là !</button>'
-    + '<button class="vote-btn no'  + (myVote&&myVote.present==='non'?' active':'') + '" onclick="castVote(\''+id+'\',\'non\')">❌ Je ne viendrai pas</button>'
+    + '<button class="vote-btn yes' + (myVote&&myVote.present==='oui'?' active':'') + '" onclick="castVote(\''+id+'\',\'oui\')">\u2705 Je serai l\u00e0 !</button>'
+    + '<button class="vote-btn no'  + (myVote&&myVote.present==='non'?' active':'') + '" onclick="castVote(\''+id+'\',\'non\')">\u274c Je ne viendrai pas</button>'
     + '</div></div>';
 
   // Sondage nourriture si pertinent
