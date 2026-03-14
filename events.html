@@ -1,0 +1,1165 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Les Artistes — Événements</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --coral:   #FF6B6B;
+  --yellow:  #FFD93D;
+  --teal:    #4ECDC4;
+  --violet:  #C77DFF;
+  --pink:    #FF9EBC;
+  --lime:    #A8E063;
+  --deep:    #1A1025;
+  --surface: rgba(255,255,255,0.06);
+  --surface2:rgba(255,255,255,0.10);
+  --border:  rgba(255,255,255,0.12);
+  --text:    #fff;
+  --muted:   rgba(255,255,255,0.5);
+  --radius:  16px;
+  --trans:   all 0.3s cubic-bezier(.4,0,.2,1);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:'DM Sans',sans-serif;
+  background:var(--deep);
+  color:var(--text);
+  min-height:100vh;
+  overflow-x:hidden;
+}
+
+/* ── BG ── */
+.bg{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(ellipse 70% 50% at 0% 0%,   rgba(255,107,107,.3) 0%,transparent 60%),
+    radial-gradient(ellipse 60% 60% at 100% 30%, rgba(78,205,196,.25) 0%,transparent 60%),
+    radial-gradient(ellipse 80% 40% at 50% 100%, rgba(199,125,255,.2) 0%,transparent 55%),
+    #1A1025;
+  animation:bgPulse 15s ease-in-out infinite alternate;
+}
+@keyframes bgPulse{0%{filter:hue-rotate(0deg)}100%{filter:hue-rotate(20deg)brightness(1.05)}}
+
+/* ── NAVBAR ── */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  height:64px;
+  background:rgba(26,16,37,.85);
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 24px;
+  gap:16px;
+}
+.nav-logo{
+  font-family:'Playfair Display',serif;
+  font-size:1.3rem;font-weight:900;
+  background:linear-gradient(135deg,var(--yellow),var(--coral),var(--violet));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  white-space:nowrap;text-decoration:none;
+}
+.nav-links{display:flex;gap:4px;align-items:center;}
+.nav-link{
+  padding:7px 14px;border-radius:10px;
+  color:var(--muted);font-size:.82rem;font-weight:600;
+  text-decoration:none;transition:var(--trans);white-space:nowrap;
+}
+.nav-link:hover{color:var(--text);background:var(--surface2);}
+.nav-link.active{color:var(--text);background:var(--surface2);}
+.nav-link.active span{
+  background:linear-gradient(135deg,var(--coral),var(--violet));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.nav-right{display:flex;align-items:center;gap:10px;}
+.nav-user{
+  display:flex;align-items:center;gap:8px;
+  padding:6px 12px;border-radius:10px;
+  background:var(--surface);border:1px solid var(--border);
+  font-size:.82rem;color:var(--muted);cursor:pointer;
+}
+.nav-user:hover{background:var(--surface2);color:var(--text);}
+.avatar{
+  width:28px;height:28px;border-radius:50%;
+  background:linear-gradient(135deg,var(--coral),var(--violet));
+  display:flex;align-items:center;justify-content:center;
+  font-size:.75rem;font-weight:700;color:#fff;
+}
+.btn-logout{
+  padding:7px 14px;border-radius:10px;border:1px solid var(--border);
+  background:transparent;color:var(--muted);font-size:.8rem;cursor:pointer;
+  transition:var(--trans);font-family:'DM Sans',sans-serif;
+}
+.btn-logout:hover{background:rgba(255,107,107,.15);color:var(--coral);border-color:rgba(255,107,107,.3);}
+
+/* Hamburger */
+.hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;padding:8px;background:none;border:none;}
+.hamburger span{width:22px;height:2px;background:var(--muted);border-radius:2px;transition:var(--trans);}
+.mobile-menu{
+  display:none;position:fixed;top:64px;left:0;right:0;z-index:99;
+  background:rgba(26,16,37,.97);backdrop-filter:blur(20px);
+  padding:16px;border-bottom:1px solid var(--border);
+  flex-direction:column;gap:4px;
+}
+.mobile-menu.open{display:flex;}
+.mobile-menu .nav-link{font-size:.9rem;padding:10px 14px;}
+
+/* ── MAIN ── */
+main{padding-top:64px;position:relative;z-index:1;}
+
+/* ── HERO ── */
+.hero{
+  padding:48px 24px 36px;
+  text-align:center;
+  position:relative;
+}
+.hero-datetime{
+  display:inline-flex;flex-direction:column;align-items:center;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:20px;
+  padding:20px 36px;
+  margin-bottom:28px;
+  backdrop-filter:blur(10px);
+}
+.hero-date{
+  font-family:'Playfair Display',serif;
+  font-size:1.5rem;font-weight:700;
+  background:linear-gradient(135deg,var(--yellow),var(--coral));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.hero-time{
+  font-size:2.8rem;font-weight:700;letter-spacing:2px;
+  background:linear-gradient(135deg,var(--teal),var(--violet));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  line-height:1;margin-top:4px;
+}
+.hero-day{font-size:.85rem;color:var(--muted);margin-top:6px;text-transform:capitalize;}
+.hero-title{
+  font-family:'Playfair Display',serif;
+  font-size:clamp(1.8rem,4vw,2.8rem);font-weight:900;
+  margin-bottom:8px;
+}
+.hero-sub{color:var(--muted);font-size:.95rem;margin-bottom:28px;}
+.btn-create{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:14px 28px;border-radius:14px;border:none;
+  background:linear-gradient(135deg,var(--coral),var(--violet));
+  color:#fff;font-family:'DM Sans',sans-serif;font-size:1rem;font-weight:700;
+  cursor:pointer;transition:var(--trans);
+  box-shadow:0 6px 24px rgba(255,107,107,.35);
+}
+.btn-create:hover{transform:translateY(-2px);box-shadow:0 10px 32px rgba(255,107,107,.5);}
+.btn-create:active{transform:translateY(0);}
+
+/* ── TOOLBAR ── */
+.toolbar{
+  display:flex;gap:12px;align-items:center;flex-wrap:wrap;
+  padding:0 24px 24px;
+  max-width:1100px;margin:0 auto;
+}
+.search-wrap{position:relative;flex:1;min-width:200px;}
+.search-wrap .si{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:.9rem;pointer-events:none;}
+.search-input{
+  width:100%;padding:11px 16px 11px 40px;
+  background:var(--surface);border:1.5px solid var(--border);
+  border-radius:12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.88rem;
+  outline:none;transition:var(--trans);
+}
+.search-input::placeholder{color:var(--muted);}
+.search-input:focus{border-color:var(--teal);background:var(--surface2);box-shadow:0 0 0 3px rgba(78,205,196,.15);}
+.select-pill{
+  padding:11px 16px;background:var(--surface);border:1.5px solid var(--border);
+  border-radius:12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.88rem;
+  outline:none;cursor:pointer;transition:var(--trans);
+  -webkit-appearance:none;appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='rgba(255,255,255,0.4)' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 12px center;padding-right:36px;
+}
+.select-pill:focus{border-color:var(--teal);}
+.sort-btn{
+  display:flex;align-items:center;gap:6px;
+  padding:11px 16px;background:var(--surface);border:1.5px solid var(--border);
+  border-radius:12px;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:.88rem;
+  cursor:pointer;transition:var(--trans);white-space:nowrap;
+}
+.sort-btn:hover{background:var(--surface2);color:var(--text);border-color:var(--teal);}
+.sort-btn.asc .arrow::after{content:'↑';}
+.sort-btn.desc .arrow::after{content:'↓';}
+
+/* ── EVENTS GRID ── */
+.events-container{
+  max-width:1100px;margin:0 auto;
+  padding:0 24px 80px;
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(320px,1fr));
+  gap:20px;
+}
+.empty-state{
+  grid-column:1/-1;text-align:center;padding:60px 20px;
+  color:var(--muted);
+}
+.empty-state .ei{font-size:3rem;margin-bottom:12px;}
+.empty-state p{font-size:.9rem;}
+
+/* ── EVENT CARD ── */
+.event-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:20px;
+  overflow:hidden;
+  transition:var(--trans);
+  cursor:pointer;
+  animation:cardIn .4s ease both;
+}
+.event-card:hover{transform:translateY(-4px);border-color:rgba(255,255,255,.22);box-shadow:0 16px 40px rgba(0,0,0,.35);}
+@keyframes cardIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.card-header{
+  padding:18px 20px 14px;
+  display:flex;align-items:flex-start;justify-content:space-between;gap:10px;
+}
+.card-cat{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:4px 12px;border-radius:20px;font-size:.75rem;font-weight:700;
+  text-transform:uppercase;letter-spacing:.5px;
+}
+.card-date-badge{
+  font-size:.78rem;color:var(--muted);
+  background:var(--surface2);padding:4px 10px;border-radius:8px;white-space:nowrap;
+}
+.card-body{padding:0 20px 16px;}
+.card-title{
+  font-family:'Playfair Display',serif;
+  font-size:1.15rem;font-weight:700;margin-bottom:8px;line-height:1.3;
+}
+.card-meta{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;}
+.meta-chip{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:4px 10px;background:var(--surface2);
+  border-radius:8px;font-size:.78rem;color:var(--muted);
+}
+.card-footer{
+  padding:12px 20px;
+  border-top:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.poll-preview{display:flex;align-items:center;gap:6px;font-size:.78rem;color:var(--muted);}
+.poll-avatars{display:flex;}
+.poll-av{
+  width:24px;height:24px;border-radius:50%;
+  background:linear-gradient(135deg,var(--coral),var(--violet));
+  border:2px solid var(--deep);
+  display:flex;align-items:center;justify-content:center;
+  font-size:.6rem;font-weight:700;
+  margin-left:-6px;
+}
+.poll-av:first-child{margin-left:0;}
+.card-author{font-size:.75rem;color:var(--muted);}
+
+/* Catégorie couleurs */
+.cat-olympiade  {background:rgba(255,217,61,.15); color:var(--yellow);  border:1px solid rgba(255,217,61,.3);}
+.cat-nouvel-an  {background:rgba(199,125,255,.15);color:var(--violet);  border:1px solid rgba(199,125,255,.3);}
+.cat-anniversaire{background:rgba(255,158,188,.15);color:var(--pink);   border:1px solid rgba(255,158,188,.3);}
+.cat-soiree     {background:rgba(78,205,196,.15); color:var(--teal);    border:1px solid rgba(78,205,196,.3);}
+.cat-barbecue   {background:rgba(255,107,107,.15);color:var(--coral);   border:1px solid rgba(255,107,107,.3);}
+.cat-jeux       {background:rgba(168,224,99,.15); color:var(--lime);    border:1px solid rgba(168,224,99,.3);}
+.cat-feria      {background:rgba(255,107,107,.15);color:#ffaa44;        border:1px solid rgba(255,170,68,.3);}
+.cat-vacances   {background:rgba(78,205,196,.15); color:#66eeff;        border:1px solid rgba(102,238,255,.3);}
+.cat-autre      {background:rgba(255,255,255,.08);color:var(--muted);   border:1px solid var(--border);}
+
+/* ── MODAL ── */
+.modal-overlay{
+  position:fixed;inset:0;z-index:200;
+  background:rgba(0,0,0,.7);
+  backdrop-filter:blur(8px);
+  display:none;align-items:center;justify-content:center;
+  padding:20px;
+  overflow-y:auto;
+}
+.modal-overlay.open{display:flex;}
+.modal{
+  background:#1e1230;
+  border:1px solid var(--border);
+  border-radius:24px;
+  width:min(580px,100%);
+  max-height:90vh;
+  overflow-y:auto;
+  animation:modalIn .35s cubic-bezier(.4,0,.2,1) both;
+  position:relative;
+}
+.modal::-webkit-scrollbar{width:4px;}
+.modal::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+@keyframes modalIn{from{opacity:0;transform:scale(.94)translateY(20px)}to{opacity:1;transform:scale(1)translateY(0)}}
+.modal-header{
+  padding:24px 24px 16px;
+  display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid var(--border);
+  position:sticky;top:0;background:#1e1230;z-index:2;
+}
+.modal-title{
+  font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;
+}
+.modal-close{
+  width:32px;height:32px;border-radius:8px;
+  background:var(--surface);border:1px solid var(--border);
+  cursor:pointer;font-size:1rem;color:var(--muted);
+  display:flex;align-items:center;justify-content:center;
+  transition:var(--trans);
+}
+.modal-close:hover{background:rgba(255,107,107,.15);color:var(--coral);}
+.modal-body{padding:20px 24px;}
+.modal-footer{
+  padding:16px 24px 24px;
+  display:flex;gap:10px;justify-content:flex-end;
+  border-top:1px solid var(--border);
+}
+
+/* Étapes création */
+.step-indicator{
+  display:flex;gap:8px;align-items:center;
+  margin-bottom:20px;
+}
+.step-dot{
+  width:8px;height:8px;border-radius:50%;
+  background:var(--border);transition:var(--trans);
+}
+.step-dot.active{background:linear-gradient(135deg,var(--coral),var(--violet));width:24px;border-radius:4px;}
+.step-dot.done{background:var(--teal);}
+
+/* Sélecteur de catégorie */
+.cat-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:10px;
+  margin-bottom:8px;
+}
+.cat-btn{
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  padding:14px 8px;border-radius:14px;
+  background:var(--surface);border:1.5px solid var(--border);
+  cursor:pointer;transition:var(--trans);text-align:center;
+}
+.cat-btn:hover{background:var(--surface2);border-color:rgba(255,255,255,.25);}
+.cat-btn.selected{border-color:var(--teal);background:rgba(78,205,196,.12);}
+.cat-btn .ce{font-size:1.5rem;}
+.cat-btn .cl{font-size:.75rem;font-weight:600;color:var(--muted);}
+.cat-btn.selected .cl{color:var(--teal);}
+
+/* Form fields dans modal */
+.mfield{margin-bottom:16px;}
+.mfield label{
+  display:block;font-size:.75rem;font-weight:700;
+  color:var(--muted);margin-bottom:6px;
+  letter-spacing:.5px;text-transform:uppercase;
+}
+.mfield-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.minput{
+  width:100%;padding:11px 14px;
+  background:var(--surface);border:1.5px solid var(--border);
+  border-radius:11px;color:var(--text);
+  font-family:'DM Sans',sans-serif;font-size:.88rem;
+  outline:none;transition:var(--trans);
+  -webkit-appearance:none;appearance:none;
+}
+.minput:focus{border-color:var(--teal);background:var(--surface2);box-shadow:0 0 0 3px rgba(78,205,196,.15);}
+.minput::placeholder{color:rgba(255,255,255,.25);}
+textarea.minput{resize:vertical;min-height:80px;}
+.radio-group{display:flex;gap:8px;flex-wrap:wrap;}
+.radio-btn{
+  padding:8px 16px;border-radius:9px;
+  background:var(--surface);border:1.5px solid var(--border);
+  cursor:pointer;transition:var(--trans);font-size:.83rem;color:var(--muted);
+}
+.radio-btn:hover{background:var(--surface2);}
+.radio-btn.sel{background:rgba(78,205,196,.15);border-color:var(--teal);color:var(--teal);}
+
+/* Boutons modal */
+.btn-sec{
+  padding:11px 20px;border-radius:12px;border:1.5px solid var(--border);
+  background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;
+  font-size:.9rem;cursor:pointer;transition:var(--trans);
+}
+.btn-sec:hover{background:var(--surface2);color:var(--text);}
+.btn-prim{
+  padding:11px 24px;border-radius:12px;border:none;
+  background:linear-gradient(135deg,var(--coral),var(--violet));
+  color:#fff;font-family:'DM Sans',sans-serif;font-size:.9rem;font-weight:700;
+  cursor:pointer;transition:var(--trans);box-shadow:0 4px 16px rgba(255,107,107,.3);
+}
+.btn-prim:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(255,107,107,.45);}
+.btn-prim:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+
+/* Alert */
+.malert{
+  padding:10px 14px;border-radius:10px;font-size:.82rem;margin-bottom:14px;display:none;
+}
+.malert.error{background:rgba(255,107,107,.15);border:1px solid rgba(255,107,107,.4);color:#ff9b9b;display:block;}
+.malert.success{background:rgba(78,205,196,.15);border:1px solid rgba(78,205,196,.4);color:var(--teal);display:block;}
+
+/* ── MODAL DÉTAIL ÉVÉNEMENT ── */
+.detail-hero{
+  padding:24px 24px 16px;
+  background:linear-gradient(135deg,rgba(255,107,107,.15),rgba(199,125,255,.15));
+}
+.detail-cat{margin-bottom:12px;}
+.detail-title{
+  font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:900;margin-bottom:8px;
+}
+.detail-meta{display:flex;flex-wrap:wrap;gap:8px;}
+.detail-chip{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:5px 12px;background:var(--surface);border:1px solid var(--border);
+  border-radius:8px;font-size:.8rem;color:var(--muted);
+}
+.detail-section{margin-bottom:20px;}
+.detail-section h3{
+  font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px;
+  color:var(--muted);margin-bottom:10px;
+  display:flex;align-items:center;gap:6px;
+}
+.detail-section h3::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* Sondage présence */
+.poll-options{display:flex;flex-direction:column;gap:8px;}
+.poll-option{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 14px;border-radius:11px;
+  background:var(--surface);border:1.5px solid var(--border);
+  cursor:pointer;transition:var(--trans);
+}
+.poll-option:hover{background:var(--surface2);}
+.poll-option.voted-yes{border-color:var(--teal);background:rgba(78,205,196,.1);}
+.poll-option.voted-no {border-color:var(--coral);background:rgba(255,107,107,.08);}
+.poll-label{font-size:.88rem;font-weight:500;}
+.poll-bar-wrap{flex:1;margin:0 12px;height:6px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden;}
+.poll-bar{height:100%;border-radius:3px;transition:width .5s ease;}
+.poll-bar.yes{background:linear-gradient(90deg,var(--teal),var(--lime));}
+.poll-bar.no {background:linear-gradient(90deg,var(--coral),var(--pink));}
+.poll-count{font-size:.78rem;color:var(--muted);min-width:24px;text-align:right;}
+.my-vote-btn{
+  display:flex;gap:8px;margin-top:8px;
+}
+.vote-btn{
+  flex:1;padding:10px;border-radius:11px;border:1.5px solid var(--border);
+  background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:.88rem;
+  cursor:pointer;transition:var(--trans);font-weight:600;
+}
+.vote-btn.yes:hover,.vote-btn.yes.active{background:rgba(78,205,196,.15);border-color:var(--teal);color:var(--teal);}
+.vote-btn.no:hover,.vote-btn.no.active{background:rgba(255,107,107,.12);border-color:var(--coral);color:var(--coral);}
+
+/* Commentaires */
+.comments-list{display:flex;flex-direction:column;gap:10px;margin-bottom:12px;}
+.comment{
+  display:flex;gap:10px;
+  padding:10px 14px;background:var(--surface);border-radius:11px;
+  border:1px solid var(--border);
+}
+.comment-av{
+  width:32px;height:32px;min-width:32px;border-radius:50%;
+  background:linear-gradient(135deg,var(--coral),var(--violet));
+  display:flex;align-items:center;justify-content:center;
+  font-size:.75rem;font-weight:700;
+}
+.comment-content{}
+.comment-author{font-size:.78rem;font-weight:700;margin-bottom:2px;}
+.comment-text{font-size:.85rem;color:rgba(255,255,255,.8);line-height:1.4;}
+.comment-time{font-size:.72rem;color:var(--muted);margin-top:3px;}
+.comment-input-row{display:flex;gap:8px;}
+.comment-input-row .minput{flex:1;}
+.btn-send{
+  padding:0 16px;border-radius:11px;border:none;
+  background:linear-gradient(135deg,var(--coral),var(--violet));
+  color:#fff;font-size:1rem;cursor:pointer;transition:var(--trans);
+}
+.btn-send:hover{opacity:.85;}
+
+/* Spinner */
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;vertical-align:middle;margin-right:6px;}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+/* Loading */
+.loading-grid{grid-column:1/-1;display:flex;justify-content:center;padding:60px;}
+.loading-spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--teal);border-radius:50%;animation:sp .8s linear infinite;}
+
+/* Responsive */
+@media(max-width:768px){
+  nav{padding:0 16px;}
+  .nav-links{display:none;}
+  .hamburger{display:flex;}
+  .hero{padding:32px 16px 24px;}
+  .hero-time{font-size:2.2rem;}
+  .toolbar{padding:0 16px 20px;gap:8px;}
+  .events-container{padding:0 16px 60px;grid-template-columns:1fr;}
+  .cat-grid{grid-template-columns:repeat(3,1fr);}
+  .mfield-row{grid-template-columns:1fr;}
+  .modal{border-radius:20px 20px 0 0;margin-top:auto;max-height:95vh;}
+  .modal-overlay{align-items:flex-end;padding:0;}
+}
+@media(max-width:400px){
+  .cat-grid{grid-template-columns:repeat(2,1fr);}
+  .hero-time{font-size:1.9rem;}
+}
+</style>
+</head>
+<body>
+<div class="bg"></div>
+
+<!-- NAVBAR -->
+<nav>
+  <a href="events.html" class="nav-logo">🎨 Les Artistes</a>
+  <div class="nav-links">
+    <a href="events.html"  class="nav-link active"><span>🎉 Événements</span></a>
+    <a href="news.html"    class="nav-link">📰 Actualités</a>
+    <a href="photos.html"  class="nav-link">📸 Photos</a>
+    <a href="games.html"   class="nav-link">🎮 Jeux</a>
+    <a href="shop.html"    class="nav-link">🛍️ Boutique</a>
+    <a href="annuaire.html"class="nav-link">📒 Annuaire</a>
+  </div>
+  <div class="nav-right">
+    <div class="nav-user" id="nav-user">
+      <div class="avatar" id="nav-avatar">?</div>
+      <span id="nav-name">...</span>
+    </div>
+    <button class="btn-logout" onclick="handleLogout()">Déconnexion</button>
+  </div>
+  <button class="hamburger" onclick="toggleMenu()" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<!-- MENU MOBILE -->
+<div class="mobile-menu" id="mobile-menu">
+  <a href="events.html"  class="nav-link active">🎉 Événements</a>
+  <a href="news.html"    class="nav-link">📰 Actualités</a>
+  <a href="photos.html"  class="nav-link">📸 Photos</a>
+  <a href="games.html"   class="nav-link">🎮 Jeux</a>
+  <a href="shop.html"    class="nav-link">🛍️ Boutique</a>
+  <a href="annuaire.html"class="nav-link">📒 Annuaire</a>
+</div>
+
+<main>
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-datetime">
+      <div class="hero-date" id="hero-date">--</div>
+      <div class="hero-time" id="hero-time">--:--:--</div>
+      <div class="hero-day"  id="hero-day">--</div>
+    </div>
+    <h1 class="hero-title">Les Événements du groupe 🎊</h1>
+    <p class="hero-sub">Organise, vote et retrouve tous vos moments ensemble</p>
+    <button class="btn-create" onclick="openCreateModal()">
+      ✨ Créer un événement
+    </button>
+  </section>
+
+  <!-- TOOLBAR -->
+  <div class="toolbar">
+    <div class="search-wrap">
+      <span class="si">🔍</span>
+      <input type="text" class="search-input" id="search-input" placeholder="Rechercher un événement...">
+    </div>
+    <select class="select-pill" id="filter-cat">
+      <option value="">Toutes catégories</option>
+      <option value="Olympiade">🏅 Olympiade</option>
+      <option value="Nouvel an">🎆 Nouvel an</option>
+      <option value="Anniversaire">🎂 Anniversaire</option>
+      <option value="Soirée">🌙 Soirée</option>
+      <option value="Barbecue">🔥 Barbecue</option>
+      <option value="Soirée jeux de société">🎲 Jeux de société</option>
+      <option value="Féria">🎠 Féria</option>
+      <option value="Vacances">✈️ Vacances</option>
+      <option value="Autre">💫 Autre</option>
+    </select>
+    <button class="sort-btn desc" id="sort-btn" onclick="toggleSort()">
+      <span>Date</span><span class="arrow"></span>
+    </button>
+  </div>
+
+  <!-- EVENTS -->
+  <div class="events-container" id="events-container">
+    <div class="loading-grid"><div class="loading-spinner"></div></div>
+  </div>
+</main>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- MODAL CRÉATION -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-create">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="create-title">Créer un événement</div>
+      <button class="modal-close" onclick="closeModal('modal-create')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="malert" id="create-alert"></div>
+
+      <!-- STEP 1 : Choix catégorie -->
+      <div id="step-1">
+        <p style="color:var(--muted);font-size:.85rem;margin-bottom:14px;">Quelle type d'événement ?</p>
+        <div class="cat-grid">
+          <div class="cat-btn" onclick="selectCat(this,'Olympiade')">       <span class="ce">🏅</span><span class="cl">Olympiade</span></div>
+          <div class="cat-btn" onclick="selectCat(this,'Nouvel an')">       <span class="ce">🎆</span><span class="cl">Nouvel an</span></div>
+          <div class="cat-btn" onclick="selectCat(this,'Anniversaire')">    <span class="ce">🎂</span><span class="cl">Anniversaire</span></div>
+          <div class="cat-btn" onclick="selectCat(this,'Soirée')">          <span class="ce">🌙</span><span class="cl">Soirée</span></div>
+          <div class="cat-btn" onclick="selectCat(this,'Barbecue')">        <span class="ce">🔥</span><span class="cl">Barbecue</span></div>
+          <div class="cat-btn" onclick="selectCat(this,'Soirée jeux de société')"><span class="ce">🎲</span><span class="cl">Jeux société</span></div>
+          <div class="cat-btn" onclick="selectCat(this,'Féria')">           <span class="ce">🎠</span><span class="cl">Féria</span></div>
+          <div class="cat-btn" onclick="selectCat(this,'Vacances')">        <span class="ce">✈️</span><span class="cl">Vacances</span></div>
+          <div class="cat-btn" onclick="selectCat(this,'Autre')">           <span class="ce">💫</span><span class="cl">Autre</span></div>
+        </div>
+      </div>
+
+      <!-- STEP 2 : Formulaire selon catégorie -->
+      <div id="step-2" style="display:none">
+        <div id="form-fields"></div>
+      </div>
+
+    </div>
+    <div class="modal-footer" id="create-footer" style="display:none">
+      <button class="btn-sec" onclick="backStep()">← Retour</button>
+      <button class="btn-prim" id="btn-submit-event" onclick="submitEvent()">Créer l'événement 🎉</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- MODAL DÉTAIL -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-detail">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="detail-modal-title">Détail</div>
+      <div style="display:flex;gap:8px">
+        <button class="modal-close" id="btn-delete-event" style="color:var(--coral);display:none" title="Supprimer">🗑️</button>
+        <button class="modal-close" onclick="closeModal('modal-detail')">✕</button>
+      </div>
+    </div>
+    <div class="modal-body" id="detail-body">
+      <div style="text-align:center;padding:40px;color:var(--muted)">
+        <div class="loading-spinner" style="margin:0 auto"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// ═══════════════════════════════════════════════════
+//  CONFIG
+// ═══════════════════════════════════════════════════
+var SUPABASE_URL  = 'https://ldchxxkmvepvbvhdokot.supabase.co';
+var SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkY2h4eGttdmVwdmJ2aGRva290Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0NDQwNTMsImV4cCI6MjA4OTAyMDA1M30.HJw5-GsHCildEQ28HAB30_YKdiZOdeRJIml5wgLvHos';
+var sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+var currentUser    = null;
+var currentProfile = null;
+var allEvents      = [];
+var sortAsc        = false;
+var selectedCat    = '';
+var currentEventId = null;
+
+// ═══════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════
+(async function init() {
+  var s = await sb.auth.getSession();
+  if (!s.data.session) { window.location.href = 'login.html'; return; }
+  currentUser = s.data.session.user;
+
+  var p = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
+  if (p.data) {
+    currentProfile = p.data;
+    document.getElementById('nav-name').textContent   = p.data.prenom || p.data.pseudo || 'Moi';
+    document.getElementById('nav-avatar').textContent = (p.data.prenom||'?')[0].toUpperCase();
+  }
+
+  startClock();
+  loadEvents();
+})();
+
+// ═══════════════════════════════════════════════════
+//  HORLOGE
+// ═══════════════════════════════════════════════════
+function startClock() {
+  function tick() {
+    var now  = new Date();
+    var days = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+    var months = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+    document.getElementById('hero-date').textContent =
+      now.getDate() + ' ' + months[now.getMonth()] + ' ' + now.getFullYear();
+    document.getElementById('hero-time').textContent =
+      pad(now.getHours())+':'+pad(now.getMinutes())+':'+pad(now.getSeconds());
+    document.getElementById('hero-day').textContent  = days[now.getDay()];
+  }
+  tick(); setInterval(tick, 1000);
+}
+function pad(n){return n<10?'0'+n:n;}
+
+// ═══════════════════════════════════════════════════
+//  LOAD EVENTS
+// ═══════════════════════════════════════════════════
+async function loadEvents() {
+  var c = document.getElementById('events-container');
+  c.innerHTML = '<div class="loading-grid"><div class="loading-spinner"></div></div>';
+  var r = await sb.from('events').select('*, profiles(prenom,nom,pseudo)').order('date_event',{ascending:sortAsc});
+  if (r.error) { c.innerHTML = '<div class="empty-state"><div class="ei">😕</div><p>Erreur de chargement</p></div>'; return; }
+  allEvents = r.data || [];
+  renderEvents();
+}
+
+function renderEvents() {
+  var q    = document.getElementById('search-input').value.toLowerCase();
+  var cat  = document.getElementById('filter-cat').value;
+  var list = allEvents.filter(function(e) {
+    var matchQ   = !q || JSON.stringify(e).toLowerCase().includes(q);
+    var matchCat = !cat || e.categorie === cat;
+    return matchQ && matchCat;
+  });
+  var c = document.getElementById('events-container');
+  if (!list.length) {
+    c.innerHTML = '<div class="empty-state"><div class="ei">🎈</div><p>Aucun événement pour le moment.<br>Sois le premier à en créer un !</p></div>';
+    return;
+  }
+  c.innerHTML = list.map(function(e){ return buildCard(e); }).join('');
+}
+
+function buildCard(e) {
+  var catClass = 'cat-' + e.categorie.toLowerCase().replace(/\s+/g,'-').replace(/é/g,'e').replace(/è/g,'e');
+  var catEmoji = {
+    'Olympiade':'🏅','Nouvel an':'🎆','Anniversaire':'🎂','Soirée':'🌙',
+    'Barbecue':'🔥','Soirée jeux de société':'🎲','Féria':'🎠','Vacances':'✈️','Autre':'💫'
+  }[e.categorie] || '📅';
+
+  var dateStr = e.date_event ? new Date(e.date_event).toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'}) : '';
+  var author  = e.profiles ? (e.profiles.prenom||e.profiles.pseudo||'?') : '?';
+
+  var chips = '';
+  if (e.chez_qui)     chips += '<span class="meta-chip">📍 ' + esc(e.chez_qui)     + '</span>';
+  if (e.heure)        chips += '<span class="meta-chip">🕐 ' + esc(e.heure)        + '</span>';
+  if (e.lieu)         chips += '<span class="meta-chip">🗺️ ' + esc(e.lieu)         + '</span>';
+  if (e.duree)        chips += '<span class="meta-chip">⏱️ ' + esc(e.duree)        + '</span>';
+  if (e.anniversaire_qui) chips += '<span class="meta-chip">🥳 ' + esc(e.anniversaire_qui) + '</span>';
+
+  return '<div class="event-card" onclick="openDetail(\'' + e.id + '\')">'
+    + '<div class="card-header">'
+    +   '<span class="card-cat ' + catClass + '">' + catEmoji + ' ' + esc(e.categorie) + '</span>'
+    +   '<span class="card-date-badge">' + dateStr + '</span>'
+    + '</div>'
+    + '<div class="card-body">'
+    +   '<div class="card-title">' + buildTitle(e) + '</div>'
+    +   '<div class="card-meta">' + chips + '</div>'
+    + '</div>'
+    + '<div class="card-footer">'
+    +   '<div class="poll-preview">🗳️ <span>Sondage présence</span></div>'
+    +   '<div class="card-author">par ' + esc(author) + '</div>'
+    + '</div>'
+    + '</div>';
+}
+
+function buildTitle(e) {
+  switch(e.categorie) {
+    case 'Anniversaire': return '🎂 Anniversaire' + (e.anniversaire_qui ? ' de '+esc(e.anniversaire_qui) : '') + (e.chez_qui ? ' chez '+esc(e.chez_qui) : '');
+    case 'Vacances':     return '✈️ Vacances' + (e.lieu ? ' à '+esc(e.lieu) : '');
+    case 'Féria':        return '🎠 Féria ' + (e.date_event ? new Date(e.date_event).getFullYear() : '');
+    default:             return esc(e.categorie) + (e.chez_qui ? ' chez '+esc(e.chez_qui) : '');
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  SEARCH / SORT
+// ═══════════════════════════════════════════════════
+document.getElementById('search-input').addEventListener('input', renderEvents);
+document.getElementById('filter-cat').addEventListener('change', renderEvents);
+
+function toggleSort() {
+  sortAsc = !sortAsc;
+  var btn = document.getElementById('sort-btn');
+  btn.className = 'sort-btn ' + (sortAsc ? 'asc' : 'desc');
+  allEvents.sort(function(a,b){
+    var da = new Date(a.date_event), db = new Date(b.date_event);
+    return sortAsc ? da-db : db-da;
+  });
+  renderEvents();
+}
+
+// ═══════════════════════════════════════════════════
+//  MODAL CRÉATION — STEP 1
+// ═══════════════════════════════════════════════════
+function openCreateModal() {
+  selectedCat = '';
+  document.getElementById('step-1').style.display = 'block';
+  document.getElementById('step-2').style.display = 'none';
+  document.getElementById('create-footer').style.display = 'none';
+  document.getElementById('create-title').textContent = 'Créer un événement';
+  document.getElementById('create-alert').className = 'malert';
+  document.querySelectorAll('.cat-btn').forEach(function(b){ b.classList.remove('selected'); });
+  openModal('modal-create');
+}
+
+function selectCat(btn, cat) {
+  document.querySelectorAll('.cat-btn').forEach(function(b){ b.classList.remove('selected'); });
+  btn.classList.add('selected');
+  selectedCat = cat;
+  // Passe au step 2 après 200ms pour l'animation
+  setTimeout(function(){
+    document.getElementById('step-1').style.display = 'none';
+    document.getElementById('step-2').style.display = 'block';
+    document.getElementById('create-footer').style.display = 'flex';
+    document.getElementById('create-title').textContent = getEmoji(cat) + ' ' + cat;
+    buildFormFields(cat);
+  }, 200);
+}
+
+function backStep() {
+  document.getElementById('step-1').style.display = 'block';
+  document.getElementById('step-2').style.display = 'none';
+  document.getElementById('create-footer').style.display = 'none';
+  document.getElementById('create-title').textContent = 'Créer un événement';
+  document.getElementById('create-alert').className = 'malert';
+}
+
+// ═══════════════════════════════════════════════════
+//  FORMULAIRES PAR CATÉGORIE
+// ═══════════════════════════════════════════════════
+function buildFormFields(cat) {
+  var html = '';
+  // Champs communs
+  function dateHeure(required) {
+    return '<div class="mfield mfield-row">'
+      + '<div><label>Date ' + (required?'*':'') + '</label><input type="date" class="minput" id="f-date" required></div>'
+      + '<div><label>Heure</label><input type="time" class="minput" id="f-heure"></div>'
+      + '</div>';
+  }
+  function chezQui() {
+    return '<div class="mfield"><label>Chez qui ? *</label><input type="text" class="minput" id="f-chez" placeholder="Prénom ou adresse" required></div>';
+  }
+  function dormir() {
+    return '<div class="mfield"><label>Peut-on dormir sur place ?</label>'
+      + '<div class="radio-group">'
+      + '<span class="radio-btn" onclick="selectRadio(this,\'f-dormir\',\'oui\')">✅ Oui</span>'
+      + '<span class="radio-btn" onclick="selectRadio(this,\'f-dormir\',\'non\')">❌ Non</span>'
+      + '<span class="radio-btn sel" onclick="selectRadio(this,\'f-dormir\',\'nsp\')">🤷 NSP</span>'
+      + '</div><input type="hidden" id="f-dormir" value="nsp"></div>';
+  }
+  function boisson() {
+    return '<div class="mfield"><label>Boisson à ramener ?</label><input type="text" class="minput" id="f-boisson" placeholder="Ex: bières, vins..."></div>';
+  }
+  function mangerAvant() {
+    return '<div class="mfield"><label>Faut-il manger avant ?</label>'
+      + '<div class="radio-group">'
+      + '<span class="radio-btn" onclick="selectRadio(this,\'f-manger\',\'oui\')">✅ Oui</span>'
+      + '<span class="radio-btn" onclick="selectRadio(this,\'f-manger\',\'non\')">❌ Non</span>'
+      + '<span class="radio-btn sel" onclick="selectRadio(this,\'f-manger\',\'nsp\')">🤷 NSP</span>'
+      + '</div><input type="hidden" id="f-manger" value="nsp"></div>';
+  }
+
+  switch(cat) {
+    case 'Olympiade':
+      html = chezQui() + dateHeure(true);
+      break;
+    case 'Nouvel an':
+      html = chezQui() + dateHeure(true) + dormir();
+      break;
+    case 'Anniversaire':
+      html = chezQui() + dateHeure(true)
+        + '<div class="mfield"><label>Anniversaire de qui ? *</label><input type="text" class="minput" id="f-anniv-qui" placeholder="Prénom" required></div>'
+        + '<div class="mfield"><label>Idée cadeau ?</label><input type="text" class="minput" id="f-cadeau" placeholder="Optionnel"></div>'
+        + boisson() + mangerAvant() + dormir();
+      break;
+    case 'Soirée':
+      html = chezQui() + dateHeure(true) + boisson() + mangerAvant() + dormir();
+      break;
+    case 'Barbecue':
+      html = chezQui() + dateHeure(true)
+        + '<div class="mfield"><label>Quoi apporter ?</label><input type="text" class="minput" id="f-apporter" placeholder="Viandes, boissons..."></div>';
+      break;
+    case 'Soirée jeux de société':
+      html = chezQui() + dateHeure(true)
+        + '<div class="mfield"><label>Jeux prévus ?</label><input type="text" class="minput" id="f-jeux-prevus" placeholder="Optionnel"></div>';
+      break;
+    case 'Féria':
+      html = dateHeure(true)
+        + '<div class="mfield mfield-row">'
+        + '<div><label>Heure de départ</label><input type="time" class="minput" id="f-heure-depart"></div>'
+        + '<div><label>Durée</label><input type="text" class="minput" id="f-duree" placeholder="Ex: 2 jours"></div>'
+        + '</div>';
+      break;
+    case 'Vacances':
+      html = '<div class="mfield mfield-row">'
+        + '<div><label>Date départ *</label><input type="date" class="minput" id="f-date" required></div>'
+        + '<div><label>Durée</label><input type="text" class="minput" id="f-duree" placeholder="Ex: 1 semaine"></div>'
+        + '</div>'
+        + '<div class="mfield"><label>Lieu / Destination *</label><input type="text" class="minput" id="f-lieu" placeholder="Ex: Barcelone" required></div>';
+      break;
+    case 'Autre':
+      html = chezQui() + dateHeure(true)
+        + '<div class="mfield"><label>Raison / Description *</label><textarea class="minput" id="f-raison" placeholder="Décris l\'événement..." required></textarea></div>';
+      break;
+  }
+  html += '<div class="mfield"><label>Note supplémentaire</label><textarea class="minput" id="f-note" placeholder="Infos complémentaires (optionnel)..." style="min-height:60px"></textarea></div>';
+  document.getElementById('form-fields').innerHTML = html;
+}
+
+function selectRadio(el, fieldId, val) {
+  el.closest('.radio-group').querySelectorAll('.radio-btn').forEach(function(b){ b.classList.remove('sel'); });
+  el.classList.add('sel');
+  document.getElementById(fieldId).value = val;
+}
+
+// ═══════════════════════════════════════════════════
+//  SUBMIT ÉVÉNEMENT
+// ═══════════════════════════════════════════════════
+async function submitEvent() {
+  var btn = document.getElementById('btn-submit-event');
+  var alert = document.getElementById('create-alert');
+  alert.className = 'malert';
+
+  var g = function(id){ var el=document.getElementById(id); return el?el.value.trim():''; };
+
+  var date = g('f-date');
+  if (!date) { alert.textContent='⚠️ La date est obligatoire.'; alert.className='malert error'; return; }
+
+  var payload = {
+    categorie:   selectedCat,
+    date_event:  date,
+    heure:       g('f-heure') || null,
+    chez_qui:    g('f-chez') || null,
+    lieu:        g('f-lieu') || null,
+    duree:       g('f-duree') || null,
+    anniversaire_qui: g('f-anniv-qui') || null,
+    cadeau:      g('f-cadeau') || null,
+    boisson:     g('f-boisson') || null,
+    manger_avant:g('f-manger') || null,
+    dormir:      g('f-dormir') || null,
+    apporter:    g('f-apporter') || null,
+    jeux_prevus: g('f-jeux-prevus') || null,
+    heure_depart:g('f-heure-depart') || null,
+    raison:      g('f-raison') || null,
+    note:        g('f-note') || null,
+    created_by:  currentUser.id
+  };
+
+  // Validation champs requis
+  if (['Olympiade','Anniversaire','Soirée','Barbecue','Soirée jeux de société','Autre','Nouvel an'].includes(selectedCat) && !payload.chez_qui) {
+    alert.textContent='⚠️ "Chez qui" est obligatoire pour cette catégorie.'; alert.className='malert error'; return;
+  }
+  if (selectedCat==='Anniversaire' && !payload.anniversaire_qui) {
+    alert.textContent="⚠️ Indique l'anniversaire de qui."; alert.className='malert error'; return;
+  }
+
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span>Création...';
+  var r = await sb.from('events').insert(payload).select().single();
+  btn.disabled=false; btn.innerHTML='Créer l\'événement 🎉';
+
+  if (r.error) {
+    alert.textContent='❌ Erreur : '+r.error.message; alert.className='malert error';
+  } else {
+    closeModal('modal-create');
+    loadEvents();
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  MODAL DÉTAIL + SONDAGES + COMMENTAIRES
+// ═══════════════════════════════════════════════════
+async function openDetail(id) {
+  currentEventId = id;
+  openModal('modal-detail');
+  document.getElementById('detail-modal-title').textContent = 'Chargement...';
+  document.getElementById('detail-body').innerHTML = '<div style="text-align:center;padding:40px"><div class="loading-spinner" style="margin:0 auto"></div></div>';
+
+  var r = await sb.from('events').select('*, profiles(prenom,nom,pseudo)').eq('id',id).single();
+  if (r.error || !r.data) return;
+  var e = r.data;
+
+  // Btn supprimer si c'est le créateur
+  var delBtn = document.getElementById('btn-delete-event');
+  delBtn.style.display = (e.created_by === currentUser.id) ? 'flex' : 'none';
+  delBtn.onclick = function(){ if(confirm('Supprimer cet événement ?')) deleteEvent(id); };
+
+  document.getElementById('detail-modal-title').textContent = getEmoji(e.categorie) + ' ' + e.categorie;
+
+  // Votes présence
+  var votes = await sb.from('event_votes').select('*').eq('event_id',id);
+  var myVote = (votes.data||[]).find(function(v){ return v.user_id===currentUser.id; });
+  var yesVotes = (votes.data||[]).filter(function(v){ return v.present==='oui'; });
+  var noVotes  = (votes.data||[]).filter(function(v){ return v.present==='non'; });
+  var total    = (votes.data||[]).length;
+
+  // Commentaires
+  var comRes = await sb.from('event_comments').select('*, profiles(prenom,pseudo)').eq('event_id',id).order('created_at',{ascending:true});
+  var comments = comRes.data||[];
+
+  var dateStr = e.date_event ? new Date(e.date_event).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'}) : '';
+
+  var html = '';
+
+  // Infos
+  html += '<div class="detail-section">';
+  html += '<h3>📋 Infos</h3>';
+  html += '<div class="detail-meta">';
+  if (e.date_event)        html += '<span class="detail-chip">📅 ' + dateStr + '</span>';
+  if (e.heure)             html += '<span class="detail-chip">🕐 ' + esc(e.heure) + '</span>';
+  if (e.chez_qui)          html += '<span class="detail-chip">📍 Chez ' + esc(e.chez_qui) + '</span>';
+  if (e.lieu)              html += '<span class="detail-chip">🗺️ ' + esc(e.lieu) + '</span>';
+  if (e.duree)             html += '<span class="detail-chip">⏱️ ' + esc(e.duree) + '</span>';
+  if (e.anniversaire_qui)  html += '<span class="detail-chip">🥳 Anniversaire de ' + esc(e.anniversaire_qui) + '</span>';
+  if (e.cadeau)            html += '<span class="detail-chip">🎁 ' + esc(e.cadeau) + '</span>';
+  if (e.boisson)           html += '<span class="detail-chip">🍺 ' + esc(e.boisson) + '</span>';
+  if (e.manger_avant && e.manger_avant!=='nsp') html += '<span class="detail-chip">🍽️ Manger avant : ' + e.manger_avant + '</span>';
+  if (e.dormir && e.dormir!=='nsp') html += '<span class="detail-chip">🛏️ Dormir sur place : ' + e.dormir + '</span>';
+  if (e.apporter)          html += '<span class="detail-chip">🧺 Apporter : ' + esc(e.apporter) + '</span>';
+  if (e.jeux_prevus)       html += '<span class="detail-chip">🎲 Jeux : ' + esc(e.jeux_prevus) + '</span>';
+  if (e.raison)            html += '<span class="detail-chip">💬 ' + esc(e.raison) + '</span>';
+  if (e.note)              html += '<span class="detail-chip">📝 ' + esc(e.note) + '</span>';
+  var author = e.profiles ? (e.profiles.prenom||e.profiles.pseudo||'?') : '?';
+  html += '<span class="detail-chip">👤 Créé par ' + esc(author) + '</span>';
+  html += '</div></div>';
+
+  // Sondage présence
+  var yPct = total ? Math.round(yesVotes.length/total*100) : 0;
+  var nPct = total ? Math.round(noVotes.length/total*100)  : 0;
+  html += '<div class="detail-section" id="poll-section">';
+  html += '<h3>🗳️ Sondage présence</h3>';
+  html += '<div class="poll-options">';
+  html += '<div class="poll-option ' + (myVote&&myVote.present==='oui'?'voted-yes':'') + '" id="poll-opt-yes">'
+    + '<span class="poll-label">✅ Présent(e)</span>'
+    + '<div class="poll-bar-wrap"><div class="poll-bar yes" style="width:'+yPct+'%"></div></div>'
+    + '<span class="poll-count">' + yesVotes.length + '</span></div>';
+  html += '<div class="poll-option ' + (myVote&&myVote.present==='non'?'voted-no':'') + '" id="poll-opt-no">'
+    + '<span class="poll-label">❌ Absent(e)</span>'
+    + '<div class="poll-bar-wrap"><div class="poll-bar no" style="width:'+nPct+'%"></div></div>'
+    + '<span class="poll-count">' + noVotes.length + '</span></div>';
+  html += '</div>';
+  html += '<div class="my-vote-btn">'
+    + '<button class="vote-btn yes' + (myVote&&myVote.present==='oui'?' active':'') + '" onclick="castVote(\''+id+'\',\'oui\')">✅ Je serai là !</button>'
+    + '<button class="vote-btn no'  + (myVote&&myVote.present==='non'?' active':'') + '" onclick="castVote(\''+id+'\',\'non\')">❌ Je ne viendrai pas</button>'
+    + '</div></div>';
+
+  // Sondage nourriture si pertinent
+  if (['Anniversaire','Barbecue','Soirée'].includes(e.categorie)) {
+    var foodVotes = await sb.from('event_food_votes').select('*').eq('event_id',id);
+    var myFoodVote = (foodVotes.data||[]).find(function(v){ return v.user_id===currentUser.id; });
+    var eatYes = (foodVotes.data||[]).filter(function(v){ return v.mange==='oui'; }).length;
+    var eatNo  = (foodVotes.data||[]).filter(function(v){ return v.mange==='non'; }).length;
+    var eatTotal = (foodVotes.data||[]).length;
+    var eyPct = eatTotal ? Math.round(eatYes/eatTotal*100) : 0;
+    var enyPct = eatTotal ? Math.round(eatNo/eatTotal*100)  : 0;
+    html += '<div class="detail-section" id="food-section">';
+    html += '<h3>🍽️ Sondage nourriture</h3>';
+    html += '<div class="poll-options">';
+    html += '<div class="poll-option ' + (myFoodVote&&myFoodVote.mange==='oui'?'voted-yes':'') + '">'
+      + '<span class="poll-label">🍴 Je mange sur place</span>'
+      + '<div class="poll-bar-wrap"><div class="poll-bar yes" style="width:'+eyPct+'%"></div></div>'
+      + '<span class="poll-count">'+eatYes+'</span></div>';
+    html += '<div class="poll-option ' + (myFoodVote&&myFoodVote.mange==='non'?'voted-no':'') + '">'
+      + '<span class="poll-label">🙅 Je mange avant / après</span>'
+      + '<div class="poll-bar-wrap"><div class="poll-bar no" style="width:'+enyPct+'%"></div></div>'
+      + '<span class="poll-count">'+eatNo+'</span></div>';
+    html += '</div><div class="my-vote-btn">'
+      + '<button class="vote-btn yes' + (myFoodVote&&myFoodVote.mange==='oui'?' active':'') + '" onclick="castFoodVote(\''+id+'\',\'oui\')">🍴 Je mange là-bas</button>'
+      + '<button class="vote-btn no'  + (myFoodVote&&myFoodVote.mange==='non'?' active':'') + '" onclick="castFoodVote(\''+id+'\',\'non\')">🙅 Je mange ailleurs</button>'
+      + '</div></div>';
+  }
+
+  // Commentaires
+  html += '<div class="detail-section">';
+  html += '<h3>💬 Commentaires (' + comments.length + ')</h3>';
+  html += '<div class="comments-list" id="comments-list">';
+  if (!comments.length) html += '<div style="color:var(--muted);font-size:.83rem;padding:8px 0">Aucun commentaire. Sois le premier ! 🗣️</div>';
+  comments.forEach(function(c){
+    var cAuthor = c.profiles ? (c.profiles.prenom||c.profiles.pseudo||'?') : '?';
+    var cTime   = new Date(c.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+    html += '<div class="comment">'
+      + '<div class="comment-av">' + esc(cAuthor[0].toUpperCase()) + '</div>'
+      + '<div class="comment-content">'
+      + '<div class="comment-author">' + esc(cAuthor) + '</div>'
+      + '<div class="comment-text">' + esc(c.contenu) + '</div>'
+      + '<div class="comment-time">' + cTime + '</div>'
+      + '</div></div>';
+  });
+  html += '</div>';
+  html += '<div class="comment-input-row">'
+    + '<input type="text" class="minput" id="comment-input" placeholder="Ajouter un commentaire..." onkeydown="if(event.key===\'Enter\')sendComment(\''+id+'\')">'
+    + '<button class="btn-send" onclick="sendComment(\''+id+'\')">➤</button>'
+    + '</div></div>';
+
+  document.getElementById('detail-body').innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════
+//  VOTES
+// ═══════════════════════════════════════════════════
+async function castVote(eventId, val) {
+  await sb.from('event_votes').upsert({ event_id:eventId, user_id:currentUser.id, present:val }, { onConflict:'event_id,user_id' });
+  openDetail(eventId);
+}
+
+async function castFoodVote(eventId, val) {
+  await sb.from('event_food_votes').upsert({ event_id:eventId, user_id:currentUser.id, mange:val }, { onConflict:'event_id,user_id' });
+  openDetail(eventId);
+}
+
+// ═══════════════════════════════════════════════════
+//  COMMENTAIRES
+// ═══════════════════════════════════════════════════
+async function sendComment(eventId) {
+  var inp = document.getElementById('comment-input');
+  var txt = inp.value.trim();
+  if (!txt) return;
+  inp.value = '';
+  await sb.from('event_comments').insert({ event_id:eventId, user_id:currentUser.id, contenu:txt });
+  openDetail(eventId);
+}
+
+// ═══════════════════════════════════════════════════
+//  SUPPRIMER
+// ═══════════════════════════════════════════════════
+async function deleteEvent(id) {
+  await sb.from('event_comments').delete().eq('event_id',id);
+  await sb.from('event_votes').delete().eq('event_id',id);
+  await sb.from('event_food_votes').delete().eq('event_id',id);
+  await sb.from('events').delete().eq('id',id);
+  closeModal('modal-detail');
+  loadEvents();
+}
+
+// ═══════════════════════════════════════════════════
+//  UTILITAIRES
+// ═══════════════════════════════════════════════════
+function openModal(id)  { document.getElementById(id).classList.add('open'); document.body.style.overflow='hidden'; }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); document.body.style.overflow=''; }
+document.querySelectorAll('.modal-overlay').forEach(function(o){
+  o.addEventListener('click', function(e){ if(e.target===this) closeModal(this.id); });
+});
+
+function toggleMenu() {
+  document.getElementById('mobile-menu').classList.toggle('open');
+}
+
+async function handleLogout() {
+  await sb.auth.signOut();
+  window.location.href = 'login.html';
+}
+
+function getEmoji(cat) {
+  return {'Olympiade':'🏅','Nouvel an':'🎆','Anniversaire':'🎂','Soirée':'🌙','Barbecue':'🔥','Soirée jeux de société':'🎲','Féria':'🎠','Vacances':'✈️','Autre':'💫'}[cat]||'📅';
+}
+
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Fermer menu mobile si clic ailleurs
+document.addEventListener('click', function(e) {
+  var menu = document.getElementById('mobile-menu');
+  var hamb  = document.querySelector('.hamburger');
+  if (menu.classList.contains('open') && !menu.contains(e.target) && !hamb.contains(e.target)) {
+    menu.classList.remove('open');
+  }
+});
+</script>
+</body>
+</html>
