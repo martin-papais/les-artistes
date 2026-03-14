@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Les Artistes — Jeux</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --coral:   #FF6B6B;
+  --yellow:  #FFD93D;
+  --teal:    #4ECDC4;
+  --violet:  #C77DFF;
+  --pink:    #FF9EBC;
+  --lime:    #A8E063;
+  --orange:  #FF9A3C;
+  --deep:    #120f1c;
+  --surface: rgba(255,255,255,0.06);
+  --surface2:rgba(255,255,255,0.10);
+  --surface3:rgba(255,255,255,0.15);
+  --border:  rgba(255,255,255,0.11);
+  --text:    #fff;
+  --muted:   rgba(255,255,255,0.5);
+  --trans:   all 0.3s cubic-bezier(.4,0,.2,1);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'DM Sans',sans-serif;background:var(--deep);color:var(--text);min-height:100vh;overflow-x:hidden;}
+
+/* BG */
+.bg{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(ellipse 60% 55% at 10% 20%, rgba(255,107,107,.3) 0%,transparent 60%),
+    radial-gradient(ellipse 50% 60% at 90% 80%, rgba(255,154,60,.25) 0%,transparent 60%),
+    radial-gradient(ellipse 70% 40% at 50% 55%, rgba(199,125,255,.12) 0%,transparent 55%),
+    #120f1c;
+  animation:bgP 16s ease-in-out infinite alternate;
+}
+@keyframes bgP{0%{filter:hue-rotate(0deg)}100%{filter:hue-rotate(20deg)brightness(1.05)}}
+
+/* NAVBAR */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;height:64px;background:rgba(18,15,28,.88);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 24px;gap:16px;}
+.nav-logo{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:900;background:linear-gradient(135deg,var(--yellow),var(--coral),var(--violet));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;white-space:nowrap;text-decoration:none;}
+.nav-links{display:flex;gap:4px;align-items:center;}
+.nav-link{padding:7px 14px;border-radius:10px;color:var(--muted);font-size:.82rem;font-weight:600;text-decoration:none;transition:var(--trans);white-space:nowrap;}
+.nav-link:hover{color:var(--text);background:var(--surface2);}
+.nav-link.active span{background:linear-gradient(135deg,var(--coral),var(--orange));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.nav-link.active{color:var(--text);background:var(--surface2);}
+.nav-right{display:flex;align-items:center;gap:10px;}
+.nav-user{display:flex;align-items:center;gap:8px;padding:6px 12px;border-radius:10px;background:var(--surface);border:1px solid var(--border);font-size:.82rem;color:var(--muted);}
+.avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--coral),var(--orange));display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;color:#fff;}
+.btn-logout{padding:7px 14px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:.8rem;cursor:pointer;transition:var(--trans);font-family:'DM Sans',sans-serif;}
+.btn-logout:hover{background:rgba(255,107,107,.15);color:var(--coral);border-color:rgba(255,107,107,.3);}
+.hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;padding:8px;background:none;border:none;}
+.hamburger span{width:22px;height:2px;background:var(--muted);border-radius:2px;transition:var(--trans);}
+.mobile-menu{display:none;position:fixed;top:64px;left:0;right:0;z-index:99;background:rgba(18,15,28,.97);backdrop-filter:blur(20px);padding:16px;border-bottom:1px solid var(--border);flex-direction:column;gap:4px;}
+.mobile-menu.open{display:flex;}
+.mobile-menu .nav-link{font-size:.9rem;padding:10px 14px;}
+
+/* MAIN */
+main{padding-top:64px;position:relative;z-index:1;}
+
+/* HERO */
+.hero{padding:44px 24px 0;text-align:center;}
+.hero h1{font-family:'Playfair Display',serif;font-size:clamp(2rem,5vw,3rem);font-weight:900;margin-bottom:8px;background:linear-gradient(135deg,var(--yellow),var(--coral),var(--orange));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.hero p{color:var(--muted);font-size:.95rem;margin-bottom:32px;}
+
+/* SOUS-PAGES TABS */
+.subtabs{display:flex;justify-content:center;gap:12px;padding:0 24px 32px;flex-wrap:wrap;}
+.subtab{
+  display:flex;align-items:center;gap:10px;
+  padding:14px 28px;border-radius:16px;
+  border:2px solid var(--border);background:var(--surface);
+  cursor:pointer;transition:var(--trans);font-family:'DM Sans',sans-serif;
+  font-size:.95rem;font-weight:700;color:var(--muted);
+  min-width:200px;justify-content:center;
+}
+.subtab:hover{background:var(--surface2);color:var(--text);}
+.subtab.active-alcool{
+  border-color:rgba(255,107,107,.6);
+  background:linear-gradient(135deg,rgba(255,107,107,.18),rgba(255,154,60,.12));
+  color:var(--coral);
+  box-shadow:0 4px 20px rgba(255,107,107,.25);
+}
+.subtab.active-societe{
+  border-color:rgba(78,205,196,.6);
+  background:linear-gradient(135deg,rgba(78,205,196,.18),rgba(168,224,99,.1));
+  color:var(--teal);
+  box-shadow:0 4px 20px rgba(78,205,196,.25);
+}
+.subtab .tab-emoji{font-size:1.4rem;}
+.subtab .tab-label{}
+.subtab .tab-count{
+  padding:2px 8px;border-radius:20px;font-size:.72rem;font-weight:700;
+  background:rgba(255,255,255,.1);
+}
+
+/* SECTIONS */
+.section{display:none;padding:0 24px 80px;max-width:1100px;margin:0 auto;}
+.section.active{display:block;animation:fadeIn .35s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* TOOLBAR */
+.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:24px;}
+.search-wrap{position:relative;flex:1;min-width:180px;}
+.search-wrap .si{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:.9rem;pointer-events:none;}
+.search-input{width:100%;padding:11px 16px 11px 40px;background:var(--surface);border:1.5px solid var(--border);border-radius:12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none;transition:var(--trans);}
+.search-input::placeholder{color:var(--muted);}
+.search-input:focus{border-color:var(--coral);background:var(--surface2);}
+.select-pill{padding:11px 36px 11px 14px;background:var(--surface);border:1.5px solid var(--border);border-radius:12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none;cursor:pointer;transition:var(--trans);-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='rgba(255,255,255,0.4)' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;}
+.select-pill:focus{border-color:var(--coral);}
+.sort-btn{display:flex;align-items:center;gap:6px;padding:11px 16px;background:var(--surface);border:1.5px solid var(--border);border-radius:12px;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:.88rem;cursor:pointer;transition:var(--trans);white-space:nowrap;}
+.sort-btn:hover{background:var(--surface2);color:var(--text);}
+.sort-btn.asc .arr::after{content:'↑';}
+.sort-btn.desc .arr::after{content:'↓';}
+.btn-add{display:inline-flex;align-items:center;gap:7px;padding:11px 20px;border-radius:12px;border:none;font-family:'DM Sans',sans-serif;font-size:.88rem;font-weight:700;cursor:pointer;transition:var(--trans);white-space:nowrap;}
+.btn-add-alcool{background:linear-gradient(135deg,var(--coral),var(--orange));color:#fff;box-shadow:0 4px 16px rgba(255,107,107,.3);}
+.btn-add-alcool:hover{transform:translateY(-1px);box-shadow:0 6px 22px rgba(255,107,107,.45);}
+.btn-add-societe{background:linear-gradient(135deg,var(--teal),var(--lime));color:var(--deep);box-shadow:0 4px 16px rgba(78,205,196,.3);}
+.btn-add-societe:hover{transform:translateY(-1px);box-shadow:0 6px 22px rgba(78,205,196,.45);}
+
+/* GRID CARDS */
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px;}
+
+/* CARD JEUX */
+.game-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:20px;overflow:hidden;
+  transition:var(--trans);animation:cardIn .4s ease both;
+  display:flex;flex-direction:column;
+}
+.game-card:hover{transform:translateY(-3px);border-color:rgba(255,255,255,.2);box-shadow:0 14px 40px rgba(0,0,0,.35);}
+@keyframes cardIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+
+/* Header coloré selon catégorie */
+.card-header-strip{height:5px;width:100%;}
+.strip-cartes   {background:linear-gradient(90deg,#FF6B6B,#FF9A3C);}
+.strip-des      {background:linear-gradient(90deg,#C77DFF,#FF9EBC);}
+.strip-oral     {background:linear-gradient(90deg,#4ECDC4,#A8E063);}
+.strip-balle    {background:linear-gradient(90deg,#FFD93D,#FF9A3C);}
+.strip-autre    {background:linear-gradient(90deg,rgba(255,255,255,.3),rgba(255,255,255,.1));}
+.strip-default  {background:linear-gradient(90deg,var(--violet),var(--pink));}
+
+.card-body{padding:18px 20px;flex:1;display:flex;flex-direction:column;}
+.card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:12px;}
+.card-badges{display:flex;flex-wrap:wrap;gap:6px;}
+.cat-badge{
+  padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:700;
+  text-transform:uppercase;letter-spacing:.4px;
+}
+.cat-cartes  {background:rgba(255,107,107,.18);color:var(--coral);  border:1px solid rgba(255,107,107,.3);}
+.cat-des     {background:rgba(199,125,255,.18);color:var(--violet); border:1px solid rgba(199,125,255,.3);}
+.cat-oral    {background:rgba(78,205,196,.18); color:var(--teal);   border:1px solid rgba(78,205,196,.3);}
+.cat-balle   {background:rgba(255,217,61,.18); color:var(--yellow); border:1px solid rgba(255,217,61,.3);}
+.cat-autre   {background:rgba(255,255,255,.08);color:var(--muted);  border:1px solid var(--border);}
+.players-badge{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:600;
+  background:rgba(255,255,255,.08);border:1px solid var(--border);color:var(--muted);
+  white-space:nowrap;
+}
+
+.card-actions{display:flex;gap:6px;}
+.icon-btn{width:28px;height:28px;border-radius:7px;background:var(--surface2);border:1px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.78rem;color:var(--muted);transition:var(--trans);}
+.icon-btn:hover{background:var(--surface3);color:var(--text);}
+.icon-btn.edit:hover{background:rgba(255,217,61,.15);color:var(--yellow);border-color:rgba(255,217,61,.3);}
+.icon-btn.del:hover{background:rgba(255,107,107,.15);color:var(--coral);border-color:rgba(255,107,107,.3);}
+
+.card-name{font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:700;margin-bottom:8px;line-height:1.3;}
+.card-rule{font-size:.85rem;color:rgba(255,255,255,.75);line-height:1.6;flex:1;}
+.card-rule.collapsed{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+.read-more{background:none;border:none;cursor:pointer;color:var(--coral);font-size:.78rem;margin-top:6px;font-family:'DM Sans',sans-serif;padding:0;transition:color .2s;}
+.read-more:hover{color:var(--orange);}
+
+.card-footer{padding:12px 20px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.card-author{font-size:.72rem;color:var(--muted);}
+.card-date{font-size:.72rem;color:var(--muted);}
+
+/* Badge "A acheter" */
+.badge-buy{
+  padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:700;
+  background:rgba(255,217,61,.18);border:1px solid rgba(255,217,61,.3);color:var(--yellow);
+}
+.badge-owner{
+  padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:600;
+  background:rgba(78,205,196,.12);border:1px solid rgba(78,205,196,.25);color:var(--teal);
+}
+
+/* Empty / loading */
+.empty-state{text-align:center;padding:60px 20px;color:var(--muted);grid-column:1/-1;}
+.empty-state .ei{font-size:3rem;margin-bottom:12px;}
+.loading-grid{grid-column:1/-1;display:flex;justify-content:center;padding:60px;}
+.loading-spinner{width:40px;height:40px;border:3px solid var(--border);border-radius:50%;animation:sp .8s linear infinite;}
+.loading-spinner.alcool{border-top-color:var(--coral);}
+.loading-spinner.societe{border-top-color:var(--teal);}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.75);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);display:none;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;}
+.modal-overlay.open{display:flex;}
+.modal{background:#191323;border:1px solid var(--border);border-radius:24px;width:min(600px,100%);margin:auto;animation:mIn .35s cubic-bezier(.4,0,.2,1) both;}
+@keyframes mIn{from{opacity:0;transform:scale(.95)translateY(20px)}to{opacity:1;transform:scale(1)translateY(0)}}
+.modal-header{padding:22px 24px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);position:sticky;top:0;background:#191323;z-index:2;border-radius:24px 24px 0 0;}
+.modal-title{font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:700;}
+.modal-close{width:32px;height:32px;border-radius:8px;background:var(--surface);border:1px solid var(--border);cursor:pointer;font-size:1rem;color:var(--muted);display:flex;align-items:center;justify-content:center;transition:var(--trans);}
+.modal-close:hover{background:rgba(255,107,107,.15);color:var(--coral);}
+.modal-body{padding:20px 24px 8px;}
+.modal-footer{padding:14px 24px 22px;display:flex;gap:10px;justify-content:flex-end;border-top:1px solid var(--border);}
+
+/* Form */
+.mfield{margin-bottom:16px;}
+.mfield label{display:block;font-size:.75rem;font-weight:700;color:var(--muted);margin-bottom:6px;letter-spacing:.5px;text-transform:uppercase;}
+.mfield-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.minput{width:100%;padding:11px 14px;background:var(--surface);border:1.5px solid var(--border);border-radius:11px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none;transition:var(--trans);-webkit-appearance:none;appearance:none;}
+.minput:focus{border-color:var(--coral);background:var(--surface2);box-shadow:0 0 0 3px rgba(255,107,107,.12);}
+.minput.teal:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(78,205,196,.12);}
+.minput::placeholder{color:rgba(255,255,255,.25);}
+textarea.minput{resize:vertical;min-height:100px;}
+.select-minput{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='rgba(255,255,255,0.4)' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:36px;}
+
+/* Catégories visuelles dans le modal */
+.cat-picker{display:flex;flex-wrap:wrap;gap:8px;}
+.cat-pick-btn{
+  display:flex;align-items:center;gap:6px;
+  padding:7px 14px;border-radius:10px;
+  border:1.5px solid var(--border);background:var(--surface);
+  cursor:pointer;transition:var(--trans);font-family:'DM Sans',sans-serif;font-size:.82rem;font-weight:600;color:var(--muted);
+}
+.cat-pick-btn:hover{background:var(--surface2);}
+.cat-pick-btn.sel-cartes{border-color:var(--coral);background:rgba(255,107,107,.15);color:var(--coral);}
+.cat-pick-btn.sel-des    {border-color:var(--violet);background:rgba(199,125,255,.15);color:var(--violet);}
+.cat-pick-btn.sel-oral   {border-color:var(--teal);background:rgba(78,205,196,.15);color:var(--teal);}
+.cat-pick-btn.sel-balle  {border-color:var(--yellow);background:rgba(255,217,61,.15);color:var(--yellow);}
+.cat-pick-btn.sel-autre  {border-color:rgba(255,255,255,.3);background:rgba(255,255,255,.1);color:var(--text);}
+
+/* Boutons modal */
+.btn-sec{padding:11px 20px;border-radius:12px;border:1.5px solid var(--border);background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:.9rem;cursor:pointer;transition:var(--trans);}
+.btn-sec:hover{background:var(--surface2);color:var(--text);}
+.btn-prim-alcool{padding:11px 24px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--coral),var(--orange));color:#fff;font-family:'DM Sans',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;transition:var(--trans);box-shadow:0 4px 16px rgba(255,107,107,.3);}
+.btn-prim-alcool:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(255,107,107,.45);}
+.btn-prim-alcool:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+.btn-prim-societe{padding:11px 24px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--teal),var(--lime));color:var(--deep);font-family:'DM Sans',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;transition:var(--trans);box-shadow:0 4px 16px rgba(78,205,196,.3);}
+.btn-prim-societe:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(78,205,196,.45);}
+.btn-prim-societe:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+
+/* Alert */
+.malert{padding:10px 14px;border-radius:10px;font-size:.82rem;margin-bottom:14px;display:none;}
+.malert.error{background:rgba(255,107,107,.15);border:1px solid rgba(255,107,107,.4);color:#ff9b9b;display:block;}
+.malert.success{background:rgba(78,205,196,.15);border:1px solid rgba(78,205,196,.4);color:var(--teal);display:block;}
+
+/* Spinner */
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;vertical-align:middle;margin-right:6px;}
+
+/* Responsive */
+@media(max-width:768px){
+  nav{padding:0 16px;}
+  .nav-links{display:none;}
+  .hamburger{display:flex;}
+  .hero{padding:32px 16px 0;}
+  .subtabs{padding:0 16px 24px;gap:8px;}
+  .subtab{min-width:unset;flex:1;padding:12px 16px;}
+  .section{padding:0 16px 60px;}
+  .cards-grid{grid-template-columns:1fr;}
+  .modal{border-radius:20px 20px 0 0;margin:auto 0 0;}
+  .modal-overlay{align-items:flex-end;padding:0;}
+  .mfield-row{grid-template-columns:1fr;}
+  .toolbar{gap:8px;}
+}
+</style>
+</head>
+<body>
+<div class="bg"></div>
+
+<!-- NAVBAR -->
+<nav>
+  <a href="events.html" class="nav-logo">🎨 Les Artistes</a>
+  <div class="nav-links">
+    <a href="events.html"   class="nav-link">🎉 Événements</a>
+    <a href="news.html"     class="nav-link">📰 Actualités</a>
+    <a href="photos.html"   class="nav-link">📸 Photos</a>
+    <a href="games.html"    class="nav-link active"><span>🎮 Jeux</span></a>
+    <a href="shop.html"     class="nav-link">🛍️ Boutique</a>
+    <a href="annuaire.html" class="nav-link">📒 Annuaire</a>
+  </div>
+  <div class="nav-right">
+    <div class="nav-user">
+      <div class="avatar" id="nav-avatar">?</div>
+      <span id="nav-name">...</span>
+    </div>
+    <button class="btn-logout" onclick="handleLogout()">Déconnexion</button>
+  </div>
+  <button class="hamburger" onclick="toggleMenu()" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+<div class="mobile-menu" id="mobile-menu">
+  <a href="events.html"   class="nav-link">🎉 Événements</a>
+  <a href="news.html"     class="nav-link">📰 Actualités</a>
+  <a href="photos.html"   class="nav-link">📸 Photos</a>
+  <a href="games.html"    class="nav-link active">🎮 Jeux</a>
+  <a href="shop.html"     class="nav-link">🛍️ Boutique</a>
+  <a href="annuaire.html" class="nav-link">📒 Annuaire</a>
+</div>
+
+<main>
+  <section class="hero">
+    <h1>La Salle de Jeux 🎮</h1>
+    <p>Vos jeux d'alcool et jeux de société au même endroit</p>
+  </section>
+
+  <!-- SOUS-PAGES TABS -->
+  <div class="subtabs">
+    <button class="subtab active-alcool" id="tab-alcool" onclick="switchTab('alcool')">
+      <span class="tab-emoji">🍺</span>
+      <span class="tab-label">Jeux d'alcool</span>
+      <span class="tab-count" id="count-alcool">0</span>
+    </button>
+    <button class="subtab" id="tab-societe" onclick="switchTab('societe')">
+      <span class="tab-emoji">🎲</span>
+      <span class="tab-label">Jeux de société</span>
+      <span class="tab-count" id="count-societe">0</span>
+    </button>
+  </div>
+
+  <!-- ══ SECTION ALCOOL ══ -->
+  <div class="section active" id="section-alcool">
+    <div class="toolbar">
+      <div class="search-wrap">
+        <span class="si">🔍</span>
+        <input type="text" class="search-input" id="search-alcool" placeholder="Rechercher un jeu...">
+      </div>
+      <select class="select-pill" id="filter-alcool-cat">
+        <option value="">Toutes catégories</option>
+        <option value="Cartes">🃏 Cartes</option>
+        <option value="Dés">🎲 Dés</option>
+        <option value="Oral">🗣️ Oral</option>
+        <option value="Balle">⚽ Balle</option>
+        <option value="Autre">💫 Autre</option>
+      </select>
+      <button class="sort-btn desc" id="sort-alcool" onclick="toggleSort('alcool')">
+        <span>Date</span><span class="arr"></span>
+      </button>
+      <button class="btn-add btn-add-alcool" onclick="openModal('modal-alcool')">
+        ➕ Ajouter un jeu
+      </button>
+    </div>
+    <div class="cards-grid" id="grid-alcool">
+      <div class="loading-grid"><div class="loading-spinner alcool"></div></div>
+    </div>
+  </div>
+
+  <!-- ══ SECTION SOCIÉTÉ ══ -->
+  <div class="section" id="section-societe">
+    <div class="toolbar">
+      <div class="search-wrap">
+        <span class="si">🔍</span>
+        <input type="text" class="search-input" id="search-societe" placeholder="Rechercher un jeu...">
+      </div>
+      <button class="sort-btn desc" id="sort-societe" onclick="toggleSort('societe')">
+        <span>Date</span><span class="arr"></span>
+      </button>
+      <button class="btn-add btn-add-societe" onclick="openModal('modal-societe')">
+        ➕ Ajouter un jeu
+      </button>
+    </div>
+    <div class="cards-grid" id="grid-societe">
+      <div class="loading-grid"><div class="loading-spinner societe"></div></div>
+    </div>
+  </div>
+</main>
+
+<!-- ═══════════ MODAL JEUX D'ALCOOL ═══════════ -->
+<div class="modal-overlay" id="modal-alcool">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="title-alcool">🍺 Nouveau jeu d'alcool</div>
+      <button class="modal-close" onclick="closeModal('modal-alcool')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="malert" id="alert-alcool"></div>
+
+      <div class="mfield">
+        <label>Catégorie *</label>
+        <div class="cat-picker" id="cat-picker">
+          <button class="cat-pick-btn" onclick="selectCat(this,'Cartes')">  🃏 Cartes</button>
+          <button class="cat-pick-btn" onclick="selectCat(this,'Dés')">    🎲 Dés</button>
+          <button class="cat-pick-btn" onclick="selectCat(this,'Oral')">   🗣️ Oral</button>
+          <button class="cat-pick-btn" onclick="selectCat(this,'Balle')">  ⚽ Balle</button>
+          <button class="cat-pick-btn" onclick="selectCat(this,'Autre')">  💫 Autre</button>
+        </div>
+        <input type="hidden" id="f-alc-cat" value="">
+      </div>
+
+      <div class="mfield">
+        <label>Nom du jeu *</label>
+        <input type="text" class="minput" id="f-alc-nom" placeholder="Ex: Bière-pong, Roi de l'alcool...">
+      </div>
+
+      <div class="mfield mfield-row">
+        <div>
+          <label>Nb de joueurs idéal</label>
+          <input type="text" class="minput" id="f-alc-joueurs" placeholder="Ex: 4-8, 2+...">
+        </div>
+        <div>
+          <label>Niveau d'ivresse</label>
+          <select class="minput select-minput" id="f-alc-niveau">
+            <option value="">-- Choisir --</option>
+            <option value="Soft">&#127866; Soft</option>
+            <option value="Medium">&#128525; Medium</option>
+            <option value="Hard">&#128293; Hard</option>
+            <option value="Destruction">&#128128; Destruction</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="mfield">
+        <label>Règles du jeu *</label>
+        <textarea class="minput" id="f-alc-regles" placeholder="Explique comment jouer, les règles, les gages..."></textarea>
+      </div>
+
+      <div class="mfield">
+        <label>Matériel nécessaire <span style="opacity:.5">(optionnel)</span></label>
+        <input type="text" class="minput" id="f-alc-materiel" placeholder="Ex: Un jeu de cartes, des dés, des verres...">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-sec" onclick="closeModal('modal-alcool')">Annuler</button>
+      <button class="btn-prim-alcool" id="btn-save-alcool" onclick="saveAlcool()">Ajouter le jeu 🍺</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ MODAL JEUX DE SOCIÉTÉ ═══════════ -->
+<div class="modal-overlay" id="modal-societe">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="title-societe">🎲 Nouveau jeu de société</div>
+      <button class="modal-close" onclick="closeModal('modal-societe')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="malert" id="alert-societe"></div>
+
+      <div class="mfield">
+        <label>Nom du jeu *</label>
+        <input type="text" class="minput teal" id="f-soc-nom" placeholder="Ex: Catan, Codenames, Uno...">
+      </div>
+
+      <div class="mfield mfield-row">
+        <div>
+          <label>Nb de joueurs max</label>
+          <input type="number" class="minput teal" id="f-soc-joueurs" placeholder="Ex: 6" min="1" max="20">
+        </div>
+        <div>
+          <label>Durée estimée</label>
+          <input type="text" class="minput teal" id="f-soc-duree" placeholder="Ex: 30 min, 1h...">
+        </div>
+      </div>
+
+      <div class="mfield">
+        <label>Qui le détient ?</label>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input type="text" class="minput teal" id="f-soc-detenteur" placeholder="Prénom de la personne..." style="flex:1;min-width:140px">
+          <button class="cat-pick-btn" id="btn-acheter" onclick="toggleAcheter()" style="white-space:nowrap">🛒 À acheter</button>
+        </div>
+        <input type="hidden" id="f-soc-acheter" value="non">
+      </div>
+
+      <div class="mfield">
+        <label>Règle brève *</label>
+        <textarea class="minput teal" id="f-soc-regles" placeholder="Décris rapidement le principe du jeu..."></textarea>
+      </div>
+
+      <div class="mfield">
+        <label>Note / Avis <span style="opacity:.5">(optionnel)</span></label>
+        <div id="stars-row" style="display:flex;gap:6px;margin-bottom:8px">
+          <button class="star-btn" onclick="setStar(1)">&#9733;</button>
+          <button class="star-btn" onclick="setStar(2)">&#9733;</button>
+          <button class="star-btn" onclick="setStar(3)">&#9733;</button>
+          <button class="star-btn" onclick="setStar(4)">&#9733;</button>
+          <button class="star-btn" onclick="setStar(5)">&#9733;</button>
+        </div>
+        <input type="hidden" id="f-soc-note" value="0">
+        <input type="text" class="minput teal" id="f-soc-avis" placeholder="Ton avis en quelques mots...">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-sec" onclick="closeModal('modal-societe')">Annuler</button>
+      <button class="btn-prim-societe" id="btn-save-societe" onclick="saveSociete()">Ajouter le jeu 🎲</button>
+    </div>
+  </div>
+</div>
+
+<style>
+.star-btn{background:none;border:none;cursor:pointer;font-size:1.4rem;color:rgba(255,255,255,.2);transition:color .15s;padding:0 2px;}
+.star-btn.active{color:var(--yellow);}
+.star-btn:hover{color:var(--yellow);}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+var SUPABASE_URL  = 'https://ldchxxkmvepvbvhdokot.supabase.co';
+var SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkY2h4eGttdmVwdmJ2aGRva290Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0NDQwNTMsImV4cCI6MjA4OTAyMDA1M30.HJw5-GsHCildEQ28HAB30_YKdiZOdeRJIml5wgLvHos';
+var sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+var currentUser    = null;
+var allAlcool      = [];
+var allSociete     = [];
+var sortAlcoolAsc  = false;
+var sortSocieteAsc = false;
+var editingAlcool  = null;
+var editingSociete = null;
+var selectedCatAlc = '';
+var selectedStar   = 0;
+
+// ── INIT ──────────────────────────────────────────────
+(async function init() {
+  var s = await sb.auth.getSession();
+  if (!s.data.session) { window.location.href = 'login.html'; return; }
+  currentUser = s.data.session.user;
+
+  var p = await sb.from('profiles').select('*').eq('id', currentUser.id).maybeSingle();
+  var meta = currentUser.user_metadata || {};
+  if (p.data) {
+    document.getElementById('nav-name').textContent   = p.data.prenom || p.data.pseudo || 'Moi';
+    document.getElementById('nav-avatar').textContent = ((p.data.prenom||p.data.pseudo||'?')[0]).toUpperCase();
+  } else {
+    document.getElementById('nav-name').textContent   = meta.prenom || currentUser.email || 'Moi';
+    document.getElementById('nav-avatar').textContent = ((meta.prenom||currentUser.email||'?')[0]).toUpperCase();
+  }
+
+  loadAlcool();
+  loadSociete();
+})();
+
+// ── TAB SWITCHER ──────────────────────────────────────
+function switchTab(tab) {
+  document.getElementById('section-alcool').classList.toggle('active', tab === 'alcool');
+  document.getElementById('section-societe').classList.toggle('active', tab === 'societe');
+  var tA = document.getElementById('tab-alcool');
+  var tS = document.getElementById('tab-societe');
+  tA.className = 'subtab' + (tab === 'alcool'  ? ' active-alcool'  : '');
+  tS.className = 'subtab' + (tab === 'societe' ? ' active-societe' : '');
+}
+
+// ════════════════════════════════════════════════════════
+//  JEUX D'ALCOOL
+// ════════════════════════════════════════════════════════
+async function loadAlcool() {
+  var grid = document.getElementById('grid-alcool');
+  grid.innerHTML = '<div class="loading-grid"><div class="loading-spinner alcool"></div></div>';
+
+  var r = await sb.from('jeux_alcool').select('*').order('created_at', { ascending: sortAlcoolAsc });
+  if (r.error) { grid.innerHTML = '<div class="empty-state"><div class="ei">😕</div><p>Erreur</p></div>'; return; }
+
+  var items = r.data || [];
+  if (items.length) {
+    var ids = [];
+    items.forEach(function(x){ if(x.created_by && ids.indexOf(x.created_by)===-1) ids.push(x.created_by); });
+    var pRes = await sb.from('profiles').select('id,prenom,nom,pseudo').in('id',ids);
+    var pm = {};
+    (pRes.data||[]).forEach(function(p){ pm[p.id]=p; });
+    items = items.map(function(x){ x.profiles=pm[x.created_by]||null; return x; });
+  }
+
+  allAlcool = items;
+  document.getElementById('count-alcool').textContent = items.length;
+  renderAlcool();
+}
+
+function renderAlcool() {
+  var q   = document.getElementById('search-alcool').value.toLowerCase();
+  var cat = document.getElementById('filter-alcool-cat').value;
+  var list = allAlcool.filter(function(x){
+    var mq  = !q || (x.nom||'').toLowerCase().includes(q) || (x.regles||'').toLowerCase().includes(q) || (x.categorie||'').toLowerCase().includes(q);
+    var mc  = !cat || x.categorie === cat;
+    return mq && mc;
+  });
+
+  var grid = document.getElementById('grid-alcool');
+  if (!list.length) {
+    grid.innerHTML = '<div class="empty-state"><div class="ei">🍺</div><p>Aucun jeu d\'alcool pour l\'instant.<br>Sois le premier !</p></div>';
+    return;
+  }
+  grid.innerHTML = list.map(function(x){ return buildAlcoolCard(x); }).join('');
+}
+
+function buildAlcoolCard(x) {
+  var isOwner = x.created_by === currentUser.id;
+  var cat     = x.categorie || 'Autre';
+  var catKey  = cat.toLowerCase().replace(/[éè]/g,'e');
+  var catEmoji = {cartes:'🃏', des:'🎲', oral:'🗣️', balle:'⚽', autre:'💫'}[catKey] || '🎮';
+  var dateStr = new Date(x.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'});
+  var p       = x.profiles;
+  var author  = p ? ((p.prenom&&p.nom)?p.prenom+' '+p.nom:p.prenom||p.pseudo||'?') : '?';
+
+  var niveauMap = {
+    'Soft':        '<span style="color:#4ECDC4">🍶 Soft</span>',
+    'Medium':      '<span style="color:#FFD93D">😅 Medium</span>',
+    'Hard':        '<span style="color:#FF9A3C">🔥 Hard</span>',
+    'Destruction': '<span style="color:#FF6B6B">💀 Destruction</span>'
+  };
+  var niveauHtml = x.niveau ? niveauMap[x.niveau] || '' : '';
+
+  var regleId = 'rule-alc-' + x.id.replace(/-/g,'');
+  var longRule = (x.regles||'').length > 180;
+
+  return '<div class="game-card">'
+    + '<div class="card-header-strip strip-'+catKey+'"></div>'
+    + '<div class="card-body">'
+    +   '<div class="card-top">'
+    +     '<div class="card-badges">'
+    +       '<span class="cat-badge cat-'+catKey+'">'+catEmoji+' '+esc(cat)+'</span>'
+    +       (x.joueurs ? '<span class="players-badge">👥 '+esc(x.joueurs)+'</span>' : '')
+    +       (niveauHtml ? '<span>'+niveauHtml+'</span>' : '')
+    +     '</div>'
+    +     (isOwner ? '<div class="card-actions">'
+    +       '<button class="icon-btn edit" onclick="openEditAlcool(\''+x.id+'\')" title="Modifier">✏️</button>'
+    +       '<button class="icon-btn del"  onclick="deleteAlcool(\''+x.id+'\')"    title="Supprimer">🗑️</button>'
+    +     '</div>' : '')
+    +   '</div>'
+    +   '<div class="card-name">'+esc(x.nom)+'</div>'
+    +   '<div class="card-rule collapsed" id="'+regleId+'">'+esc(x.regles||'')+'</div>'
+    +   (longRule ? '<button class="read-more" onclick="toggleRule(\''+regleId+'\',this)">Lire la suite ↓</button>' : '')
+    +   (x.materiel ? '<div style="margin-top:8px;font-size:.78rem;color:var(--muted)">🎒 '+esc(x.materiel)+'</div>' : '')
+    + '</div>'
+    + '<div class="card-footer">'
+    +   '<span class="card-author">Ajouté par <strong>'+esc(author)+'</strong></span>'
+    +   '<span class="card-date">'+dateStr+'</span>'
+    + '</div>'
+    + '</div>';
+}
+
+// Ajouter / Modifier jeu alcool
+function selectCat(btn, cat) {
+  document.querySelectorAll('#cat-picker .cat-pick-btn').forEach(function(b){ b.className = 'cat-pick-btn'; });
+  var key = cat.toLowerCase().replace(/[éè]/g,'e');
+  btn.className = 'cat-pick-btn sel-' + key;
+  selectedCatAlc = cat;
+  document.getElementById('f-alc-cat').value = cat;
+}
+
+async function saveAlcool() {
+  var btn     = document.getElementById('btn-save-alcool');
+  var alertEl = document.getElementById('alert-alcool');
+  alertEl.className = 'malert';
+
+  var cat    = document.getElementById('f-alc-cat').value;
+  var nom    = document.getElementById('f-alc-nom').value.trim();
+  var regles = document.getElementById('f-alc-regles').value.trim();
+
+  if (!cat)    { alertEl.textContent='⚠️ Choisis une catégorie.'; alertEl.className='malert error'; return; }
+  if (!nom)    { alertEl.textContent='⚠️ Le nom est obligatoire.'; alertEl.className='malert error'; return; }
+  if (!regles) { alertEl.textContent='⚠️ Les règles sont obligatoires.'; alertEl.className='malert error'; return; }
+
+  var payload = {
+    categorie: cat,
+    nom:       nom,
+    regles:    regles,
+    joueurs:   document.getElementById('f-alc-joueurs').value.trim() || null,
+    niveau:    document.getElementById('f-alc-niveau').value || null,
+    materiel:  document.getElementById('f-alc-materiel').value.trim() || null
+  };
+
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>' + (editingAlcool ? 'Sauvegarde...' : 'Ajout...');
+
+  var r;
+  if (editingAlcool) {
+    r = await sb.from('jeux_alcool').update(payload).eq('id', editingAlcool);
+  } else {
+    payload.created_by = currentUser.id;
+    r = await sb.from('jeux_alcool').insert(payload);
+  }
+
+  btn.disabled = false;
+  btn.textContent = editingAlcool ? 'Enregistrer' : 'Ajouter le jeu 🍺';
+
+  if (r.error) {
+    alertEl.textContent = '❌ Erreur : ' + r.error.message; alertEl.className = 'malert error';
+  } else {
+    closeModal('modal-alcool');
+    resetAlcoolForm();
+    loadAlcool();
+  }
+}
+
+function openEditAlcool(id) {
+  var x = allAlcool.find(function(g){ return g.id===id; });
+  if (!x) return;
+  editingAlcool = id;
+  document.getElementById('title-alcool').textContent = '✏️ Modifier le jeu';
+  document.getElementById('f-alc-nom').value      = x.nom || '';
+  document.getElementById('f-alc-regles').value   = x.regles || '';
+  document.getElementById('f-alc-joueurs').value  = x.joueurs || '';
+  document.getElementById('f-alc-niveau').value   = x.niveau || '';
+  document.getElementById('f-alc-materiel').value = x.materiel || '';
+  document.getElementById('alert-alcool').className = 'malert';
+  // Sélectionne la catégorie
+  document.querySelectorAll('#cat-picker .cat-pick-btn').forEach(function(b){ b.className='cat-pick-btn'; });
+  document.getElementById('f-alc-cat').value = x.categorie || '';
+  selectedCatAlc = x.categorie || '';
+  if (x.categorie) {
+    var key = x.categorie.toLowerCase().replace(/[éè]/g,'e');
+    var btn = document.querySelector('#cat-picker .cat-pick-btn[onclick*="\''+x.categorie+'\'"]');
+    if (btn) btn.className = 'cat-pick-btn sel-' + key;
+  }
+  document.getElementById('btn-save-alcool').textContent = 'Enregistrer ✏️';
+  openModal('modal-alcool');
+}
+
+async function deleteAlcool(id) {
+  if (!confirm('Supprimer ce jeu ?')) return;
+  await sb.from('jeux_alcool').delete().eq('id', id);
+  loadAlcool();
+}
+
+function resetAlcoolForm() {
+  editingAlcool = null;
+  selectedCatAlc = '';
+  document.getElementById('title-alcool').textContent = '🍺 Nouveau jeu d\'alcool';
+  document.getElementById('f-alc-cat').value = '';
+  document.getElementById('f-alc-nom').value = '';
+  document.getElementById('f-alc-regles').value = '';
+  document.getElementById('f-alc-joueurs').value = '';
+  document.getElementById('f-alc-niveau').value = '';
+  document.getElementById('f-alc-materiel').value = '';
+  document.getElementById('alert-alcool').className = 'malert';
+  document.querySelectorAll('#cat-picker .cat-pick-btn').forEach(function(b){ b.className='cat-pick-btn'; });
+  document.getElementById('btn-save-alcool').textContent = 'Ajouter le jeu 🍺';
+}
+
+// ════════════════════════════════════════════════════════
+//  JEUX DE SOCIÉTÉ
+// ════════════════════════════════════════════════════════
+async function loadSociete() {
+  var grid = document.getElementById('grid-societe');
+  grid.innerHTML = '<div class="loading-grid"><div class="loading-spinner societe"></div></div>';
+
+  var r = await sb.from('jeux_societe').select('*').order('created_at', { ascending: sortSocieteAsc });
+  if (r.error) { grid.innerHTML = '<div class="empty-state"><div class="ei">😕</div><p>Erreur</p></div>'; return; }
+
+  var items = r.data || [];
+  if (items.length) {
+    var ids = [];
+    items.forEach(function(x){ if(x.created_by && ids.indexOf(x.created_by)===-1) ids.push(x.created_by); });
+    var pRes = await sb.from('profiles').select('id,prenom,nom,pseudo').in('id',ids);
+    var pm = {};
+    (pRes.data||[]).forEach(function(p){ pm[p.id]=p; });
+    items = items.map(function(x){ x.profiles=pm[x.created_by]||null; return x; });
+  }
+
+  allSociete = items;
+  document.getElementById('count-societe').textContent = items.length;
+  renderSociete();
+}
+
+function renderSociete() {
+  var q    = document.getElementById('search-societe').value.toLowerCase();
+  var list = allSociete.filter(function(x){
+    return !q || (x.nom||'').toLowerCase().includes(q) || (x.regles||'').toLowerCase().includes(q) || (x.detenteur||'').toLowerCase().includes(q);
+  });
+
+  var grid = document.getElementById('grid-societe');
+  if (!list.length) {
+    grid.innerHTML = '<div class="empty-state"><div class="ei">🎲</div><p>Aucun jeu de soci&#233;t&#233; pour l\'instant.</p></div>';
+    return;
+  }
+  grid.innerHTML = list.map(function(x){ return buildSocieteCard(x); }).join('');
+}
+
+function buildSocieteCard(x) {
+  var isOwner = x.created_by === currentUser.id;
+  var dateStr = new Date(x.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'});
+  var p       = x.profiles;
+  var author  = p ? ((p.prenom&&p.nom)?p.prenom+' '+p.nom:p.prenom||p.pseudo||'?') : '?';
+  var regleId = 'rule-soc-' + x.id.replace(/-/g,'');
+  var longRule = (x.regles||'').length > 180;
+
+  var starsHtml = '';
+  if (x.note && x.note > 0) {
+    for (var i=1; i<=5; i++) {
+      starsHtml += '<span style="color:'+(i<=x.note?'var(--yellow)':'rgba(255,255,255,.15)')+'">&#9733;</span>';
+    }
+    starsHtml = '<div style="display:flex;gap:2px;margin-bottom:6px">'+starsHtml+'</div>';
+  }
+
+  var detenteurHtml = '';
+  if (x.a_acheter === 'oui') {
+    detenteurHtml = '<span class="badge-buy">&#128722; A acheter</span>';
+  } else if (x.detenteur) {
+    detenteurHtml = '<span class="badge-owner">&#128100; '+esc(x.detenteur)+'</span>';
+  }
+
+  return '<div class="game-card">'
+    + '<div class="card-header-strip strip-default"></div>'
+    + '<div class="card-body">'
+    +   '<div class="card-top">'
+    +     '<div class="card-badges">'
+    +       (x.joueurs_max ? '<span class="players-badge">&#128101; Max '+x.joueurs_max+' joueurs</span>' : '')
+    +       (x.duree ? '<span class="players-badge">&#8987; '+esc(x.duree)+'</span>' : '')
+    +       detenteurHtml
+    +     '</div>'
+    +     (isOwner ? '<div class="card-actions">'
+    +       '<button class="icon-btn edit" onclick="openEditSociete(\''+x.id+'\')" title="Modifier">&#9998;&#65039;</button>'
+    +       '<button class="icon-btn del"  onclick="deleteSociete(\''+x.id+'\')"   title="Supprimer">&#128465;&#65039;</button>'
+    +     '</div>' : '')
+    +   '</div>'
+    +   '<div class="card-name">'+esc(x.nom)+'</div>'
+    +   starsHtml
+    +   '<div class="card-rule collapsed" id="'+regleId+'">'+esc(x.regles||'')+'</div>'
+    +   (longRule ? '<button class="read-more" onclick="toggleRule(\''+regleId+'\',this)">Lire la suite &#8595;</button>' : '')
+    +   (x.avis ? '<div style="margin-top:8px;font-size:.8rem;color:var(--muted);font-style:italic">&#x1F4AC; '+esc(x.avis)+'</div>' : '')
+    + '</div>'
+    + '<div class="card-footer">'
+    +   '<span class="card-author">Ajout&#233; par <strong>'+esc(author)+'</strong></span>'
+    +   '<span class="card-date">'+dateStr+'</span>'
+    + '</div>'
+    + '</div>';
+}
+
+// Stars rating
+function setStar(n) {
+  selectedStar = n;
+  document.getElementById('f-soc-note').value = n;
+  document.querySelectorAll('.star-btn').forEach(function(b, i){ b.className = 'star-btn' + (i < n ? ' active' : ''); });
+}
+
+// Toggle "à acheter"
+function toggleAcheter() {
+  var btn = document.getElementById('btn-acheter');
+  var inp = document.getElementById('f-soc-acheter');
+  var det = document.getElementById('f-soc-detenteur');
+  if (inp.value === 'non') {
+    inp.value = 'oui';
+    btn.className = 'cat-pick-btn sel-cartes';
+    det.disabled = true; det.style.opacity = '.4';
+  } else {
+    inp.value = 'non';
+    btn.className = 'cat-pick-btn';
+    det.disabled = false; det.style.opacity = '1';
+  }
+}
+
+async function saveSociete() {
+  var btn     = document.getElementById('btn-save-societe');
+  var alertEl = document.getElementById('alert-societe');
+  alertEl.className = 'malert';
+
+  var nom    = document.getElementById('f-soc-nom').value.trim();
+  var regles = document.getElementById('f-soc-regles').value.trim();
+
+  if (!nom)    { alertEl.textContent='⚠️ Le nom est obligatoire.';   alertEl.className='malert error'; return; }
+  if (!regles) { alertEl.textContent='⚠️ Les règles sont obligatoires.'; alertEl.className='malert error'; return; }
+
+  var payload = {
+    nom:        nom,
+    regles:     regles,
+    joueurs_max:document.getElementById('f-soc-joueurs').value || null,
+    duree:      document.getElementById('f-soc-duree').value.trim() || null,
+    detenteur:  document.getElementById('f-soc-detenteur').value.trim() || null,
+    a_acheter:  document.getElementById('f-soc-acheter').value,
+    note:       parseInt(document.getElementById('f-soc-note').value) || null,
+    avis:       document.getElementById('f-soc-avis').value.trim() || null
+  };
+
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>' + (editingSociete ? 'Sauvegarde...' : 'Ajout...');
+
+  var r;
+  if (editingSociete) {
+    r = await sb.from('jeux_societe').update(payload).eq('id', editingSociete);
+  } else {
+    payload.created_by = currentUser.id;
+    r = await sb.from('jeux_societe').insert(payload);
+  }
+
+  btn.disabled = false;
+  btn.textContent = editingSociete ? 'Enregistrer' : 'Ajouter le jeu 🎲';
+
+  if (r.error) {
+    alertEl.textContent = '❌ ' + r.error.message; alertEl.className = 'malert error';
+  } else {
+    closeModal('modal-societe');
+    resetSocieteForm();
+    loadSociete();
+  }
+}
+
+function openEditSociete(id) {
+  var x = allSociete.find(function(g){ return g.id===id; });
+  if (!x) return;
+  editingSociete = id;
+  document.getElementById('title-societe').textContent = '✏️ Modifier le jeu';
+  document.getElementById('f-soc-nom').value       = x.nom || '';
+  document.getElementById('f-soc-regles').value    = x.regles || '';
+  document.getElementById('f-soc-joueurs').value   = x.joueurs_max || '';
+  document.getElementById('f-soc-duree').value     = x.duree || '';
+  document.getElementById('f-soc-detenteur').value = x.detenteur || '';
+  document.getElementById('f-soc-acheter').value   = x.a_acheter || 'non';
+  document.getElementById('f-soc-avis').value      = x.avis || '';
+  document.getElementById('alert-societe').className = 'malert';
+  if (x.note) setStar(x.note);
+  if (x.a_acheter === 'oui') {
+    document.getElementById('btn-acheter').className = 'cat-pick-btn sel-cartes';
+    document.getElementById('f-soc-detenteur').disabled = true;
+    document.getElementById('f-soc-detenteur').style.opacity = '.4';
+  }
+  document.getElementById('btn-save-societe').textContent = 'Enregistrer ✏️';
+  openModal('modal-societe');
+}
+
+async function deleteSociete(id) {
+  if (!confirm('Supprimer ce jeu ?')) return;
+  await sb.from('jeux_societe').delete().eq('id', id);
+  loadSociete();
+}
+
+function resetSocieteForm() {
+  editingSociete = null;
+  selectedStar   = 0;
+  document.getElementById('title-societe').textContent = '🎲 Nouveau jeu de société';
+  document.getElementById('f-soc-nom').value       = '';
+  document.getElementById('f-soc-regles').value    = '';
+  document.getElementById('f-soc-joueurs').value   = '';
+  document.getElementById('f-soc-duree').value     = '';
+  document.getElementById('f-soc-detenteur').value = '';
+  document.getElementById('f-soc-acheter').value   = 'non';
+  document.getElementById('f-soc-avis').value      = '';
+  document.getElementById('f-soc-note').value      = '0';
+  document.getElementById('alert-societe').className = 'malert';
+  document.querySelectorAll('.star-btn').forEach(function(b){ b.className='star-btn'; });
+  document.getElementById('btn-acheter').className = 'cat-pick-btn';
+  document.getElementById('f-soc-detenteur').disabled = false;
+  document.getElementById('f-soc-detenteur').style.opacity = '1';
+  document.getElementById('btn-save-societe').textContent = 'Ajouter le jeu 🎲';
+}
+
+// ── SORT / SEARCH ─────────────────────────────────────
+document.getElementById('search-alcool').addEventListener('input', renderAlcool);
+document.getElementById('filter-alcool-cat').addEventListener('change', renderAlcool);
+document.getElementById('search-societe').addEventListener('input', renderSociete);
+
+function toggleSort(which) {
+  if (which === 'alcool') {
+    sortAlcoolAsc = !sortAlcoolAsc;
+    var btn = document.getElementById('sort-alcool');
+    btn.className = 'sort-btn ' + (sortAlcoolAsc ? 'asc' : 'desc');
+    allAlcool.sort(function(a,b){
+      return sortAlcoolAsc ? new Date(a.created_at)-new Date(b.created_at) : new Date(b.created_at)-new Date(a.created_at);
+    });
+    renderAlcool();
+  } else {
+    sortSocieteAsc = !sortSocieteAsc;
+    var btn2 = document.getElementById('sort-societe');
+    btn2.className = 'sort-btn ' + (sortSocieteAsc ? 'asc' : 'desc');
+    allSociete.sort(function(a,b){
+      return sortSocieteAsc ? new Date(a.created_at)-new Date(b.created_at) : new Date(b.created_at)-new Date(a.created_at);
+    });
+    renderSociete();
+  }
+}
+
+// ── TOGGLE RÈGLE ─────────────────────────────────────
+function toggleRule(ruleId, btn) {
+  var el = document.getElementById(ruleId);
+  if (!el) return;
+  if (el.classList.contains('collapsed')) {
+    el.classList.remove('collapsed');
+    btn.textContent = 'Réduire ↑';
+  } else {
+    el.classList.add('collapsed');
+    btn.textContent = 'Lire la suite ↓';
+  }
+}
+
+// ── UTILITAIRES ───────────────────────────────────────
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+  document.body.style.overflow = '';
+  if (id === 'modal-alcool')  resetAlcoolForm();
+  if (id === 'modal-societe') resetSocieteForm();
+}
+
+document.querySelectorAll('.modal-overlay').forEach(function(o){
+  o.addEventListener('click', function(e){ if(e.target===this) closeModal(this.id); });
+});
+
+function toggleMenu() { document.getElementById('mobile-menu').classList.toggle('open'); }
+async function handleLogout() { await sb.auth.signOut(); window.location.href = 'login.html'; }
+
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+document.addEventListener('click', function(e) {
+  var menu = document.getElementById('mobile-menu');
+  var hamb = document.querySelector('.hamburger');
+  if (menu && menu.classList.contains('open') && !menu.contains(e.target) && hamb && !hamb.contains(e.target)) {
+    menu.classList.remove('open');
+  }
+});
+</script>
+</body>
+</html>
