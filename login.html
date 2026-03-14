@@ -234,10 +234,10 @@
   <div class="panel active" id="panel-login">
     <div class="alert" id="alert-login"></div>
     <div class="field">
-      <label>Pseudo (prénom + nom)</label>
+      <label>Email ou pseudo (prénom + nom)</label>
       <div class="input-wrap">
         <span class="icon">👤</span>
-        <input type="text" id="login-pseudo" placeholder="Marie Dupont" autocomplete="username">
+        <input type="text" id="login-pseudo" placeholder="marie@email.com ou Marie Dupont" autocomplete="username">
       </div>
     </div>
     <div class="field">
@@ -448,20 +448,34 @@ function setLoading(id, on, txt) {
   }
 }
 
-// ── CONNEXION ───────────────────────────────────────────
+// ── CONNEXION (email OU pseudo) ─────────────────────────
 document.getElementById('btn-login').addEventListener('click', async function() {
-  var pseudo   = document.getElementById('login-pseudo').value.trim();
-  var password = document.getElementById('login-password').value;
-  if (!pseudo || !password) { showAlert('alert-login', '⚠️ Remplis tous les champs !'); return; }
+  var identifiant = document.getElementById('login-pseudo').value.trim();
+  var password    = document.getElementById('login-password').value;
+  if (!identifiant || !password) { showAlert('alert-login', '⚠️ Remplis tous les champs !'); return; }
 
   setLoading('btn-login', true);
   try {
-    var res = await sb.from('profiles').select('email').ilike('pseudo', pseudo).single();
-    if (res.error || !res.data) { showAlert('alert-login', '❌ Pseudo introuvable. Vérifie ton prénom et nom.'); return; }
+    var emailToUse = identifiant;
 
-    var auth = await sb.auth.signInWithPassword({ email: res.data.email, password: password });
+    // Si ce n'est pas un email, on cherche le pseudo dans profiles
+    if (!identifiant.includes('@')) {
+      var res = await sb.from('profiles').select('email').ilike('pseudo', identifiant).single();
+      if (res.error || !res.data) {
+        showAlert('alert-login', '❌ Pseudo introuvable. Vérifie ton prénom et nom (ou utilise ton email).');
+        setLoading('btn-login', false, 'Se connecter 🚀');
+        return;
+      }
+      emailToUse = res.data.email;
+    }
+
+    var auth = await sb.auth.signInWithPassword({ email: emailToUse, password: password });
     if (auth.error) {
-      showAlert('alert-login', '❌ Mot de passe incorrect.');
+      if (auth.error.message.toLowerCase().includes('confirm')) {
+        showAlert('alert-login', '📧 Confirme d\'abord ton email (vérifie ta boîte mail).');
+      } else {
+        showAlert('alert-login', '❌ Identifiant ou mot de passe incorrect.');
+      }
     } else {
       showAlert('alert-login', '✅ Connexion réussie ! Redirection...', 'success');
       setTimeout(function() { window.location.href = 'events.html'; }, 1200);
@@ -471,6 +485,8 @@ document.getElementById('btn-login').addEventListener('click', async function() 
 });
 
 // ── INSCRIPTION ─────────────────────────────────────────
+// Le profil est créé automatiquement par un trigger SQL côté Supabase.
+// On passe juste les metadata au signUp, c'est tout.
 document.getElementById('btn-signup').addEventListener('click', async function() {
   var prenom = document.getElementById('signup-prenom').value.trim();
   var nom    = document.getElementById('signup-nom').value.trim();
@@ -490,15 +506,17 @@ document.getElementById('btn-signup').addEventListener('click', async function()
   setLoading('btn-signup', true);
   try {
     var res = await sb.auth.signUp({
-      email: email, password: pw,
-      options: { data: { pseudo: pseudo, prenom: prenom, nom: nom, tel: tel, dob: dob } }
+      email: email,
+      password: pw,
+      options: {
+        data: { pseudo: pseudo, prenom: prenom, nom: nom, tel: tel, dob: dob }
+      }
     });
     if (res.error) {
       showAlert('alert-signup', res.error.message.toLowerCase().includes('already') ? '❌ Cet email est déjà utilisé.' : '❌ ' + res.error.message);
     } else {
-      await sb.from('profiles').insert({ id: res.data.user.id, pseudo: pseudo, prenom: prenom, nom: nom, email: email, tel: tel, dob: dob || null });
-      showAlert('alert-signup', '🎉 Compte créé ! Vérifie tes emails pour confirmer.', 'success');
-      setTimeout(function() { showPanel('login'); }, 2500);
+      showAlert('alert-signup', '🎉 Compte créé ! Vérifie tes emails pour confirmer ta boîte mail, puis reviens te connecter.', 'success');
+      setTimeout(function() { showPanel('login'); }, 3500);
     }
   } catch(e) { showAlert('alert-signup', '❌ Erreur réseau. Réessaie.'); }
   setLoading('btn-signup', false, 'Rejoindre les artistes 🎉');
