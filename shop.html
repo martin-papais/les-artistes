@@ -217,6 +217,103 @@ textarea.minput{resize:vertical;min-height:70px;}
   .cd-num{font-size:1.7rem;min-width:40px;}
   .countdown-digits{gap:8px;}
 }
+
+/* ── SOUS-ONGLETS BOUTIQUE ── */
+.shop-tabs{display:flex;justify-content:center;gap:12px;padding:0 24px 32px;flex-wrap:wrap;}
+.shop-tab{
+  display:flex;align-items:center;gap:9px;
+  padding:13px 26px;border-radius:16px;
+  border:2px solid var(--border);background:var(--surface);
+  cursor:pointer;transition:var(--trans);font-family:'DM Sans',sans-serif;
+  font-size:.92rem;font-weight:700;color:var(--muted);min-width:180px;justify-content:center;
+}
+.shop-tab:hover{background:var(--surface2);color:var(--text);}
+.shop-tab.active-commande{border-color:rgba(245,200,66,.6);background:linear-gradient(135deg,rgba(245,200,66,.15),rgba(255,107,107,.1));color:var(--gold);box-shadow:0 4px 20px rgba(245,200,66,.2);}
+.shop-tab.active-sondage{border-color:rgba(199,125,255,.6);background:linear-gradient(135deg,rgba(199,125,255,.15),rgba(255,107,107,.1));color:var(--violet);box-shadow:0 4px 20px rgba(199,125,255,.2);}
+
+/* ── SONDAGE SECTION ── */
+.sondage-section{max-width:1100px;margin:0 auto;padding:0 24px 80px;display:none;}
+.sondage-section.active{display:block;animation:fadeIn .35s ease;}
+
+/* Timer sondage */
+.sondage-hero{text-align:center;margin-bottom:32px;}
+.sondage-timer-wrap{display:inline-flex;flex-direction:column;align-items:center;background:var(--surface);border:1px solid rgba(199,125,255,.25);border-radius:20px;padding:18px 32px;backdrop-filter:blur(10px);margin-bottom:16px;}
+.sondage-timer-label{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--violet);margin-bottom:10px;}
+.sondage-timer-digits{display:flex;gap:10px;align-items:center;}
+.std-block{display:flex;flex-direction:column;align-items:center;gap:3px;}
+.std-num{font-family:'Playfair Display',serif;font-size:2rem;font-weight:900;line-height:1;background:linear-gradient(135deg,var(--violet),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;min-width:44px;text-align:center;}
+.std-unit{font-size:.6rem;font-weight:700;text-transform:uppercase;color:var(--muted);}
+.std-sep{font-size:1.4rem;color:var(--muted);margin-bottom:12px;}
+.sondage-expired{font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:700;color:var(--violet);padding:8px 0;}
+.sondage-none{padding:10px 20px;font-size:.85rem;color:var(--muted);border:1px dashed rgba(199,125,255,.3);border-radius:12px;}
+
+/* Admin sondage */
+.admin-sondage{background:rgba(199,125,255,.07);border:1px solid rgba(199,125,255,.25);border-radius:14px;padding:14px 18px;margin-bottom:24px;}
+.admin-sondage-title{font-size:.78rem;font-weight:700;color:var(--violet);margin-bottom:10px;}
+.admin-sondage-row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;}
+.btn-admin-violet{padding:9px 18px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--violet),var(--pink));color:#fff;font-family:'DM Sans',sans-serif;font-size:.83rem;font-weight:700;cursor:pointer;transition:var(--trans);white-space:nowrap;}
+.btn-admin-violet:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(199,125,255,.35);}
+.btn-admin-violet-sec{padding:9px 14px;border-radius:10px;border:1px solid rgba(199,125,255,.4);background:transparent;color:var(--violet);font-family:'DM Sans',sans-serif;font-size:.8rem;cursor:pointer;transition:var(--trans);}
+.btn-admin-violet-sec:hover{background:rgba(199,125,255,.1);}
+.votes-input{padding:8px 11px;background:rgba(255,255,255,.08);border:1.5px solid rgba(199,125,255,.3);border-radius:9px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.83rem;outline:none;width:80px;}
+.votes-input:focus{border-color:var(--violet);}
+
+/* Catégories sondage */
+.sondage-cats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px;}
+.scat-btn{padding:8px 16px;border-radius:20px;border:1.5px solid var(--border);background:var(--surface);cursor:pointer;font-family:'DM Sans',sans-serif;font-size:.82rem;font-weight:600;color:var(--muted);transition:var(--trans);}
+.scat-btn:hover{background:var(--surface2);color:var(--text);}
+.scat-btn.active{border-color:var(--violet);background:rgba(199,125,255,.15);color:var(--violet);}
+.scat-btn .scat-count{display:inline-block;padding:1px 6px;border-radius:10px;font-size:.65rem;background:rgba(255,255,255,.1);margin-left:4px;}
+
+/* Grille candidats */
+.candidates-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-bottom:32px;}
+.candidate-card{
+  background:var(--surface);border:2px solid var(--border);border-radius:18px;
+  overflow:hidden;transition:var(--trans);cursor:pointer;position:relative;
+}
+.candidate-card:hover{border-color:rgba(199,125,255,.4);box-shadow:0 10px 30px rgba(0,0,0,.35);}
+.candidate-card.voted{border-color:var(--violet);background:rgba(199,125,255,.1);box-shadow:0 0 0 2px rgba(199,125,255,.3);}
+.candidate-card.maxed{opacity:.55;cursor:not-allowed;}
+.candidate-card.maxed:hover{border-color:var(--border);box-shadow:none;}
+.candidate-img-wrap{aspect-ratio:1;overflow:hidden;background:#1a1530;position:relative;}
+.candidate-img{width:100%;height:100%;object-fit:cover;transition:transform .3s;}
+.candidate-card:hover .candidate-img{transform:scale(1.04);}
+.candidate-placeholder{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,rgba(199,125,255,.1),rgba(255,107,107,.06));}
+.voted-badge{position:absolute;top:8px;right:8px;padding:3px 9px;border-radius:20px;font-size:.68rem;font-weight:700;background:rgba(199,125,255,.35);color:var(--violet);backdrop-filter:blur(6px);}
+.candidate-info{padding:10px 12px 12px;}
+.candidate-name{font-weight:700;font-size:.88rem;margin-bottom:4px;}
+.candidate-sub{font-size:.72rem;color:var(--muted);}
+
+/* Leaderboard */
+.leaderboard{background:var(--surface);border:1px solid var(--border);border-radius:18px;overflow:hidden;}
+.lb-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.lb-title{font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;}
+.lb-total{font-size:.75rem;color:var(--muted);}
+.lb-row{display:flex;align-items:center;gap:12px;padding:10px 18px;border-bottom:1px solid var(--border);transition:background .2s;}
+.lb-row:last-child{border-bottom:none;}
+.lb-row:hover{background:rgba(255,255,255,.03);}
+.lb-rank{font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:900;min-width:28px;text-align:center;}
+.lb-rank.r1{background:linear-gradient(135deg,#FFD700,#FFA500);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.lb-rank.r2{background:linear-gradient(135deg,#C0C0C0,#A0A0A0);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.lb-rank.r3{background:linear-gradient(135deg,#CD7F32,#A0522D);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.lb-thumb{width:40px;height:40px;border-radius:10px;object-fit:cover;background:#1a1530;flex-shrink:0;}
+.lb-thumb-ph{width:40px;height:40px;border-radius:10px;background:rgba(199,125,255,.15);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;}
+.lb-name{flex:1;font-size:.88rem;font-weight:600;}
+.lb-bar-wrap{flex:2;height:6px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden;}
+.lb-bar{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--violet),var(--pink));transition:width .6s ease;}
+.lb-votes{font-size:.82rem;font-weight:700;color:var(--violet);min-width:48px;text-align:right;}
+.lb-section{margin-bottom:28px;}
+.lb-section-title{font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.lb-section-title::after{content:'';flex:1;height:1px;background:var(--border);}
+.my-votes-left{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;background:rgba(199,125,255,.12);border:1px solid rgba(199,125,255,.3);font-size:.78rem;color:var(--violet);font-weight:600;margin-bottom:16px;}
+
+@media(max-width:768px){
+  .shop-tabs{padding:0 16px 20px;gap:8px;}
+  .shop-tab{min-width:unset;flex:1;padding:11px 14px;font-size:.85rem;}
+  .sondage-section{padding:0 16px 60px;}
+  .candidates-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;}
+  .admin-sondage-row{flex-direction:column;}
+}
 </style>
 </head>
 <body>
@@ -284,6 +381,16 @@ textarea.minput{resize:vertical;min-height:70px;}
     </div>
   </section>
 
+  <!-- SOUS-ONGLETS -->
+  <div class="shop-tabs">
+    <button class="shop-tab active-commande" id="tab-commande" onclick="switchShopTab('commande')">
+      <span>&#128717;</span><span>Commandes</span>
+    </button>
+    <button class="shop-tab" id="tab-sondage" onclick="switchShopTab('sondage')">
+      <span>&#127881;</span><span>Sondage</span>
+    </button>
+  </div>
+
   <!-- ADMIN (uniquement martin15.papais@gmail.com) -->
   <div class="admin-panel" id="admin-panel">
     <div class="admin-title">&#9881; Panneau Admin</div>
@@ -302,6 +409,64 @@ textarea.minput{resize:vertical;min-height:70px;}
     <div class="shop-grid" id="shop-grid">
       <div class="loading-wrap"><div class="loading-spinner"></div></div>
     </div>
+  </div>
+
+  <!-- ═══════ SECTION SONDAGE ═══════ -->
+  <div class="sondage-section" id="sondage-section">
+
+    <!-- Timer sondage -->
+    <div class="sondage-hero">
+      <div class="sondage-timer-wrap">
+        <div id="st-state-none"><div class="sondage-none">Aucun sondage en cours &#8212; en attente de l'admin &#9203;</div></div>
+        <div id="st-state-running" style="display:none;flex-direction:column;align-items:center">
+          <div class="sondage-timer-label">Sondage se termine dans</div>
+          <div class="sondage-timer-digits">
+            <div class="std-block"><span class="std-num" id="st-j">--</span><span class="std-unit">jours</span></div>
+            <span class="std-sep">:</span>
+            <div class="std-block"><span class="std-num" id="st-h">--</span><span class="std-unit">h</span></div>
+            <span class="std-sep">:</span>
+            <div class="std-block"><span class="std-num" id="st-m">--</span><span class="std-unit">min</span></div>
+            <span class="std-sep">:</span>
+            <div class="std-block"><span class="std-num" id="st-s">--</span><span class="std-unit">sec</span></div>
+          </div>
+        </div>
+        <div id="st-state-expired" style="display:none">
+          <div class="sondage-expired">&#9201; Le sondage est termin&#233; !</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Admin sondage -->
+    <div class="admin-sondage" id="admin-sondage" style="display:none">
+      <div class="admin-sondage-title">&#9881; Gestion du sondage</div>
+      <div class="admin-sondage-row">
+        <div class="admin-field">
+          <label style="font-size:.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Date de fin du sondage</label>
+          <input type="datetime-local" class="admin-input" id="sondage-deadline-input" style="border-color:rgba(199,125,255,.3)">
+        </div>
+        <div class="admin-field">
+          <label style="font-size:.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Votes max par cat&#233;gorie</label>
+          <input type="number" class="votes-input" id="sondage-votes-max" min="1" max="10" value="3" placeholder="3">
+        </div>
+        <button class="btn-admin-violet" onclick="saveSondageSettings()">&#128190; Enregistrer</button>
+        <button class="btn-admin-violet-sec" onclick="clearSondageTimer()">Effacer timer</button>
+        <button class="btn-admin-violet" onclick="openAddCandidat()">&#43; Ajouter un candidat</button>
+      </div>
+    </div>
+
+    <!-- Filtre catégories -->
+    <div class="sondage-cats" id="sondage-cats"></div>
+
+    <!-- Votes restants -->
+    <div id="my-votes-info"></div>
+
+    <!-- Grille candidats -->
+    <div class="candidates-grid" id="candidates-grid">
+      <div class="loading-wrap"><div class="loading-spinner" style="border-top-color:var(--violet)"></div></div>
+    </div>
+
+    <!-- Leaderboard -->
+    <div id="leaderboard-wrap"></div>
   </div>
 </main>
 
@@ -861,6 +1026,362 @@ async function deleteArticle(id) {
   loadShop();
 }
 
+// ── SONDAGE : variables ───────────────────────────────────────────────────────
+var sondageDeadline  = null;
+var sondageInterval  = null;
+var sondageVotesMax  = 3;
+var allCandidats     = [];
+var allSVotes        = [];
+var activeSondageCat = 'all';
+var editingCandidat  = null;
+
+// ── TAB SWITCHER ──────────────────────────────────────────────────────────────
+function switchShopTab(tab) {
+  var isCommande = tab === 'commande';
+  document.getElementById('tab-commande').className  = 'shop-tab' + (isCommande  ? ' active-commande' : '');
+  document.getElementById('tab-sondage').className   = 'shop-tab' + (!isCommande ? ' active-sondage'  : '');
+
+  // Section commande : admin-panel + shop
+  document.getElementById('admin-panel').style.display = isCommande && isAdmin ? 'block' : 'none';
+  document.querySelector('.shop').style.display        = isCommande ? 'block' : 'none';
+
+  // Section sondage
+  document.getElementById('sondage-section').classList.toggle('active', !isCommande);
+  if (!isCommande) {
+    document.getElementById('admin-sondage').style.display = isAdmin ? 'block' : 'none';
+    loadSondage();
+  }
+}
+
+// Appel initial : masquer le admin-panel en attendant le tab switch
+document.addEventListener('DOMContentLoaded', function() {
+  // Par défaut onglet commande est actif, admin-panel géré par init()
+});
+
+// ── SONDAGE : timer ────────────────────────────────────────────────────────────
+function setSondageState(state) {
+  document.getElementById('st-state-none').style.display    = state === 'none'    ? 'block' : 'none';
+  document.getElementById('st-state-running').style.display = state === 'running' ? 'flex'  : 'none';
+  document.getElementById('st-state-expired').style.display = state === 'expired' ? 'block' : 'none';
+}
+
+async function loadSondageSettings() {
+  var r = await sb.from('shop_config').select('*').in('key', ['sondage_deadline','sondage_votes_max']);
+  (r.data || []).forEach(function(row) {
+    if (row.key === 'sondage_deadline' && row.value) {
+      sondageDeadline = new Date(row.value);
+      if (isAdmin) {
+        var local = new Date(sondageDeadline.getTime() - sondageDeadline.getTimezoneOffset()*60000).toISOString().slice(0,16);
+        document.getElementById('sondage-deadline-input').value = local;
+      }
+      startSondageTimer();
+    }
+    if (row.key === 'sondage_votes_max' && row.value) {
+      sondageVotesMax = parseInt(row.value) || 3;
+      document.getElementById('sondage-votes-max').value = sondageVotesMax;
+    }
+  });
+  if (!sondageDeadline) setSondageState('none');
+}
+
+function startSondageTimer() {
+  if (sondageInterval) clearInterval(sondageInterval);
+  function tick() {
+    if (!sondageDeadline) return;
+    var diff = sondageDeadline.getTime() - new Date().getTime();
+    if (diff <= 0) { clearInterval(sondageInterval); setSondageState('expired'); return; }
+    setSondageState('running');
+    document.getElementById('st-j').textContent = pad(Math.floor(diff / 86400000));
+    document.getElementById('st-h').textContent = pad(Math.floor((diff % 86400000) / 3600000));
+    document.getElementById('st-m').textContent = pad(Math.floor((diff % 3600000)  / 60000));
+    document.getElementById('st-s').textContent = pad(Math.floor((diff % 60000)    / 1000));
+  }
+  tick(); sondageInterval = setInterval(tick, 1000);
+}
+
+async function saveSondageSettings() {
+  var dlVal = document.getElementById('sondage-deadline-input').value;
+  var vmVal = parseInt(document.getElementById('sondage-votes-max').value) || 3;
+  sondageVotesMax = vmVal;
+
+  var rows = [{ key:'sondage_votes_max', value: String(vmVal) }];
+  if (dlVal) {
+    sondageDeadline = new Date(dlVal);
+    rows.push({ key:'sondage_deadline', value: sondageDeadline.toISOString() });
+    startSondageTimer();
+  }
+  await sb.from('shop_config').upsert(rows, { onConflict:'key' });
+  renderCandidates();
+}
+
+async function clearSondageTimer() {
+  if (!confirm('Effacer le timer du sondage ?')) return;
+  await sb.from('shop_config').delete().eq('key','sondage_deadline');
+  sondageDeadline = null;
+  if (sondageInterval) clearInterval(sondageInterval);
+  setSondageState('none');
+}
+
+// ── SONDAGE : load data ────────────────────────────────────────────────────────
+async function loadSondage() {
+  document.getElementById('candidates-grid').innerHTML =
+    '<div class="loading-wrap"><div class="loading-spinner" style="border-top-color:var(--violet)"></div></div>';
+
+  await loadSondageSettings();
+
+  var cr = await sb.from('sondage_candidats').select('*').order('categorie').order('nom');
+  allCandidats = cr.data || [];
+
+  var vr = await sb.from('sondage_votes').select('*');
+  allSVotes = vr.data || [];
+
+  renderSondageCats();
+  renderCandidates();
+  renderLeaderboard();
+}
+
+// ── SONDAGE : catégories ───────────────────────────────────────────────────────
+function renderSondageCats() {
+  var cats = [];
+  allCandidats.forEach(function(cat_item) {
+    if (cats.indexOf(cat_item.categorie) === -1) cats.push(cat_item.categorie);
+  });
+
+  var container = document.getElementById('sondage-cats');
+  container.innerHTML = '';
+
+  // Bouton "Tout voir"
+  var allBtn = document.createElement('button');
+  allBtn.className = 'scat-btn' + (activeSondageCat === 'all' ? ' active' : '');
+  allBtn.innerHTML = 'Tout voir <span class="scat-count">' + allCandidats.length + '</span>';
+  allBtn.onclick = function() { filterSondageCat('all'); };
+  container.appendChild(allBtn);
+
+  // Boutons par catégorie
+  cats.forEach(function(cat) {
+    var n   = allCandidats.filter(function(c) { return c.categorie === cat; }).length;
+    var btn = document.createElement('button');
+    btn.className = 'scat-btn' + (activeSondageCat === cat ? ' active' : '');
+    btn.innerHTML = esc(cat) + ' <span class="scat-count">' + n + '</span>';
+    btn.onclick = (function(catVal) { return function() { filterSondageCat(catVal); }; })(cat);
+    container.appendChild(btn);
+  });
+}
+
+
+function filterSondageCat(cat) {
+  activeSondageCat = cat;
+  renderSondageCats();
+  renderCandidates();
+  renderLeaderboard();
+}
+
+// ── SONDAGE : candidats ────────────────────────────────────────────────────────
+function renderCandidates() {
+  var list = activeSondageCat === 'all'
+    ? allCandidats
+    : allCandidats.filter(function(c) { return c.categorie === activeSondageCat; });
+
+  // Mes votes par catégorie
+  var myVotesByCat = {};
+  allSVotes.filter(function(v) { return v.user_id === currentUser.id; }).forEach(function(v) {
+    myVotesByCat[v.categorie] = (myVotesByCat[v.categorie] || 0) + 1;
+  });
+
+  var grid = document.getElementById('candidates-grid');
+  if (!list.length) {
+    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="ei">&#127881;</div><p>Aucun candidat'+(isAdmin?' — ajoutes-en via le panneau admin':'')+'</p></div>';
+  } else {
+    grid.innerHTML = list.map(function(c) { return buildCandidatCard(c, myVotesByCat); }).join('');
+    // Attacher les handlers de clic via data attributes
+    grid.querySelectorAll('.candidate-card').forEach(function(card) {
+      if (card.dataset.maxed !== '1') {
+        card.addEventListener('click', function(e) {
+          if (e.target.closest('.pa-btn')) return;
+          var id  = this.dataset.id;
+          var cat = this.dataset.cat;
+          if (id && cat) castSVote(id, cat);
+        });
+      }
+    });
+  }
+
+  // Info votes restants
+  var infoEl = document.getElementById('my-votes-info');
+  var cats = [];
+  allCandidats.forEach(function(c) { if (cats.indexOf(c.categorie) === -1) cats.push(c.categorie); });
+
+  if (cats.length) {
+    var infos = cats.map(function(cat) {
+      var used = (myVotesByCat[cat] || 0);
+      var left = sondageVotesMax - used;
+      return esc(cat) + ' : <strong style="color:' + (left > 0 ? 'var(--teal)' : 'var(--coral)') + '">' + left + ' vote' + (left !== 1 ? 's' : '') + '</strong> restant' + (left !== 1 ? 's' : '');
+    }).join(' &nbsp;|&nbsp; ');
+    infoEl.innerHTML = '<div class="my-votes-left">&#127931; ' + infos + ' (max ' + sondageVotesMax + ' par cat&#233;gorie)</div>';
+  } else {
+    infoEl.innerHTML = '';
+  }
+}
+
+function buildCandidatCard(c, myVotesByCat) {
+  var myVotes    = allSVotes.filter(function(v) { return v.user_id === currentUser.id && v.candidat_id === c.id; });
+  var voted      = myVotes.length > 0;
+  var catUsed    = myVotesByCat[c.categorie] || 0;
+  var maxReached = !voted && catUsed >= sondageVotesMax;
+  var totalVotes = allSVotes.filter(function(v) { return v.candidat_id === c.id; }).length;
+
+  var imgSrc = c.image ? 'images/shop/' + esc(c.image) : '';
+  var imgHtml = imgSrc
+    ? '<img class="candidate-img" src="' + imgSrc + '" alt="' + esc(c.nom) + '">'
+      + '<div class="candidate-placeholder" style="display:none"><span style="font-size:2rem">&#128248;</span></div>'
+    : '<div class="candidate-placeholder"><span style="font-size:2rem">&#128248;</span></div>';
+
+  var adminBtnsHtml = isAdmin
+    ? '<div style="padding:0 10px 10px;display:flex;gap:5px">'
+      + '<button class="pa-btn" style="font-size:.7rem" onclick="event.stopPropagation();openEditCandidat(\'' + c.id + '\')">&#9998;</button>'
+      + '<button class="pa-btn del" style="font-size:.7rem" onclick="event.stopPropagation();deleteCandidat(\'' + c.id + '\')">&#128465;</button>'
+      + '</div>'
+    : '';
+
+  var cardClass = 'candidate-card' + (voted ? ' voted' : '') + (maxReached ? ' maxed' : '');
+
+  return '<div class="' + cardClass + '" data-id="' + c.id + '" data-cat="' + esc(c.categorie) + '" data-maxed="' + (maxReached ? '1' : '0') + '">'
+    + '<div class="candidate-img-wrap">'
+    +   imgHtml
+    +   (voted ? '<span class="voted-badge">&#10003; Vot&#233;</span>' : '')
+    + '</div>'
+    + '<div class="candidate-info">'
+    +   '<div class="candidate-name">' + esc(c.nom) + '</div>'
+    +   (c.description ? '<div class="candidate-sub">' + esc(c.description) + '</div>' : '')
+    +   '<div style="font-size:.72rem;color:var(--violet);font-weight:700;margin-top:4px">' + totalVotes + ' vote' + (totalVotes !== 1 ? 's' : '') + '</div>'
+    + '</div>'
+    + adminBtnsHtml
+    + '</div>';
+}
+
+
+// ── SONDAGE : voter ────────────────────────────────────────────────────────────
+async function castSVote(candidatId, categorie) {
+  var existing = allSVotes.find(function(v) { return v.user_id === currentUser.id && v.candidat_id === candidatId; });
+  if (existing) {
+    // Retire le vote
+    await sb.from('sondage_votes').delete().eq('id', existing.id);
+  } else {
+    // Vérifie quota
+    var catUsed = allSVotes.filter(function(v) { return v.user_id === currentUser.id && v.categorie === categorie; }).length;
+    if (catUsed >= sondageVotesMax) return;
+    await sb.from('sondage_votes').insert({ candidat_id: candidatId, user_id: currentUser.id, categorie: categorie });
+  }
+  // Reload votes seulement
+  var vr = await sb.from('sondage_votes').select('*');
+  allSVotes = vr.data || [];
+  renderCandidates();
+  renderLeaderboard();
+}
+
+// ── SONDAGE : leaderboard ─────────────────────────────────────────────────────
+function renderLeaderboard() {
+  var cats = [];
+  allCandidats.forEach(function(c) { if (cats.indexOf(c.categorie) === -1) cats.push(c.categorie); });
+  if (activeSondageCat !== 'all') cats = cats.filter(function(c) { return c === activeSondageCat; });
+
+  var wrap = document.getElementById('leaderboard-wrap');
+  if (!cats.length || !allCandidats.length) { wrap.innerHTML = ''; return; }
+
+  var html = '<div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:16px;display:flex;align-items:center;gap:8px">&#127942; Classement en temps r&#233;el<span style="flex:1;height:1px;background:var(--border);display:inline-block;margin-left:8px"></span></div>';
+
+  cats.forEach(function(cat) {
+    var cands = allCandidats.filter(function(c) { return c.categorie === cat; });
+    var scored = cands.map(function(c) {
+      return { c: c, votes: allSVotes.filter(function(v) { return v.candidat_id === c.id; }).length };
+    }).sort(function(a,b) { return b.votes - a.votes; });
+
+    var maxV  = scored.length ? scored[0].votes : 0;
+    var total = scored.reduce(function(sum, x) { return sum + x.votes; }, 0);
+
+    html += '<div class="lb-section"><div class="lb-section-title">' + esc(cat) + '</div>';
+    html += '<div class="leaderboard"><div class="lb-header"><span class="lb-title">&#127942; Top ' + esc(cat) + '</span><span class="lb-total">' + total + ' vote' + (total !== 1 ? 's' : '') + '</span></div>';
+
+    scored.forEach(function(item, idx) {
+      var rank     = idx + 1;
+      var rankCls  = rank <= 3 ? ' r' + rank : '';
+      var barW     = maxV > 0 ? Math.round(item.votes / maxV * 100) : 0;
+      var thumbHtml = item.c.image
+        ? '<img class="lb-thumb" src="images/shop/' + esc(item.c.image) + '" >'
+        : '<div class="lb-thumb-ph">&#128248;</div>';
+
+      html += '<div class="lb-row">'
+        + '<span class="lb-rank' + rankCls + '">' + (rank === 1 ? '&#129351;' : rank === 2 ? '&#129352;' : rank === 3 ? '&#129353;' : rank) + '</span>'
+        + thumbHtml
+        + '<span class="lb-name">' + esc(item.c.nom) + '</span>'
+        + '<div class="lb-bar-wrap"><div class="lb-bar" style="width:' + barW + '%"></div></div>'
+        + '<span class="lb-votes">' + item.votes + ' vote' + (item.votes !== 1 ? 's' : '') + '</span>'
+        + '</div>';
+    });
+
+    html += '</div></div>';
+  });
+
+  wrap.innerHTML = html;
+}
+
+// ── SONDAGE : admin candidats ──────────────────────────────────────────────────
+function openAddCandidat() {
+  editingCandidat = null;
+  document.getElementById('candidat-modal-title').textContent = '+ Nouveau candidat';
+  document.getElementById('f-cand-nom').value = '';
+  document.getElementById('f-cand-cat').value = '';
+  document.getElementById('f-cand-img').value = '';
+  document.getElementById('f-cand-sub').value = '';
+  document.getElementById('alert-candidat').className = 'malert';
+  openModal('modal-candidat');
+}
+
+function openEditCandidat(id) {
+  var c = allCandidats.find(function(x) { return x.id === id; });
+  if (!c) return;
+  editingCandidat = id;
+  document.getElementById('candidat-modal-title').textContent = 'Modifier le candidat';
+  document.getElementById('f-cand-nom').value = c.nom || '';
+  document.getElementById('f-cand-cat').value = c.categorie || '';
+  document.getElementById('f-cand-img').value = c.image || '';
+  document.getElementById('f-cand-sub').value = c.description || '';
+  document.getElementById('alert-candidat').className = 'malert';
+  openModal('modal-candidat');
+}
+
+async function saveCandidat() {
+  var btn = document.getElementById('btn-save-candidat');
+  var alertEl = document.getElementById('alert-candidat');
+  alertEl.className = 'malert';
+  var nom = document.getElementById('f-cand-nom').value.trim();
+  var cat = document.getElementById('f-cand-cat').value.trim();
+  if (!nom || !cat) { alertEl.textContent = 'Nom et cat&#233;gorie obligatoires.'; alertEl.className = 'malert error'; return; }
+
+  var payload = {
+    nom:         nom,
+    categorie:   cat,
+    image:       document.getElementById('f-cand-img').value.trim() || null,
+    description: document.getElementById('f-cand-sub').value.trim() || null
+  };
+
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>...';
+  var r = editingCandidat
+    ? await sb.from('sondage_candidats').update(payload).eq('id', editingCandidat)
+    : await sb.from('sondage_candidats').insert(payload);
+  btn.disabled = false; btn.textContent = 'Enregistrer';
+
+  if (r.error) { alertEl.textContent = 'Erreur : ' + r.error.message; alertEl.className = 'malert error'; }
+  else { closeModal('modal-candidat'); loadSondage(); }
+}
+
+async function deleteCandidat(id) {
+  if (!confirm('Supprimer ce candidat ?')) return;
+  await sb.from('sondage_votes').delete().eq('candidat_id', id);
+  await sb.from('sondage_candidats').delete().eq('id', id);
+  loadSondage();
+}
+
 // ── UTILS ─────────────────────────────────────────────────────────────────────
 function openModal(id)  { document.getElementById(id).classList.add('open'); document.body.style.overflow = 'hidden'; }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); document.body.style.overflow = ''; }
@@ -885,5 +1406,40 @@ document.addEventListener('click', function(e) {
   }
 });
 </script>
+
+<!-- MODAL CANDIDAT (admin) -->
+<div class="modal-overlay" id="modal-candidat">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="candidat-modal-title">&#43; Nouveau candidat</div>
+      <button class="modal-close" onclick="closeModal('modal-candidat')">&#10005;</button>
+    </div>
+    <div class="modal-body">
+      <div class="malert" id="alert-candidat"></div>
+      <div class="mfield">
+        <label>Nom / Description *</label>
+        <input type="text" class="minput" id="f-cand-nom" placeholder="Ex: D&#233;bardeur blanc oversize">
+      </div>
+      <div class="mfield">
+        <label>Cat&#233;gorie *</label>
+        <input type="text" class="minput" id="f-cand-cat" placeholder="Ex: D&#233;bardeur, Pull, Bandeau...">
+        <div style="font-size:.7rem;color:var(--muted);margin-top:4px">Les candidats d'une m&#234;me cat&#233;gorie s'affrontent entre eux</div>
+      </div>
+      <div class="mfield">
+        <label>Image (fichier dans /images/shop/)</label>
+        <input type="text" class="minput" id="f-cand-img" placeholder="debardeur_blanc.jpg">
+      </div>
+      <div class="mfield">
+        <label>Description courte</label>
+        <input type="text" class="minput" id="f-cand-sub" placeholder="Ex: 100% coton, blanc, coupe oversize">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-sec" onclick="closeModal('modal-candidat')">Annuler</button>
+      <button class="btn-prim" id="btn-save-candidat" onclick="saveCandidat()" style="background:linear-gradient(135deg,var(--violet),var(--pink))">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
