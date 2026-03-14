@@ -323,6 +323,15 @@
       </div>
     </div>
     <div class="field">
+      <label>Mot de passe du groupe 🐢</label>
+      <div class="input-wrap">
+        <span class="icon">🔑</span>
+        <input type="password" id="signup-groupe" placeholder="Mot de passe commun au groupe" autocomplete="off" class="has-toggle">
+        <button class="toggle-pw" type="button" id="eye-groupe">👁️</button>
+      </div>
+    </div>
+
+    <div class="field">
       <div class="check-row">
         <input type="checkbox" id="cgu">
         <label for="cgu">J'accepte les <a href="#">conditions d'utilisation</a> du site privé</label>
@@ -411,6 +420,7 @@ function makeToggle(eyeId, inputId) {
 makeToggle('eye-login',   'login-password');
 makeToggle('eye-signup',  'signup-password');
 makeToggle('eye-signup2', 'signup-password2');
+makeToggle('eye-groupe',  'signup-groupe');
 
 // ── Jauge force mot de passe ────────────────────────────
 document.getElementById('signup-password').addEventListener('input', function() {
@@ -500,6 +510,10 @@ document.getElementById('btn-signup').addEventListener('click', async function()
   if (!prenom || !nom || !email || !pw || !pw2) { showAlert('alert-signup', '⚠️ Remplis tous les champs obligatoires !'); return; }
   if (pw !== pw2)    { showAlert('alert-signup', '❌ Les mots de passe ne correspondent pas.'); return; }
   if (pw.length < 8) { showAlert('alert-signup', '❌ Le mot de passe doit faire au moins 8 caractères.'); return; }
+
+  var groupe = document.getElementById('signup-groupe').value.trim();
+  if (groupe.toLowerCase() !== 'tortue') { showAlert('alert-signup', '❌ Mot de passe du groupe incorrect. Demande-le à un membre !'); return; }
+
   if (!cgu)          { showAlert('alert-signup', "⚠️ Accepte les conditions d'utilisation."); return; }
 
   var pseudo = prenom + ' ' + nom;
