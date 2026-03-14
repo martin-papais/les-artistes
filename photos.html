@@ -548,19 +548,35 @@ function buildItem(m, i) {
 
   // Partie visuelle
   var mediaHtml = '';
-  if (m.type === 'photo') {
+  if (m.type === 'photo' && m.file_url) {
+    // Photo : img normale avec crossOrigin pour eviter les erreurs CORS
     mediaHtml = '<div class="item-media">'
-      + '<img class="item-img" src="'+esc(m.file_url)+'" alt="'+esc(m.sujet)+'" loading="lazy">'
+      + '<img class="item-img" src="'+esc(m.file_url)+'" alt="'+esc(m.sujet)+'" loading="lazy" crossorigin="anonymous" onerror="this.parentElement.innerHTML=\'<div class=\\"item-file-icon\\"><span class=\\"fi\\">&#128248;</span><span class=\\"fn\\">Image non chargee</span></div>\'">'
       + '<span class="type-badge badge-photo">Photo</span>'
       + '<div class="item-overlay"></div>'
       + '</div>';
-  } else if (m.type === 'video') {
+  } else if (m.type === 'video' && m.file_url) {
+    // Video : thumbnail via canvas + tag video avec premiere frame
+    var vidId = 'vid-' + m.id.replace(/-/g,'');
+    mediaHtml = '<div class="item-media" style="position:relative">'
+      + '<video id="'+vidId+'" class="item-video" src="'+esc(m.file_url)+'" preload="metadata" crossorigin="anonymous"'
+      + ' onloadedmetadata="captureThumb(this)"'
+      + ' onerror="this.style.display=\'none\'">'  
+      + '</video>'
+      + '<canvas id="cvs-'+vidId+'" style="display:none;width:100%;border-radius:0"></canvas>'
+      + '<span class="type-badge badge-video">&#127909; Vid&#233;o</span>'
+      + '<div class="item-overlay" style="display:flex;align-items:center;justify-content:center;opacity:1;background:rgba(0,0,0,.3)">'
+      + '<div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.25);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;font-size:1.2rem;border:2px solid rgba(255,255,255,.5)">&#9654;</div>'
+      + '</div>'
+      + '</div>';
+  } else if (!m.file_url) {
+    // Pas d URL : affichage generique
+    var icon2 = getFileIcon(m.file_name||'');
     mediaHtml = '<div class="item-media">'
-      + '<video class="item-video" src="'+esc(m.file_url)+'" preload="metadata"></video>'
-      + '<span class="type-badge badge-video">Video</span>'
-      + '<div class="item-overlay"></div>'
+      + '<div class="item-file-icon"><span class="fi">'+icon2+'</span><span class="fn">'+esc(m.file_name||m.sujet||'Fichier')+'</span></div>'
       + '</div>';
   } else {
+    // Fichier / dossier
     var ext  = (m.file_name||'').split('.').pop().toUpperCase();
     var icon = getFileIcon(m.file_name||'');
     var badgeCls = m.type==='folder' ? 'badge-folder' : 'badge-file';
@@ -604,13 +620,30 @@ function buildItem(m, i) {
 function getFileIcon(name) {
   var ext = (name||'').split('.').pop().toLowerCase();
   var map = {
-    pdf:'📄', doc:'📝', docx:'📝', xls:'📊', xlsx:'📊', ppt:'📑', pptx:'📑',
-    zip:'📦', rar:'📦', gz:'📦', '7z':'📦',
-    mp3:'🎵', wav:'🎵', flac:'🎵', aac:'🎵',
-    txt:'📃', csv:'📃', json:'📃',
-    exe:'⚙️', dmg:'⚙️', apk:'📱'
+    pdf:'&#128196;', doc:'&#128221;', docx:'&#128221;', xls:'&#128202;', xlsx:'&#128202;', ppt:'&#128209;', pptx:'&#128209;',
+    zip:'&#128230;', rar:'&#128230;', gz:'&#128230;', '7z':'&#128230;',
+    mp3:'&#127925;', wav:'&#127925;', flac:'&#127925;', aac:'&#127925;',
+    txt:'&#128195;', csv:'&#128195;', json:'&#128195;',
+    exe:'&#9881;', dmg:'&#9881;', apk:'&#128241;'
   };
-  return map[ext] || '📎';
+  return map[ext] || '&#128206;';
+}
+
+// Capture la premiere frame d une video comme thumbnail
+function captureThumb(video) {
+  try {
+    var id  = video.id;
+    var cvs = document.getElementById('cvs-' + id);
+    if (!cvs) return;
+    cvs.width  = video.videoWidth  || 320;
+    cvs.height = video.videoHeight || 180;
+    var ctx = cvs.getContext('2d');
+    ctx.drawImage(video, 0, 0, cvs.width, cvs.height);
+    cvs.style.display = 'block';
+    video.style.display = 'none';
+  } catch(e) {
+    // CORS ou autre erreur : on garde le tag video
+  }
 }
 
 // ── DROPZONE ──────────────────────────────────────────
