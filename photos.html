@@ -105,35 +105,43 @@ main{padding-top:64px;position:relative;z-index:1;}
 
 /* Media dans la card */
 .item-media{position:relative;overflow:hidden;}
-.item-img{width:100%;display:block;object-fit:cover;transition:transform .4s ease;}
-.gallery-item:hover .item-img{transform:scale(1.04);}
-.item-video{width:100%;display:block;max-height:240px;object-fit:cover;}
+.item-img{width:100%;display:block;object-fit:cover;transition:transform .4s ease;min-height:140px;max-height:280px;background:#0d0b15;}
+.gallery-item:hover .item-img{transform:scale(1.03);}
+.item-video{width:100%;display:block;max-height:220px;background:#000;}
 .item-file-icon{
-  width:100%;padding:28px 20px;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
-  background:linear-gradient(135deg,rgba(78,205,196,.1),rgba(168,224,99,.08));
-  min-height:100px;
+  width:100%;padding:32px 20px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+  background:linear-gradient(135deg,rgba(78,205,196,.12),rgba(168,224,99,.07));
+  min-height:130px;
 }
-.item-file-icon .fi{font-size:2.2rem;}
+.item-file-icon .fi{font-size:2.6rem;}
 .item-file-icon .fn{font-size:.78rem;color:var(--muted);text-align:center;word-break:break-all;padding:0 8px;}
 
-/* Overlay hover */
+/* Overlay deco uniquement */
 .item-overlay{
-  position:absolute;inset:0;
-  background:linear-gradient(to top,rgba(0,0,0,.7) 0%,transparent 50%);
+  position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(to top,rgba(0,0,0,.4) 0%,transparent 60%);
   opacity:0;transition:opacity .3s;
-  display:flex;align-items:flex-end;padding:12px;gap:6px;
 }
 .gallery-item:hover .item-overlay{opacity:1;}
-.overlay-btn{
-  width:30px;height:30px;border-radius:8px;
-  background:rgba(255,255,255,.15);backdrop-filter:blur(6px);
-  border:1px solid rgba(255,255,255,.2);
-  cursor:pointer;display:flex;align-items:center;justify-content:center;
-  font-size:.8rem;color:#fff;transition:var(--trans);
+
+/* Barre d'actions toujours visible */
+.item-actions-bar{
+  display:flex;align-items:center;flex-wrap:wrap;gap:5px;
+  padding:8px 12px;border-top:1px solid var(--border);
 }
-.overlay-btn:hover{background:rgba(255,255,255,.25);}
-.overlay-btn.del:hover{background:rgba(255,107,107,.4);}
+.act-btn{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:5px 11px;border-radius:8px;
+  border:1px solid var(--border);background:var(--surface2);
+  cursor:pointer;font-family:'DM Sans',sans-serif;font-size:.75rem;font-weight:600;
+  color:var(--muted);transition:var(--trans);text-decoration:none;
+}
+.act-btn:hover{background:var(--surface3);color:var(--text);}
+.act-btn.view:hover{background:rgba(78,205,196,.15);color:var(--teal);border-color:rgba(78,205,196,.4);}
+.act-btn.dl:hover{background:rgba(168,224,99,.15);color:var(--lime);border-color:rgba(168,224,99,.4);}
+.act-btn.edit:hover{background:rgba(255,217,61,.12);color:var(--yellow);border-color:rgba(255,217,61,.3);}
+.act-btn.del:hover{background:rgba(255,107,107,.15);color:var(--coral);border-color:rgba(255,107,107,.3);}
 
 /* Type badge */
 .type-badge{
@@ -440,6 +448,7 @@ textarea.minput{resize:vertical;min-height:70px;}
       <div class="lb-meta"    id="lb-meta"></div>
     </div>
   </div>
+  <a id="lb-dl-btn" target="_blank" style="display:none;position:fixed;bottom:60px;right:20px;padding:8px 18px;border-radius:20px;background:rgba(78,205,196,.25);border:1px solid rgba(78,205,196,.5);color:var(--teal);font-family:'DM Sans',sans-serif;font-size:.83rem;font-weight:600;text-decoration:none;align-items:center;gap:6px;backdrop-filter:blur(6px);">&#11015; T&#233;l&#233;charger</a>
   <div class="lb-counter" id="lb-counter"></div>
 </div>
 
@@ -534,68 +543,63 @@ function buildItem(m, i) {
   var dateStr  = m.date_media ? new Date(m.date_media+'T00:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'}) : '';
   var p        = m.profiles;
   var uploader = p ? ((p.prenom&&p.nom)?p.prenom+' '+p.nom:p.prenom||p.pseudo||'?') : '?';
+  var authorLabel = m.pris_par ? esc(m.pris_par) : esc(uploader);
+  var lbIdx = lbItems.findIndex(function(x){ return x.id===m.id; });
 
+  // Partie visuelle
   var mediaHtml = '';
-  var badgeHtml = '';
-  var lbIndexForItem = lbItems.findIndex(function(x){ return x.id===m.id; });
-
   if (m.type === 'photo') {
-    badgeHtml = '<span class="type-badge badge-photo">📷 Photo</span>';
     mediaHtml = '<div class="item-media">'
-      + '<img class="item-img" src="'+esc(m.file_url)+'" alt="'+esc(m.sujet)+'" loading="lazy" onerror="this.src=\'\'">'
-      + badgeHtml
-      + '<div class="item-overlay">'
-      + '<button class="overlay-btn" onclick="openLightbox('+lbIndexForItem+');event.stopPropagation()" title="Agrandir">🔍</button>'
-      + (isOwner ? '<button class="overlay-btn" onclick="openEditModal(\''+m.id+'\');event.stopPropagation()" title="Modifier">✏️</button>' : '')
-      + (isOwner ? '<button class="overlay-btn del" onclick="deleteMedia(\''+m.id+'\');event.stopPropagation()" title="Supprimer">🗑️</button>' : '')
-      + '</div></div>';
+      + '<img class="item-img" src="'+esc(m.file_url)+'" alt="'+esc(m.sujet)+'" loading="lazy">'
+      + '<span class="type-badge badge-photo">Photo</span>'
+      + '<div class="item-overlay"></div>'
+      + '</div>';
   } else if (m.type === 'video') {
-    badgeHtml = '<span class="type-badge badge-video">🎥 Vidéo</span>';
-    mediaHtml = '<div class="item-media" style="position:relative">'
-      + '<video class="item-video" src="'+esc(m.file_url)+'" preload="metadata" onclick="openLightbox('+lbIndexForItem+');event.stopPropagation()"></video>'
-      + badgeHtml
-      + '<div class="item-overlay">'
-      + '<button class="overlay-btn" onclick="openLightbox('+lbIndexForItem+');event.stopPropagation()" title="Lire">▶</button>'
-      + (isOwner ? '<button class="overlay-btn" onclick="openEditModal(\''+m.id+'\');event.stopPropagation()" title="Modifier">✏️</button>' : '')
-      + (isOwner ? '<button class="overlay-btn del" onclick="deleteMedia(\''+m.id+'\');event.stopPropagation()" title="Supprimer">🗑️</button>' : '')
-      + '</div></div>';
-  } else if (m.type === 'folder') {
-    badgeHtml = '<span class="type-badge badge-folder">📁 Dossier</span>';
-    mediaHtml = '<div class="item-media"><div class="item-file-icon"><span class="fi">📁</span><span class="fn">'+esc(m.file_name||'Dossier')+'</span></div>'+badgeHtml+'</div>';
+    mediaHtml = '<div class="item-media">'
+      + '<video class="item-video" src="'+esc(m.file_url)+'" preload="metadata"></video>'
+      + '<span class="type-badge badge-video">Video</span>'
+      + '<div class="item-overlay"></div>'
+      + '</div>';
   } else {
     var ext  = (m.file_name||'').split('.').pop().toUpperCase();
     var icon = getFileIcon(m.file_name||'');
-    badgeHtml = '<span class="type-badge badge-file">'+icon+' '+ext+'</span>';
+    var badgeCls = m.type==='folder' ? 'badge-folder' : 'badge-file';
+    var badgeTxt = m.type==='folder' ? 'Dossier' : ext;
     mediaHtml = '<div class="item-media">'
       + '<div class="item-file-icon"><span class="fi">'+icon+'</span><span class="fn">'+esc(m.file_name||'Fichier')+'</span></div>'
-      + badgeHtml
-      + (m.file_url ? '<div class="item-overlay"><a class="overlay-btn" href="'+esc(m.file_url)+'" target="_blank" title="Télécharger" download>⬇️</a>'
-          + (isOwner ? '<button class="overlay-btn del" onclick="deleteMedia(\''+m.id+'\');event.stopPropagation()" title="Supprimer">🗑️</button>' : '')
-          + '</div>' : '')
+      + '<span class="type-badge '+badgeCls+'">'+badgeTxt+'</span>'
       + '</div>';
   }
 
-  var listActions = viewMode === 'list' && isOwner
-    ? '<div class="item-actions">'
-      + '<button class="overlay-btn" onclick="openEditModal(\''+m.id+'\')" title="Modifier" style="background:var(--surface2);border:1px solid var(--border)">✏️</button>'
-      + '<button class="overlay-btn del" onclick="deleteMedia(\''+m.id+'\')" title="Supprimer" style="background:var(--surface2);border:1px solid var(--border)">🗑️</button>'
-      + '</div>'
-    : '';
+  // Barre d actions toujours visible
+  var actionsBar = '<div class="item-actions-bar">';
+  if (m.type === 'photo' || m.type === 'video') {
+    var lbl = m.type==='video' ? 'Lire' : 'Voir';
+    actionsBar += '<button class="act-btn view" onclick="openLightbox('+lbIdx+')">&#128065; '+lbl+'</button>';
+  }
+  if (m.file_url) {
+    actionsBar += '<a class="act-btn dl" href="'+esc(m.file_url)+'" target="_blank" download="'+esc(m.file_name||m.sujet||'fichier')+'">&#11015; T&#233;l&#233;charger</a>';
+  }
+  if (isOwner) {
+    actionsBar += '<button class="act-btn edit" onclick="openEditModal(\'' + m.id + '\')">&#9998; Modifier</button>';
+    actionsBar += '<button class="act-btn del"  onclick="deleteMedia(\'' + m.id + '\')">&#x1F5D1;</button>';
+  }
+  actionsBar += '</div>';
 
   return '<div class="gallery-item" id="item-'+m.id+'">'
     + mediaHtml
     + '<div class="item-info">'
     +   '<div class="item-subject">'+esc(m.sujet)+'</div>'
     +   '<div class="item-meta">'
-    +     (dateStr ? '<span class="item-date">📅 '+dateStr+'</span>' : '')
-    +     (dateStr && (m.pris_par||uploader) ? '<span class="item-dot"></span>' : '')
-    +     '<span class="item-by">👤 '+(m.pris_par ? esc(m.pris_par) : esc(uploader))+'</span>'
+    +     (dateStr ? '<span class="item-date">'+dateStr+'</span><span class="item-dot"></span>' : '')
+    +     '<span class="item-by">'+authorLabel+'</span>'
     +   '</div>'
-    +   (m.description ? '<div style="font-size:.8rem;color:var(--muted);margin-top:6px;line-height:1.4">'+esc(m.description)+'</div>' : '')
+    +   (m.description ? '<div style="font-size:.8rem;color:var(--muted);margin-top:5px;line-height:1.4">'+esc(m.description)+'</div>' : '')
     + '</div>'
-    + listActions
+    + actionsBar
     + '</div>';
 }
+
 
 function getFileIcon(name) {
   var ext = (name||'').split('.').pop().toLowerCase();
@@ -856,6 +860,17 @@ function renderLightbox() {
   var uploader = p ? ((p.prenom&&p.nom)?p.prenom+' '+p.nom:p.prenom||p.pseudo||'?') : '?';
   document.getElementById('lb-meta').textContent = (dateStr?dateStr+' · ':'' ) + '📷 '+(m.pris_par||uploader);
   document.getElementById('lb-counter').textContent = (lbIndex+1) + ' / ' + lbItems.length;
+  // Bouton telechargement
+  var dlBtn = document.getElementById('lb-dl-btn');
+  if (dlBtn) {
+    if (m.file_url) {
+      dlBtn.href = m.file_url;
+      dlBtn.setAttribute('download', m.file_name || m.sujet || 'fichier');
+      dlBtn.style.display = 'flex';
+    } else {
+      dlBtn.style.display = 'none';
+    }
+  }
 }
 
 // Clavier pour lightbox
