@@ -219,16 +219,25 @@ main{padding-top:64px;position:relative;z-index:1;}
 .size-section{margin-bottom:20px;}
 .size-label{font-size:.75rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;}
 .size-btns{display:flex;gap:8px;flex-wrap:wrap;}
-.size-btn{
-  width:56px;height:56px;border-radius:12px;
-  border:2px solid var(--border);background:var(--surface);
-  cursor:pointer;font-family:'DM Sans',sans-serif;font-size:.95rem;font-weight:700;
-  color:var(--muted);transition:var(--trans);display:flex;flex-direction:column;align-items:center;justify-content:center;
+
+/* Nouveau: size-btn-wrap avec contrôles +/- */
+.size-btn-wrap{
+  border-radius:14px;border:2px solid var(--border);background:var(--surface);
+  padding:10px 12px;display:flex;flex-direction:column;align-items:center;gap:8px;
+  min-width:68px;transition:var(--trans);
 }
-.size-btn:hover{border-color:rgba(245,200,66,.5);background:rgba(245,200,66,.08);color:var(--gold);}
-.size-btn.selected{border-color:var(--gold);background:rgba(245,200,66,.15);color:var(--gold);}
-.size-btn .sz-label{font-size:.95rem;font-weight:700;}
-.size-btn .sz-qty{font-size:.62rem;color:var(--muted);margin-top:1px;}
+.size-btn-wrap.has-qty{border-color:var(--gold);background:rgba(245,200,66,.1);}
+.sz-top{display:flex;flex-direction:column;align-items:center;gap:2px;}
+.sz-label{font-size:1rem;font-weight:700;color:var(--text);}
+.sz-qty{font-size:.65rem;color:var(--muted);}
+.sz-controls{display:flex;align-items:center;gap:8px;}
+.sz-controls button{
+  width:24px;height:24px;border-radius:6px;border:1px solid var(--border);
+  background:var(--surface2);cursor:pointer;color:var(--text);font-size:.9rem;
+  display:flex;align-items:center;justify-content:center;transition:var(--trans);
+}
+.sz-controls button:hover{background:rgba(245,200,66,.2);border-color:var(--gold);color:var(--gold);}
+.sz-my-qty{font-size:1.1rem;font-weight:700;color:var(--gold);min-width:20px;text-align:center;}
 
 /* Récap commande */
 .order-recap{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-top:16px;}
@@ -698,19 +707,21 @@ function toggleSize(sz) {
 }
 
 function renderRecap() {
-  var sizes = Object.keys(pendingOrders);
+  var keys = Object.keys(pendingOrders);
   var container = document.getElementById('recap-lines');
-  if (!sizes.length) {
-    container.innerHTML = '<div class="recap-empty">Aucune taille s&#233;lectionn&#233;e</div>';
+  if (!keys.length) {
+    container.innerHTML = '<div class="recap-empty">Aucune taille s&#233;lectionn&#233;e — utilise + pour ajouter</div>';
     return;
   }
-  container.innerHTML = sizes.map(function(sz){
+  container.innerHTML = keys.map(function(sz){
+    var qty = pendingOrders[sz];
     return '<div class="recap-line">'
-      + '<span class="recap-item">Taille <span class="recap-size">'+esc(sz)+'</span></span>'
-      + '<button class="recap-remove" onclick="toggleSize(\''+sz+'\')">&#10005;</button>'
+      + '<span class="recap-item">'+qty+' &#215; taille <span class="recap-size">'+esc(sz)+'</span></span>'
+      + '<button class="recap-remove" onclick="changeQty(\'' + sz + '\',-99)">&#10005;</button>'
       + '</div>';
   }).join('');
 }
+
 
 async function confirmOrder() {
   var btn     = document.getElementById('btn-confirm-order');
@@ -727,8 +738,12 @@ async function confirmOrder() {
 
   // Insère les nouvelles
   if (sizes.length) {
-    var toInsert = sizes.map(function(sz){
-      return { article_id: orderProductId, user_id: currentUser.id, taille: sz };
+    var toInsert = [];
+    sizes.forEach(function(sz){
+      var qty = pendingOrders[sz] || 1;
+      for (var i=0; i<qty; i++) {
+        toInsert.push({ article_id: orderProductId, user_id: currentUser.id, taille: sz });
+      }
     });
     var r = await sb.from('shop_orders').insert(toInsert);
     if (r.error) {
