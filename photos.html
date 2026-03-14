@@ -84,7 +84,7 @@ main{padding-top:64px;position:relative;z-index:1;}
 /* GALLERY — masonry grid */
 .gallery{max-width:1200px;margin:0 auto;padding:0 24px 80px;}
 .gallery-grid{
-  columns:4 240px;column-gap:16px;
+  columns:1;
 }
 .gallery-grid.list-view{columns:1;}
 
@@ -335,8 +335,8 @@ textarea.minput{resize:vertical;min-height:70px;}
       <span>Date</span><span class="arr"></span>
     </button>
     <div class="view-toggle">
-      <button class="vt-btn active" id="vt-grid" onclick="setView('grid')" title="Grille">⊞</button>
-      <button class="vt-btn" id="vt-list" onclick="setView('list')" title="Liste">☰</button>
+      <button class="vt-btn" id="vt-grid" onclick="setView('grid')" title="Grille">⊞</button>
+      <button class="vt-btn active" id="vt-list" onclick="setView('list')" title="Liste" class="vt-btn active">☰</button>
     </div>
   </div>
 
@@ -362,8 +362,10 @@ textarea.minput{resize:vertical;min-height:70px;}
         <div class="dz-icon">📁</div>
         <div class="dz-text"><strong>Clique ou glisse tes fichiers ici</strong></div>
         <div class="dz-hint">Photos · Vidéos · PDF · ZIP · Tout type de fichier</div>
+        <div style="margin-top:10px"><button type="button" onclick="event.stopPropagation();document.getElementById('folder-input').click()" style="background:rgba(78,205,196,.15);border:1px solid rgba(78,205,196,.3);color:var(--teal);border-radius:8px;padding:6px 14px;font-family:DM Sans,sans-serif;font-size:.78rem;cursor:pointer;">&#128193; Ou sélectionner un dossier entier</button></div>
       </div>
       <input type="file" id="file-input" multiple accept="*/*" onchange="handleFileSelect(this.files)">
+      <input type="file" id="folder-input" webkitdirectory multiple style="display:none" onchange="handleFileSelect(this.files)">
 
       <!-- Preview fichiers sélectionnés -->
       <div class="files-preview" id="files-preview"></div>
@@ -462,7 +464,7 @@ var currentUser    = null;
 var currentProfile = null;
 var allMedia       = [];
 var sortAsc        = false;
-var viewMode       = 'grid';
+var viewMode       = 'list';
 var selectedFiles  = [];
 var editingId      = null;
 var lbIndex        = 0;
@@ -534,7 +536,7 @@ function renderGallery() {
   // Construit la liste lightbox (photos + vidéos uniquement)
   lbItems = list.filter(function(m){ return m.type === 'photo' || m.type === 'video'; });
 
-  grid.className = 'gallery-grid' + (viewMode === 'list' ? ' list-view' : '');
+  grid.className = 'gallery-grid' + (viewMode === 'list' ? ' list-view' : ' grid-view');
   grid.innerHTML = list.map(function(m, i){ return buildItem(m, i); }).join('');
 }
 
@@ -551,7 +553,7 @@ function buildItem(m, i) {
   if (m.type === 'photo' && m.file_url) {
     // Photo : img normale avec crossOrigin pour eviter les erreurs CORS
     mediaHtml = '<div class="item-media">'
-      + '<img class="item-img" src="'+esc(m.file_url)+'" alt="'+esc(m.sujet)+'" loading="lazy" crossorigin="anonymous" onerror="this.parentElement.innerHTML=\'<div class=\\"item-file-icon\\"><span class=\\"fi\\">&#128248;</span><span class=\\"fn\\">Image non chargee</span></div>\'">'
+      + '<img class="item-img" src="'+esc(m.file_url)+'" alt="'+esc(m.sujet)+'" loading="lazy">'
       + '<span class="type-badge badge-photo">Photo</span>'
       + '<div class="item-overlay"></div>'
       + '</div>';
@@ -594,7 +596,8 @@ function buildItem(m, i) {
     actionsBar += '<button class="act-btn view" onclick="openLightbox('+lbIdx+')">&#128065; '+lbl+'</button>';
   }
   if (m.file_url) {
-    actionsBar += '<a class="act-btn dl" href="'+esc(m.file_url)+'" target="_blank" download="'+esc(m.file_name||m.sujet||'fichier')+'">&#11015; T&#233;l&#233;charger</a>';
+    var dlName = m.file_name || m.sujet || 'fichier';
+    actionsBar += '<button class="act-btn dl" onclick="forceDownload(\''+esc(m.file_url)+'\',\''+esc(dlName)+'\')">&#11015; T&#233;l&#233;charger</button>';
   }
   if (isOwner) {
     actionsBar += '<button class="act-btn edit" onclick="openEditModal(\'' + m.id + '\')">&#9998; Modifier</button>';
@@ -616,6 +619,25 @@ function buildItem(m, i) {
     + '</div>';
 }
 
+
+
+// ── TÉLÉCHARGEMENT FORCÉ (bypass "ouvrir dans le navigateur") ─────────────────
+async function forceDownload(url, filename) {
+  try {
+    var resp = await fetch(url);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    var blob = await resp.blob();
+    var a    = document.createElement('a');
+    a.href   = URL.createObjectURL(blob);
+    a.download = filename || 'fichier';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function() { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  } catch(e) {
+    // Fallback : ouvrir dans un nouvel onglet
+    window.open(url, '_blank');
+  }
+}
 
 function getFileIcon(name) {
   var ext = (name||'').split('.').pop().toLowerCase();
@@ -647,19 +669,78 @@ function captureThumb(video) {
 }
 
 // ── DROPZONE ──────────────────────────────────────────
+
+// Lit récursivement une FileSystemEntry (fichier ou dossier)
+function readEntry(entry) {
+  return new Promise(function(resolve) {
+    if (entry.isFile) {
+      entry.file(function(f) { resolve([f]); }, function() { resolve([]); });
+    } else if (entry.isDirectory) {
+      var reader = entry.createReader();
+      var allEntries = [];
+      function readBatch() {
+        reader.readEntries(function(entries) {
+          if (!entries.length) {
+            Promise.all(allEntries.map(readEntry)).then(function(results) {
+              var files = [];
+              results.forEach(function(r){ if(Array.isArray(r)) r.forEach(function(f){ files.push(f); }); });
+              resolve(files);
+            });
+          } else {
+            allEntries = allEntries.concat(Array.from(entries));
+            readBatch();
+          }
+        }, function() { resolve([]); });
+      }
+      readBatch();
+    } else {
+      resolve([]);
+    }
+  });
+}
+
 function setupDropzone() {
   var dz = document.getElementById('dropzone');
   dz.addEventListener('dragover',  function(e){ e.preventDefault(); dz.classList.add('dragover'); });
   dz.addEventListener('dragleave', function()  { dz.classList.remove('dragover'); });
   dz.addEventListener('drop', function(e) {
     e.preventDefault(); dz.classList.remove('dragover');
-    handleFileSelect(e.dataTransfer.files);
+    var items = e.dataTransfer.items;
+    if (items && items.length && items[0].webkitGetAsEntry) {
+      // Utilise FileSystemEntry API pour lire les dossiers récursivement
+      var filePromises = [];
+      for (var i=0; i<items.length; i++) {
+        var entry = items[i].webkitGetAsEntry();
+        if (entry) filePromises.push(readEntry(entry));
+      }
+      Promise.all(filePromises).then(function(results) {
+        var files = [];
+        results.forEach(function(r){ if (Array.isArray(r)) r.forEach(function(f){ files.push(f); }); else if(r) files.push(r); });
+        if (files.length) {
+          files.forEach(function(f){ selectedFiles.push(f); });
+          renderFilesPreview();
+        }
+      });
+    } else {
+      handleFileSelect(e.dataTransfer.files);
+    }
   });
 }
 
 function handleFileSelect(files) {
+  var added = 0;
   for (var i=0; i<files.length; i++) {
-    selectedFiles.push(files[i]);
+    var f = files[i];
+    // Ignorer les entrées de type dossier (size=0 ET pas de type MIME)
+    if (f.size === 0 && !f.type) continue;
+    selectedFiles.push(f);
+    added++;
+  }
+  if (added === 0 && files.length > 0) {
+    // Probablement un dossier drag&drop → utiliser le bouton "Sélectionner un dossier"
+    var alertEl = document.getElementById('upload-alert');
+    alertEl.textContent = '⚠️ Pour importer un dossier, utilise le bouton "Sélectionner un dossier entier" ci-dessus.';
+    alertEl.className = 'malert error';
   }
   renderFilesPreview();
 }
@@ -897,8 +978,9 @@ function renderLightbox() {
   var dlBtn = document.getElementById('lb-dl-btn');
   if (dlBtn) {
     if (m.file_url) {
-      dlBtn.href = m.file_url;
-      dlBtn.setAttribute('download', m.file_name || m.sujet || 'fichier');
+      var dlName = m.file_name || m.sujet || 'fichier';
+      dlBtn.href = 'javascript:void(0)';
+      dlBtn.onclick = function(e) { e.preventDefault(); forceDownload(m.file_url, dlName); };
       dlBtn.style.display = 'flex';
     } else {
       dlBtn.style.display = 'none';
