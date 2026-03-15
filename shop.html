@@ -558,7 +558,7 @@ textarea.minput{resize:vertical;min-height:70px;}
       <div class="mfield">
         <label>Image 1 (principale)</label>
         <input type="text" class="minput" id="f-art-img" placeholder="debardeur-face.jpg">
-        <div style="font-size:.72rem;color:var(--muted);margin-top:4px">Upload sur GitHub dans images/ — laisse vide pour placeholder</div>
+        <div style="font-size:.72rem;color:var(--muted);margin-top:4px">Upload sur GitHub dans images/shop/ — laisse vide pour placeholder</div>
       </div>
       <div class="mfield">
         <label>Image 2 <span style="opacity:.5">(optionnel)</span></label>
@@ -762,11 +762,11 @@ function buildProductCard(a) {
   var cid  = 'car-' + a.id.replace(/-/g,'');
   var imgHtml;
   if (!imgs.length) {
-    imgHtml = '<div class="product-placeholder"><span class="ph-emoji">&#128248;</span><span class="ph-text">Photo '
+    imgHtml = '<div class="product-placeholder\' onclick=\'openOrderModal(\\\'' + a.id + '\\\')\' style=\'cursor:pointer\'><span class="ph-emoji">&#128248;</span><span class="ph-text">Photo '
       + esc(a.nom) + '<br><em style="font-size:.72rem;opacity:.6">Image &#224; venir</em></span></div>';
   } else {
     var slides = imgs.map(function(img) {
-      return '<div class="carousel-slide">'
+      return '<div class="carousel-slide" onclick="openOrderModal(\\\'' + a.id + '\\\'" style="cursor:pointer">'
         + '<img class="product-img" src="images/' + esc(img) + '" alt="' + esc(a.nom) + '">'
         + '</div>';
     }).join('');
@@ -797,7 +797,7 @@ function buildProductCard(a) {
     : '';
 
   return '<div class="product-card" id="pcard-' + a.id + '">'
-    + '<div class="product-img-wrap" onclick="openOrderModal(\'' + a.id + '\')">'
+    + '<div class="product-img-wrap">'
     + imgHtml + badgeHtml
     + (isAdmin ? '<button class="admin-img-btn" onclick="event.stopPropagation();openEditArticle(\'' + a.id + '\')">&#9998; Modifier</button>' : '')
     + '</div>'
