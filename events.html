@@ -52,23 +52,10 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;height:64px;background:rgba(
 main{padding-top:64px;position:relative;z-index:1;}
 
 
-/* TIMELINE ANNIVERSAIRES */
-.anniv-timeline{max-width:500px;margin:0 auto 28px;text-align:left;}
-.anniv-tl-title{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:12px;text-align:center;}
-.anniv-tl{display:flex;flex-direction:column;border-left:1px solid rgba(255,158,188,.25);padding-left:20px;margin-left:8px;gap:0;}
-.anniv-item{position:relative;padding:10px 0 10px 4px;}
-.anniv-item::before{content:'';position:absolute;left:-25px;top:14px;width:8px;height:8px;border-radius:50%;background:var(--dot-color,var(--pink));box-shadow:0 0 8px var(--dot-color,var(--pink));flex-shrink:0;}
-.anniv-item:not(:last-child){border-bottom:1px solid rgba(255,255,255,.05);}
-.anniv-who{font-family:'Playfair Display',serif;font-size:.95rem;font-weight:700;color:var(--text);margin-bottom:2px;}
-.anniv-date{font-size:.75rem;color:var(--muted);}
-.anniv-countdown{display:inline-flex;align-items:center;gap:4px;margin-top:4px;padding:2px 9px;border-radius:20px;font-size:.72rem;font-weight:700;border:1px solid;}
-.anniv-countdown.soon{background:rgba(255,107,107,.12);border-color:rgba(255,107,107,.3);color:var(--coral);}
-.anniv-countdown.normal{background:rgba(199,125,255,.1);border-color:rgba(199,125,255,.25);color:var(--violet);}
-.anniv-empty{text-align:center;color:var(--muted);font-size:.82rem;padding:12px 0;}
-@media(max-width:768px){.anniv-timeline{margin-bottom:18px;}}
-
 /* HERO */
-.hero{padding:40px 24px 28px;text-align:center;}
+.hero{padding:40px 24px 28px;}
+.hero-inner{display:flex;align-items:flex-start;justify-content:center;gap:32px;flex-wrap:wrap;}
+.hero-left{display:flex;flex-direction:column;align-items:center;text-align:center;flex:0 0 auto;}
 .hero-clock{display:inline-flex;flex-direction:column;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:16px 32px;margin-bottom:24px;backdrop-filter:blur(10px);}
 .hero-date{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;background:linear-gradient(135deg,var(--yellow),var(--coral));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
 .hero-time{font-size:2.4rem;font-weight:700;letter-spacing:2px;background:linear-gradient(135deg,var(--teal),var(--violet));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;margin-top:2px;}
@@ -77,6 +64,29 @@ main{padding-top:64px;position:relative;z-index:1;}
 .hero-sub{color:var(--muted);font-size:.9rem;margin-bottom:22px;}
 .btn-create{display:inline-flex;align-items:center;gap:8px;padding:13px 26px;border-radius:14px;border:none;background:linear-gradient(135deg,var(--coral),var(--violet));color:#fff;font-family:'DM Sans',sans-serif;font-size:.95rem;font-weight:700;cursor:pointer;transition:var(--trans);box-shadow:0 5px 22px rgba(255,107,107,.35);}
 .btn-create:hover{transform:translateY(-2px);box-shadow:0 9px 28px rgba(255,107,107,.5);}
+
+/* TIMELINE ANNIVERSAIRES */
+.hero-right{flex:0 0 220px;padding-top:8px;}
+.anniv-timeline{display:flex;flex-direction:column;gap:0;}
+.anniv-tl-title{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.9px;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:7px;}
+.anniv-tl-title::after{content:'';flex:1;height:1px;background:var(--border);}
+.anniv-tl{display:flex;flex-direction:column;border-left:1px solid rgba(199,125,255,.2);padding-left:16px;margin-left:4px;gap:0;}
+.anniv-item{position:relative;padding:8px 0 8px 4px;transition:var(--trans);}
+.anniv-item:not(:last-child){border-bottom:1px solid rgba(255,255,255,.04);}
+.anniv-item::before{content:'';position:absolute;left:-21px;top:13px;width:8px;height:8px;border-radius:50%;background:var(--dot-color,var(--pink));box-shadow:0 0 7px var(--dot-color,var(--pink));}
+.anniv-who{font-size:.85rem;font-weight:700;color:var(--text);margin-bottom:2px;}
+.anniv-date-str{font-size:.72rem;color:var(--muted);margin-bottom:4px;}
+.anniv-badge{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:20px;font-size:.7rem;font-weight:700;}
+.anniv-badge.soon{background:rgba(255,107,107,.12);border:1px solid rgba(255,107,107,.3);color:var(--coral);}
+.anniv-badge.medium{background:rgba(199,125,255,.1);border:1px solid rgba(199,125,255,.25);color:var(--violet);}
+.anniv-badge.far{background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--muted);}
+.anniv-loading{font-size:.75rem;color:var(--muted);padding:8px 0;}
+@media(max-width:768px){
+  .hero{padding:20px 16px 16px;}
+  .hero-inner{flex-direction:column;align-items:center;gap:20px;}
+  .hero-right{flex:none;width:100%;max-width:340px;padding-top:0;}
+  .anniv-tl-title{margin-bottom:10px;}
+}
 
 /* TOOLBAR */
 .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:0 24px 20px;max-width:1100px;margin:0 auto;}
@@ -296,19 +306,30 @@ textarea.minput{resize:vertical;min-height:70px;}
 
 <main>
   <section class="hero">
-    <div class="hero-clock">
-      <div class="hero-date" id="hero-date">--</div>
-      <div class="hero-time" id="hero-time">--:--:--</div>
-      <div class="hero-day"  id="hero-day">--</div>
-    </div>
-    <h1 class="hero-title">Les Événements 🎊</h1>
-    <p class="hero-sub">Organise, vote et retrouve tous vos moments ensemble</p>
-    <button class="btn-create" onclick="openCreateModal()">✨ Créer un événement</button>
+    <div class="hero-inner">
 
-    <!-- TIMELINE ANNIVERSAIRES -->
-    <div class="anniv-timeline" id="anniv-timeline" style="display:none">
-      <div class="anniv-tl-title">🎂 Prochains anniversaires</div>
-      <div class="anniv-tl" id="anniv-tl-items"></div>
+      <!-- GAUCHE : horloge + titre + bouton -->
+      <div class="hero-left">
+        <div class="hero-clock">
+          <div class="hero-date" id="hero-date">--</div>
+          <div class="hero-time" id="hero-time">--:--:--</div>
+          <div class="hero-day"  id="hero-day">--</div>
+        </div>
+        <h1 class="hero-title">Les Événements 🎊</h1>
+        <p class="hero-sub">Organise, vote et retrouve tous vos moments ensemble</p>
+        <button class="btn-create" onclick="openCreateModal()">✨ Créer un événement</button>
+      </div>
+
+      <!-- DROITE : timeline anniversaires -->
+      <div class="hero-right" id="hero-right" style="display:none">
+        <div class="anniv-timeline">
+          <div class="anniv-tl-title">🎂 Anniversaires</div>
+          <div class="anniv-tl" id="anniv-tl-items">
+            <div class="anniv-loading">Chargement...</div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </section>
 
@@ -494,47 +515,52 @@ async function loadEvents() {
   renderAnnivTimeline();
 }
 
-function renderAnnivTimeline() {
-  // Récupère les events de type Anniversaire à venir (pas passés)
-  var now = new Date(); now.setHours(0,0,0,0);
-  var thisYear = now.getFullYear();
-
-  // Prend tous les events Anniversaire et calcule la prochaine occurrence
-  var annivs = allEvents
-    .filter(function(e){ return e.categorie === 'Anniversaire' && e.anniversaire_qui; })
-    .map(function(e) {
-      // Essaie de construire la date de cet anniversaire cette année ou l'année prochaine
-      var d = e.date_event ? new Date(e.date_event + 'T00:00:00') : null;
-      if (!d) return null;
-      // Prochain anniversaire : même jour/mois mais cette année ou suivante
-      var next = new Date(thisYear, d.getMonth(), d.getDate());
-      if (next < now) next = new Date(thisYear + 1, d.getMonth(), d.getDate());
-      var diffDays = Math.round((next - now) / 86400000);
-      return { qui: e.anniversaire_qui, next: next, diffDays: diffDays };
-    })
-    .filter(function(x){ return x !== null; })
-    .sort(function(a,b){ return a.next - b.next; })
-    .slice(0, 3);
-
-  var container = document.getElementById('anniv-timeline');
+async function renderAnnivTimeline() {
   var list      = document.getElementById('anniv-tl-items');
+  var container = document.getElementById('hero-right');
+
+  // Charger tous les profils avec une date de naissance (dob)
+  var pr = await sb.from('profiles').select('prenom,nom,pseudo,dob').not('dob','is',null);
+  var profiles = pr.data || [];
+
+  if (!profiles.length) { container.style.display = 'none'; return; }
+
+  var now      = new Date(); now.setHours(0,0,0,0);
+  var thisYear = now.getFullYear();
+  var COLORS   = ['#FF9EBC','#C77DFF','#4ECDC4'];
+
+  var annivs = profiles.map(function(p) {
+    var dob  = new Date(p.dob + 'T00:00:00');
+    var name = p.prenom || p.pseudo || (p.nom ? p.nom : '?');
+    // Prochain anniversaire cette année ou l'année prochaine
+    var next = new Date(thisYear, dob.getMonth(), dob.getDate());
+    if (next < now) next = new Date(thisYear + 1, dob.getMonth(), dob.getDate());
+    var diff = Math.round((next - now) / 86400000);
+    return { name: name, next: next, diff: diff };
+  })
+  .sort(function(a,b){ return a.next - b.next; })
+  .slice(0, 3);
+
   if (!annivs.length) { container.style.display = 'none'; return; }
 
-  var COLORS = ['#FF9EBC','#C77DFF','#4ECDC4'];
-  var html = annivs.map(function(a, i) {
+  list.innerHTML = annivs.map(function(a, i) {
     var dateStr = a.next.toLocaleDateString('fr-FR', {day:'numeric', month:'long'});
-    var isSoon  = a.diffDays <= 14;
-    var cdStr   = a.diffDays === 0 ? "🎂 Aujourd'hui !"
-                : a.diffDays === 1 ? '🎉 Demain !'
-                : 'Dans ' + a.diffDays + ' jours';
+    var badge, cdStr;
+    if (a.diff === 0)       { cdStr = "🎂 Aujourd'hui !"; badge = 'soon'; }
+    else if (a.diff === 1)  { cdStr = '🎉 Demain !';       badge = 'soon'; }
+    else if (a.diff <= 14)  { cdStr = 'Dans ' + a.diff + ' j'; badge = 'medium'; }
+    else if (a.diff <= 60)  { cdStr = 'Dans ' + a.diff + ' j'; badge = 'medium'; }
+    else {
+      var months = Math.round(a.diff / 30);
+      cdStr = 'Dans ' + months + ' mois'; badge = 'far';
+    }
     return '<div class="anniv-item" style="--dot-color:' + COLORS[i] + '">'
-      + '<div class="anniv-who">🎂 ' + esc(a.qui) + '</div>'
-      + '<div class="anniv-date">' + dateStr + '</div>'
-      + '<span class="anniv-countdown ' + (isSoon ? 'soon' : 'normal') + '">' + cdStr + '</span>'
+      + '<div class="anniv-who">' + esc(a.name) + '</div>'
+      + '<div class="anniv-date-str">' + dateStr + '</div>'
+      + '<span class="anniv-badge ' + badge + '">' + cdStr + '</span>'
       + '</div>';
   }).join('');
 
-  list.innerHTML = html;
   container.style.display = 'block';
 }
 
