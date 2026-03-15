@@ -349,6 +349,7 @@ textarea.minput{resize:vertical;min-height:70px;}
       <option value="Féria">🎠 Féria</option>
       <option value="Vacances">✈️ Vacances</option>
       <option value="Sport">🏃 Sport</option>
+      <option value="Barathon">🍺 Barathon</option>🍺
       <option value="Autre">💫 Autre</option>
     </select>
   </div>
@@ -391,6 +392,7 @@ textarea.minput{resize:vertical;min-height:70px;}
           <div class="cat-btn" onclick="selectCat(this,'Féria')">          <span class="ce">🎠</span><span class="cl">Féria</span></div>
           <div class="cat-btn" onclick="selectCat(this,'Vacances')">       <span class="ce">✈️</span><span class="cl">Vacances</span></div>
           <div class="cat-btn" onclick="selectCat(this,'Sport')">          <span class="ce">🏃</span><span class="cl">Sport</span></div>
+          <div class="cat-btn" onclick="selectCat(this,'Barathon')">       <span class="ce">🍺</span><span class="cl">Barathon</span></div>
           <div class="cat-btn" onclick="selectCat(this,'Autre')">          <span class="ce">💫</span><span class="cl">Autre</span></div>
         </div>
       </div>
@@ -603,7 +605,7 @@ var CAT_COLORS = {
 };
 var CAT_EMOJI = {
   'Olympiade':'🏅','Nouvel an':'🎆','Anniversaire':'🎂','Soirée':'🌙',
-  'Barbecue':'🔥','Soirée jeux de société':'🎲','Féria':'🎠','Vacances':'✈️','Sport':'🏃','Autre':'💫'
+  'Barbecue':'🔥','Soirée jeux de société':'🎲','Féria':'🎠','Vacances':'✈️','Sport':'🏃','Barathon':'🍺','Autre':'💫'
 };
 
 function buildRow(e, isPast) {
