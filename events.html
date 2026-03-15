@@ -601,7 +601,7 @@ function renderAll() {
 var CAT_COLORS = {
   'Olympiade': '#FFD93D','Nouvel an': '#C77DFF','Anniversaire': '#FF9EBC',
   'Soirée': '#4ECDC4','Barbecue': '#FF6B6B','Soirée jeux de société': '#A8E063',
-  'Féria': '#ff9944','Vacances': '#66eeff','Sport': '#A8E063','Autre': 'rgba(255,255,255,.2)'
+  'Féria': '#ff9944','Vacances': '#66eeff','Sport': '#A8E063','Barathon': '#f59e0b','Autre': 'rgba(255,255,255,.2)'
 };
 var CAT_EMOJI = {
   'Olympiade':'🏅','Nouvel an':'🎆','Anniversaire':'🎂','Soirée':'🌙',
@@ -1083,9 +1083,11 @@ async function openDetail(id) {
   }
 
   // ─ Sondage présence ─
-  html += buildPollSection('🗳️ Sondage présence', id, allVotes, 'present',
-    [{val:'oui', lbl:'✅ Présent(e)', cls:'yes'}, {val:'non', lbl:'❌ Absent(e)', cls:'no'}],
-    'castVote');
+  if (e.categorie !== 'Barathon') {
+    html += buildPollSection('🗳️ Sondage présence', id, allVotes, 'present',
+      [{val:'oui', lbl:'✅ Présent(e)', cls:'yes'}, {val:'non', lbl:'❌ Absent(e)', cls:'no'}],
+      'castVote');
+  }
 
   // ─ Sondages conditionnels ─
 
