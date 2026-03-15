@@ -188,8 +188,8 @@ textarea.minput{resize:vertical;min-height:70px;}
 .d-section{margin-bottom:18px;}
 .d-section h3{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin-bottom:9px;display:flex;align-items:center;gap:7px;}
 .d-section h3::after{content:'';flex:1;height:1px;background:var(--border);}
-.poll-opt{display:flex;align-items:center;padding:9px 13px;border-radius:11px;background:var(--surface);border:1.5px solid var(--border);cursor:pointer;transition:var(--trans);margin-bottom:5px;}
-.poll-opt:hover{background:var(--surface2);}
+.poll-opt{display:flex;align-items:center;padding:9px 13px;border-radius:11px;background:var(--surface);border:1.5px solid var(--border);cursor:pointer;transition:var(--trans);margin-bottom:5px;user-select:none;}
+.poll-opt:hover{background:var(--surface3);transform:translateX(2px);}
 .poll-opt.voted-yes{border-color:var(--teal);background:rgba(78,205,196,.1);}
 .poll-opt.voted-no{border-color:var(--coral);background:rgba(255,107,107,.07);}
 .poll-lbl{font-size:.85rem;font-weight:500;flex-shrink:0;min-width:120px;}
@@ -1038,35 +1038,47 @@ async function openDetail(id) {
     + '</div></div>';
 
   document.getElementById('detail-body').innerHTML = html;
+
+  // Délégation : clic sur .poll-opt → vote
+  document.getElementById('detail-body').addEventListener('click', function(e) {
+    var opt = e.target.closest('.poll-opt');
+    if (!opt) return;
+    var fn   = opt.dataset.fn;
+    var eid  = opt.dataset.eid;
+    var val  = opt.dataset.val;
+    var meal = opt.dataset.meal;
+    if (!fn || !eid || !val) return;
+    if (fn === 'castVote')        castVote(eid, val);
+    else if (fn === 'castFoodVote')    castFoodVote(eid, val, meal);
+    else if (fn === 'castCoursesVote') castCoursesVote(eid, val);
+  }, { once: true }); // once:true car openDetail re-render à chaque vote
 }
 
 // ── POLL BUILDER ──────────────────────────────────────────────────────────────
 function buildPollSection(title, eventId, votes, field, options, castFn) {
   var myVote = votes.find(function(v){ return v.user_id===currentUser.id; });
   var total  = votes.length;
-  var html   = '<div class="d-section"><h3>'+title+'</h3>';
+  var sectionId = 'poll-' + eventId.replace(/-/g,'').substr(0,8) + '-' + field;
+  var html = '<div class="d-section"><h3>'+title+'</h3>';
 
   options.forEach(function(opt) {
-    var cnt  = votes.filter(function(v){ return v[field]===opt.val; }).length;
-    var pct  = total ? Math.round(cnt/total*100) : 0;
+    var cnt   = votes.filter(function(v){ return v[field]===opt.val; }).length;
+    var pct   = total ? Math.round(cnt/total*100) : 0;
     var voted = myVote && myVote[field]===opt.val;
     var named = votes.filter(function(v){ return v[field]===opt.val; });
-    html += '<div class="poll-opt'+(voted?' voted-'+opt.cls:'')+'">'
+    html += '<div class="poll-opt'+(voted?' voted-'+opt.cls:'')+'" data-fn="'+castFn+'" data-eid="'+esc(eventId)+'" data-val="'+esc(opt.val)+'">'
       + '<span class="poll-lbl">'+opt.lbl+'</span>'
       + '<div class="poll-bar-wrap"><div class="poll-bar '+opt.cls+'" style="width:'+pct+'%"></div></div>'
       + '<span class="poll-cnt">'+cnt+'</span>'
+      + (voted ? '<span style="font-size:.7rem;margin-left:6px;color:var(--teal)">&#10003;</span>' : '<span style="font-size:.7rem;margin-left:6px;color:var(--muted);opacity:.4">Voter</span>')
       + '</div>';
     html += '<div class="vote-names">'+nameChips(named)+'</div>';
   });
 
-  html += '<div class="vote-btns">';
-  options.forEach(function(opt){
-    var active = myVote && myVote[field]===opt.val;
-    html += '<button class="vote-btn '+opt.cls+(active?' active':'')+'" onclick="'+castFn+'(\''+eventId+'\',\''+opt.val+'\')">'+opt.lbl+'</button>';
-  });
-  html += '</div></div>';
+  html += '</div>';
   return html;
 }
+
 
 function buildFoodPoll(title, eventId, allFoodVotes, meal, castFn) {
   var relevant = allFoodVotes.filter(function(v){ return v.meal === meal; });
@@ -1078,16 +1090,25 @@ function buildFoodPoll(title, eventId, allFoodVotes, meal, castFn) {
   var nP  = tot ? Math.round(no.length/tot*100)  : 0;
   var myY = myVote && (myVote.repas||myVote.mange)==='oui';
   var myN = myVote && (myVote.repas||myVote.mange)==='non';
+
   return '<div class="d-section"><h3>'+title+'</h3>'
-    + '<div class="poll-opt'+(myY?' voted-yes':'')+'"><span class="poll-lbl">🍴 Je mange</span><div class="poll-bar-wrap"><div class="poll-bar yes" style="width:'+yP+'%"></div></div><span class="poll-cnt">'+yes.length+'</span></div>'
+    + '<div class="poll-opt'+(myY?' voted-yes':'')+'" data-fn="'+castFn+'" data-eid="'+esc(eventId)+'" data-val="oui" data-meal="'+esc(meal)+'">'
+    +   '<span class="poll-lbl">&#127860; Je mange</span>'
+    +   '<div class="poll-bar-wrap"><div class="poll-bar yes" style="width:'+yP+'%"></div></div>'
+    +   '<span class="poll-cnt">'+yes.length+'</span>'
+    +   (myY ? '<span style="font-size:.7rem;margin-left:6px;color:var(--teal)">&#10003;</span>' : '<span style="font-size:.7rem;margin-left:6px;color:var(--muted);opacity:.4">Voter</span>')
+    + '</div>'
     + '<div class="vote-names">'+nameChips(yes)+'</div>'
-    + '<div class="poll-opt'+(myN?' voted-no':'')+'"><span class="poll-lbl">🙅 Je mange pas</span><div class="poll-bar-wrap"><div class="poll-bar no" style="width:'+nP+'%"></div></div><span class="poll-cnt">'+no.length+'</span></div>'
+    + '<div class="poll-opt'+(myN?' voted-no':'')+'" data-fn="'+castFn+'" data-eid="'+esc(eventId)+'" data-val="non" data-meal="'+esc(meal)+'">'
+    +   '<span class="poll-lbl">&#9940; Je mange pas</span>'
+    +   '<div class="poll-bar-wrap"><div class="poll-bar no" style="width:'+nP+'%"></div></div>'
+    +   '<span class="poll-cnt">'+no.length+'</span>'
+    +   (myN ? '<span style="font-size:.7rem;margin-left:6px;color:var(--teal)">&#10003;</span>' : '<span style="font-size:.7rem;margin-left:6px;color:var(--muted);opacity:.4">Voter</span>')
+    + '</div>'
     + '<div class="vote-names">'+nameChips(no)+'</div>'
-    + '<div class="vote-btns">'
-    + '<button class="vote-btn yes'+(myY?' active':'')+'" onclick="'+castFn+'(\''+eventId+'\',\'oui\',\''+meal+'\')">🍴 Je mange</button>'
-    + '<button class="vote-btn no'+(myN?' active':'')+'" onclick="'+castFn+'(\''+eventId+'\',\'non\',\''+meal+'\')">🙅 Je mange pas</button>'
-    + '</div></div>';
+    + '</div>';
 }
+
 
 function nameChips(list) {
   if (!list.length) return '<em style="color:var(--muted);font-size:.75rem">Personne pour l\'instant</em>';
@@ -1129,17 +1150,30 @@ async function castVote(eventId, val) {
 async function castFoodVote(eventId, val, meal) {
   meal = meal || 'general';
   try {
-    // Cherche un vote existant pour ce meal
-    var ex = await sb.from('event_food_votes').select('*').eq('event_id',eventId).eq('user_id',currentUser.id).eq('meal',meal).maybeSingle();
-    var v  = ex.data;
+    // Cherche par (event_id, user_id, meal) — meal différencie midi/soir/etc.
+    var ex = await sb.from('event_food_votes').select('*')
+      .eq('event_id', eventId)
+      .eq('user_id',  currentUser.id)
+      .eq('meal',     meal)
+      .maybeSingle();
+    var v = ex.data;
     if (v) {
-      if ((v.repas||v.mange)===val) {
-        await sb.from('event_food_votes').delete().eq('id',v.id);
+      // Déjà voté pour ce repas : si même valeur → retire le vote, sinon → update
+      if ((v.repas || v.mange) === val) {
+        await sb.from('event_food_votes').delete().eq('id', v.id);
       } else {
-        await sb.from('event_food_votes').update({repas:val,mange:val}).eq('id',v.id);
+        await sb.from('event_food_votes').update({ repas: val, mange: val }).eq('id', v.id);
       }
     } else {
-      await sb.from('event_food_votes').insert({event_id:eventId,user_id:currentUser.id,repas:val,mange:val,meal:meal});
+      // Nouveau vote pour ce repas — insert sans contrainte unique sur (event_id,user_id) seul
+      // On insère en ignorant l'éventuel conflit grâce au champ 'id' unique
+      await sb.from('event_food_votes').insert({
+        event_id: eventId,
+        user_id:  currentUser.id,
+        repas:    val,
+        mange:    val,
+        meal:     meal
+      });
     }
   } catch(err) { console.error('castFoodVote error:', err); }
   openDetail(eventId);
