@@ -558,7 +558,7 @@ textarea.minput{resize:vertical;min-height:70px;}
       <div class="mfield">
         <label>Image 1 (principale)</label>
         <input type="text" class="minput" id="f-art-img" placeholder="debardeur-face.jpg">
-        <div style="font-size:.72rem;color:var(--muted);margin-top:4px">Upload sur GitHub dans images/shop/ — laisse vide pour placeholder</div>
+        <div style="font-size:.72rem;color:var(--muted);margin-top:4px">Upload sur GitHub dans images/ — laisse vide pour placeholder</div>
       </div>
       <div class="mfield">
         <label>Image 2 <span style="opacity:.5">(optionnel)</span></label>
@@ -767,7 +767,7 @@ function buildProductCard(a) {
   } else {
     var slides = imgs.map(function(img) {
       return '<div class="carousel-slide">'
-        + '<img class="product-img" src="images/shop/' + esc(img) + '" alt="' + esc(a.nom) + '">'
+        + '<img class="product-img" src="images/' + esc(img) + '" alt="' + esc(a.nom) + '">'
         + '</div>';
     }).join('');
     var dots = imgs.length > 1 ? '<div class="carousel-dots" id="' + cid + '-dots">'
@@ -1294,7 +1294,7 @@ function buildCandidatCard(c, myVotesByCat) {
     imgHtml = '<div class="candidate-placeholder"><span style="font-size:2rem">&#128248;</span></div>';
   } else {
     var cslides = cimgs.map(function(img) {
-      return '<div class="carousel-slide"><img class="candidate-img" src="images/shop/' + esc(img) + '" alt="' + esc(c.nom) + '"></div>';
+      return '<div class="carousel-slide"><img class="candidate-img" src="images/' + esc(img) + '" alt="' + esc(c.nom) + '"></div>';
     }).join('');
     var cdots = cimgs.length > 1 ? '<div class="carousel-dots" id="' + ccid + '-dots">'
       + cimgs.map(function(_, i){ return '<span class="carousel-dot' + (i===0?' active':'') + '" onclick="carGo(\\\'' + ccid + '\\\',' + i + ');event.stopPropagation()"></span>'; }).join('')
@@ -1378,7 +1378,7 @@ function renderLeaderboard() {
       var rankCls  = rank <= 3 ? ' r' + rank : '';
       var barW     = maxV > 0 ? Math.round(item.votes / maxV * 100) : 0;
       var thumbHtml = item.c.image
-        ? '<img class="lb-thumb" src="images/shop/' + esc(item.c.image) + '" >'
+        ? '<img class="lb-thumb" src="images/' + esc(item.c.image) + '" >'
         : '<div class="lb-thumb-ph">&#128248;</div>';
 
       html += '<div class="lb-row">'
