@@ -107,6 +107,10 @@ main{padding-top:64px;position:relative;z-index:1;}
 .carousel-dots{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);display:flex;gap:4px;z-index:5;}
 .carousel-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.4);cursor:pointer;transition:background .2s;}
 .carousel-dot.active{background:#fff;}
+/* Overlay transparent pour clic image → modal, sous les boutons */
+.carousel-overlay{position:absolute;inset:0;z-index:2;cursor:pointer;}
+.carousel-btn{z-index:10;}
+.carousel-dots{z-index:10;}
 .product-placeholder{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:linear-gradient(135deg,rgba(245,200,66,.08),rgba(255,107,107,.06));cursor:pointer;}
 .ph-emoji{font-size:3rem;}
 .ph-text{font-size:.82rem;color:var(--muted);text-align:center;padding:0 16px;}
@@ -766,7 +770,7 @@ function buildProductCard(a) {
       + esc(a.nom) + '<br><em style="font-size:.72rem;opacity:.6">Image &#224; venir</em></span></div>';
   } else {
     var slides = imgs.map(function(img) {
-      return '<div class="carousel-slide" onclick="openOrderModal(\\\'' + a.id + '\\\'" style="cursor:pointer">'
+      return '<div class="carousel-slide">'
         + '<img class="product-img" src="images/' + esc(img) + '" alt="' + esc(a.nom) + '">'
         + '</div>';
     }).join('');
@@ -778,6 +782,7 @@ function buildProductCard(a) {
         + '<button class="carousel-btn next" onclick="carNext(\\\'' + cid + '\\\');event.stopPropagation()">&#8250;</button>'
       : '';
     imgHtml = '<div class="carousel-track" id="' + cid + '-track">' + slides + '</div>'
+      + '<div class="carousel-overlay" onclick="openOrderModal(\\\'' + a.id + '\\\')"></div>'
       + arrows + dots;
   }
 
@@ -1255,6 +1260,8 @@ function renderCandidates() {
       if (card.dataset.maxed !== '1') {
         card.addEventListener('click', function(e) {
           if (e.target.closest('.pa-btn')) return;
+          if (e.target.closest('.carousel-btn')) return;
+          if (e.target.closest('.carousel-dots')) return;
           var id  = this.dataset.id;
           var cat = this.dataset.cat;
           if (id && cat) castSVote(id, cat);
