@@ -1150,8 +1150,8 @@ async function castVote(eventId, val) {
 async function castFoodVote(eventId, val, meal) {
   meal = meal || 'general';
   try {
-    // 1. Cherche le vote existant pour CE repas précis
-    var ex = await sb.from('event_food_votes').select('*')
+    // Cherche uniquement par (event_id, user_id, meal) — chaque repas est indépendant
+    var ex = await sb.from('event_food_votes').select('id,repas,mange')
       .eq('event_id', eventId)
       .eq('user_id',  currentUser.id)
       .eq('meal',     meal)
@@ -1159,42 +1159,19 @@ async function castFoodVote(eventId, val, meal) {
     var v = ex.data;
 
     if (v) {
-      // Vote existant pour ce repas
       if ((v.repas || v.mange) === val) {
-        // Même valeur → retire le vote
         await sb.from('event_food_votes').delete().eq('id', v.id);
       } else {
-        // Autre valeur → met à jour
         await sb.from('event_food_votes').update({ repas: val, mange: val }).eq('id', v.id);
       }
     } else {
-      // Pas encore voté pour ce repas.
-      // Tente d'abord de supprimer tout vote existant (event_id, user_id) sans meal
-      // pour éviter le 409 si l'ancienne contrainte est encore là
-      var old409 = await sb.from('event_food_votes').select('id')
-        .eq('event_id', eventId)
-        .eq('user_id',  currentUser.id);
-      var existingVotes = old409.data || [];
-
-      if (existingVotes.length > 0) {
-        // Ancienne contrainte UNIQUE(event_id,user_id) encore active
-        // → mettre à jour le premier enregistrement avec le nouveau meal
-        var firstId = existingVotes[0].id;
-        await sb.from('event_food_votes').update({ repas: val, mange: val, meal: meal }).eq('id', firstId);
-        // Supprimer les autres (si plusieurs)
-        for (var i = 1; i < existingVotes.length; i++) {
-          await sb.from('event_food_votes').delete().eq('id', existingVotes[i].id);
-        }
-      } else {
-        // Aucun vote → insert normal
-        await sb.from('event_food_votes').insert({
-          event_id: eventId,
-          user_id:  currentUser.id,
-          repas:    val,
-          mange:    val,
-          meal:     meal
-        });
-      }
+      await sb.from('event_food_votes').insert({
+        event_id: eventId,
+        user_id:  currentUser.id,
+        repas:    val,
+        mange:    val,
+        meal:     meal
+      });
     }
   } catch(err) { console.error('castFoodVote error:', err); }
   openDetail(eventId);
