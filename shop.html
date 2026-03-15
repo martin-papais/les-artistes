@@ -32,16 +32,20 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;height:64px;background:rgba(
 .nav-link:hover{color:var(--text);background:var(--surface2);}
 .nav-link.active{color:var(--text);background:var(--surface2);}
 .nav-link.active span{background:linear-gradient(135deg,var(--gold),var(--coral));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
-.nav-right{display:flex;align-items:center;gap:10px;}
+.nav-right{display:flex;align-items:center;gap:8px;flex-shrink:0;}
 .nav-user{display:flex;align-items:center;gap:8px;padding:6px 12px;border-radius:10px;background:var(--surface);border:1px solid var(--border);font-size:.82rem;color:var(--muted);}
 .avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--coral));display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;color:#fff;}
 .btn-logout{padding:7px 14px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:.8rem;cursor:pointer;transition:var(--trans);font-family:'DM Sans',sans-serif;}
 .btn-logout:hover{background:rgba(255,107,107,.15);color:var(--coral);}
-.hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;padding:8px;background:none;border:none;}
-.hamburger span{width:22px;height:2px;background:var(--muted);border-radius:2px;}
-.mobile-menu{display:none;position:fixed;top:64px;left:0;right:0;z-index:99;background:rgba(15,13,24,.97);backdrop-filter:blur(20px);padding:16px;border-bottom:1px solid var(--border);flex-direction:column;gap:4px;}
+.hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;padding:8px;background:none;border:none;flex-shrink:0;}
+.hamburger span{width:22px;height:2px;background:var(--muted);border-radius:2px;transition:var(--trans);display:block;}
+.hamburger.open span:nth-child(1){transform:translateY(7px) rotate(45deg);}
+.hamburger.open span:nth-child(2){opacity:0;}
+.hamburger.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg);}
+.mobile-menu{display:none;position:fixed;top:64px;left:0;right:0;z-index:99;background:rgba(15,13,24,.98);backdrop-filter:blur(20px);padding:12px;border-bottom:1px solid var(--border);flex-direction:column;gap:2px;}
 .mobile-menu.open{display:flex;}
-.mobile-menu .nav-link{font-size:.9rem;padding:10px 14px;}
+.mobile-menu .nav-link{font-size:.9rem;padding:12px 16px;border-radius:12px;}
+.mobile-menu .nav-link.active{background:var(--surface2);}
 
 main{padding-top:64px;position:relative;z-index:1;}
 
@@ -196,14 +200,30 @@ textarea.minput{resize:vertical;min-height:70px;}
 .empty-state .ei{font-size:3rem;margin-bottom:12px;}
 
 @media(max-width:768px){
-  nav{padding:0 16px;}
+  nav{padding:0 14px;}
   .nav-links{display:none;}
+  .nav-right{display:none;}
   .hamburger{display:flex;}
   .hero{padding:28px 16px 0;}
   .countdown-wrap{padding:18px 20px;}
   .cd-num{font-size:2rem;}
   .shop{padding:0 16px 60px;}
-  .shop-grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;}
+  /* Cards mobiles : layout horizontal compact */
+  .shop-grid{grid-template-columns:1fr;gap:10px;}
+  .product-card{flex-direction:row;align-items:stretch;border-radius:16px;}
+  .product-img-wrap{width:100px;min-width:100px;aspect-ratio:auto;height:auto;flex-shrink:0;border-radius:0;}
+  .product-info{padding:10px 12px 6px;flex:1;min-width:0;}
+  .product-name{font-size:.92rem;margin-bottom:2px;}
+  .product-desc{font-size:.75rem;margin-bottom:5px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  .product-price{font-size:.9rem;margin-bottom:5px;}
+  .size-counters{gap:4px;margin-bottom:4px;}
+  .size-counter{padding:3px 6px;min-width:36px;}
+  .sc-size{font-size:.6rem;}
+  .sc-count{font-size:.82rem;}
+  .product-admin-btns{padding:0 10px 6px;flex-wrap:wrap;}
+  .pa-btn{padding:3px 8px;font-size:.7rem;}
+  .product-order{padding:6px 10px 10px;}
+  .btn-order{padding:8px;font-size:.8rem;border-radius:10px;}
   .modal{border-radius:20px 20px 0 0;margin:auto 0 0;}
   .modal-overlay{align-items:flex-end;padding:0;}
   .mfield-row{grid-template-columns:1fr;}
@@ -320,7 +340,7 @@ textarea.minput{resize:vertical;min-height:70px;}
 <div class="bg"></div>
 
 <nav>
-  <a href="events.html" class="nav-logo">&#127912; Les Artistes</a>
+  <a href="events.html" class="nav-logo"><img src="logo-artistes.png" alt="" style="height:36px;width:auto;vertical-align:middle;margin-right:8px;"> Les Artistes</a>
   <div class="nav-links">
     <a href="events.html"   class="nav-link">&#127881; &#201;v&#233;nements</a>
     <a href="news.html"     class="nav-link">&#128240; Actualit&#233;s</a>
@@ -336,7 +356,7 @@ textarea.minput{resize:vertical;min-height:70px;}
     </div>
     <button class="btn-logout" onclick="handleLogout()">D&#233;connexion</button>
   </div>
-  <button class="hamburger" onclick="toggleMenu()" aria-label="Menu">
+  <button class="hamburger" id="hamburger" onclick="toggleMenu()" aria-label="Menu">
     <span></span><span></span><span></span>
   </button>
 </nav>
@@ -1390,7 +1410,12 @@ document.querySelectorAll('.modal-overlay').forEach(function(o) {
   o.addEventListener('click', function(e) { if (e.target === this) closeModal(this.id); });
 });
 
-function toggleMenu() { document.getElementById('mobile-menu').classList.toggle('open'); }
+function toggleMenu() {
+  var menu = document.getElementById('mobile-menu');
+  var hamb = document.getElementById('hamburger');
+  var isOpen = menu.classList.toggle('open');
+  hamb.classList.toggle('open', isOpen);
+}
 async function handleLogout() { await sb.auth.signOut(); window.location.href = 'login.html'; }
 
 function esc(s) {
@@ -1400,9 +1425,10 @@ function esc(s) {
 
 document.addEventListener('click', function(e) {
   var menu = document.getElementById('mobile-menu');
-  var hamb = document.querySelector('.hamburger');
+  var hamb = document.getElementById('hamburger');
   if (menu && menu.classList.contains('open') && !menu.contains(e.target) && hamb && !hamb.contains(e.target)) {
     menu.classList.remove('open');
+    hamb.classList.remove('open');
   }
 });
 </script>
