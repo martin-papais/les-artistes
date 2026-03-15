@@ -883,9 +883,18 @@ async function openDetail(id) {
   document.getElementById('detail-title').textContent = 'Chargement...';
   document.getElementById('detail-body').innerHTML = '<div class="loading-wrap"><div class="loading-spinner" style="margin:0 auto"></div></div>';
 
-  var r  = await sb.from('events').select('*').eq('id',id).maybeSingle();
-  if (r.error||!r.data) return;
-  var e = r.data;
+  var r, e;
+  try {
+    r = await sb.from('events').select('*').eq('id',id).maybeSingle();
+  } catch(err) {
+    document.getElementById('detail-body').innerHTML = '<div class="empty-state"><p>Erreur de chargement</p></div>';
+    return;
+  }
+  if (!r || r.error || !r.data) {
+    document.getElementById('detail-body').innerHTML = '<div class="empty-state"><p>'+(r&&r.error?r.error.message:'Événement introuvable')+'</p></div>';
+    return;
+  }
+  e = r.data;
 
   // Profil auteur
   if (e.created_by) {
@@ -894,23 +903,35 @@ async function openDetail(id) {
   }
 
   // Votes présence
-  var vr = await sb.from('event_votes').select('*').eq('event_id',id);
-  var allVotes = vr.data || [];
+  var allVotes = [];
+  try {
+    var vr = await sb.from('event_votes').select('*').eq('event_id',id);
+    allVotes = vr.data || [];
+  } catch(e) { allVotes = []; }
   await enrichWithProfiles(allVotes);
 
   // Votes nourriture (midi/soir/ensemble)
-  var fr = await sb.from('event_food_votes').select('*').eq('event_id',id);
-  var foodVotes = fr.data || [];
+  var foodVotes = [];
+  try {
+    var fr = await sb.from('event_food_votes').select('*').eq('event_id',id);
+    foodVotes = fr.data || [];
+  } catch(e) { foodVotes = []; }
   await enrichWithProfiles(foodVotes);
 
   // Votes courses (barbecue)
-  var courRes = await sb.from('event_courses_votes').select('*').eq('event_id',id).catch(function(){ return {data:[]}; });
-  var coursesVotes = (courRes && courRes.data) || [];
+  var coursesVotes = [];
+  try {
+    var courRes = await sb.from('event_courses_votes').select('*').eq('event_id',id);
+    coursesVotes = (courRes && courRes.data) || [];
+  } catch(e) { coursesVotes = []; }
   await enrichWithProfiles(coursesVotes);
 
   // Commentaires
-  var cr = await sb.from('event_comments').select('*').eq('event_id',id).order('created_at',{ascending:true});
-  var comments = cr.data || [];
+  var comments = [];
+  try {
+    var cr = await sb.from('event_comments').select('*').eq('event_id',id).order('created_at',{ascending:true});
+    comments = cr.data || [];
+  } catch(e) { comments = []; }
   await enrichWithProfiles(comments, 'user_id');
 
   var isOwner = e.created_by === currentUser.id;
@@ -1050,13 +1071,13 @@ function buildPollSection(title, eventId, votes, field, options, castFn) {
 function buildFoodPoll(title, eventId, allFoodVotes, meal, castFn) {
   var relevant = allFoodVotes.filter(function(v){ return v.meal === meal; });
   var myVote   = relevant.find(function(v){ return v.user_id===currentUser.id; });
-  var yes = relevant.filter(function(v){ return v.repas==='oui'; });
-  var no  = relevant.filter(function(v){ return v.repas==='non'; });
+  var yes = relevant.filter(function(v){ return (v.repas||v.mange)==='oui'; });
+  var no  = relevant.filter(function(v){ return (v.repas||v.mange)==='non'; });
   var tot = relevant.length;
   var yP  = tot ? Math.round(yes.length/tot*100) : 0;
   var nP  = tot ? Math.round(no.length/tot*100)  : 0;
-  var myY = myVote && myVote.repas==='oui';
-  var myN = myVote && myVote.repas==='non';
+  var myY = myVote && (myVote.repas||myVote.mange)==='oui';
+  var myN = myVote && (myVote.repas||myVote.mange)==='non';
   return '<div class="d-section"><h3>'+title+'</h3>'
     + '<div class="poll-opt'+(myY?' voted-yes':'')+'"><span class="poll-lbl">🍴 Je mange</span><div class="poll-bar-wrap"><div class="poll-bar yes" style="width:'+yP+'%"></div></div><span class="poll-cnt">'+yes.length+'</span></div>'
     + '<div class="vote-names">'+nameChips(yes)+'</div>'
@@ -1107,14 +1128,20 @@ async function castVote(eventId, val) {
 
 async function castFoodVote(eventId, val, meal) {
   meal = meal || 'general';
-  var ex = await sb.from('event_food_votes').select('id,repas').eq('event_id',eventId).eq('user_id',currentUser.id).eq('meal',meal).maybeSingle();
-  var v  = ex.data;
-  if (v) {
-    if (v.repas===val) await sb.from('event_food_votes').delete().eq('id',v.id);
-    else await sb.from('event_food_votes').update({repas:val}).eq('id',v.id);
-  } else {
-    await sb.from('event_food_votes').insert({event_id:eventId,user_id:currentUser.id,repas:val,meal:meal});
-  }
+  try {
+    // Cherche un vote existant pour ce meal
+    var ex = await sb.from('event_food_votes').select('*').eq('event_id',eventId).eq('user_id',currentUser.id).eq('meal',meal).maybeSingle();
+    var v  = ex.data;
+    if (v) {
+      if ((v.repas||v.mange)===val) {
+        await sb.from('event_food_votes').delete().eq('id',v.id);
+      } else {
+        await sb.from('event_food_votes').update({repas:val,mange:val}).eq('id',v.id);
+      }
+    } else {
+      await sb.from('event_food_votes').insert({event_id:eventId,user_id:currentUser.id,repas:val,mange:val,meal:meal});
+    }
+  } catch(err) { console.error('castFoodVote error:', err); }
   openDetail(eventId);
 }
 
