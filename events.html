@@ -274,7 +274,7 @@ textarea.minput{resize:vertical;min-height:70px;}
 <div class="bg"></div>
 
 <nav>
-  <a href="events.html" class="nav-logo"><img src="logo-artistes.png" alt="" style="height:42px;width:auto;vertical-align:middle;margin-right:8px;"> Les Artistes</a>
+    <a href="events.html" class="nav-logo"><img src="logo-artistes.png" alt="" style="height:42px;width:auto;vertical-align:middle;margin-right:8px;"> Les Artistes</a>
   <div class="nav-links">
     <a href="events.html"   class="nav-link active"><span> Événements</span></a>
     <a href="news.html"     class="nav-link"> Actualités</a>
@@ -288,7 +288,7 @@ textarea.minput{resize:vertical;min-height:70px;}
       <div class="avatar" id="nav-avatar">?</div>
       <span id="nav-name">...</span>
     </div>
-    <button class="btn-logout" onclick="handleLogout()">Déco</button>
+    <button class="btn-logout" onclick="handleLogout()">Déconnexion</button>
   </div>
   <button class="hamburger" id="hamburger" onclick="toggleMenu()" aria-label="Menu">
     <span></span><span></span><span></span>
@@ -349,7 +349,6 @@ textarea.minput{resize:vertical;min-height:70px;}
       <option value="Féria">🎠 Féria</option>
       <option value="Vacances">✈️ Vacances</option>
       <option value="Sport">🏃 Sport</option>
-      <option value="Barathon">🍺 Barathon</option>🍺
       <option value="Autre">💫 Autre</option>
     </select>
   </div>
@@ -392,7 +391,6 @@ textarea.minput{resize:vertical;min-height:70px;}
           <div class="cat-btn" onclick="selectCat(this,'Féria')">          <span class="ce">🎠</span><span class="cl">Féria</span></div>
           <div class="cat-btn" onclick="selectCat(this,'Vacances')">       <span class="ce">✈️</span><span class="cl">Vacances</span></div>
           <div class="cat-btn" onclick="selectCat(this,'Sport')">          <span class="ce">🏃</span><span class="cl">Sport</span></div>
-          <div class="cat-btn" onclick="selectCat(this,'Barathon')">       <span class="ce">🍺</span><span class="cl">Barathon</span></div>
           <div class="cat-btn" onclick="selectCat(this,'Autre')">          <span class="ce">💫</span><span class="cl">Autre</span></div>
         </div>
       </div>
@@ -601,11 +599,11 @@ function renderAll() {
 var CAT_COLORS = {
   'Olympiade': '#FFD93D','Nouvel an': '#C77DFF','Anniversaire': '#FF9EBC',
   'Soirée': '#4ECDC4','Barbecue': '#FF6B6B','Soirée jeux de société': '#A8E063',
-  'Féria': '#ff9944','Vacances': '#66eeff','Sport': '#A8E063','Barathon': '#f59e0b','Autre': 'rgba(255,255,255,.2)'
+  'Féria': '#ff9944','Vacances': '#66eeff','Sport': '#A8E063','Autre': 'rgba(255,255,255,.2)'
 };
 var CAT_EMOJI = {
   'Olympiade':'🏅','Nouvel an':'🎆','Anniversaire':'🎂','Soirée':'🌙',
-  'Barbecue':'🔥','Soirée jeux de société':'🎲','Féria':'🎠','Vacances':'✈️','Sport':'🏃','Barathon':'🍺','Autre':'💫'
+  'Barbecue':'🔥','Soirée jeux de société':'🎲','Féria':'🎠','Vacances':'✈️','Sport':'🏃','Autre':'💫'
 };
 
 function buildRow(e, isPast) {
@@ -642,11 +640,11 @@ function buildRow(e, isPast) {
   if (e.anniversaire_qui) chips += '<span class="row-chip">🥳 '+esc(e.anniversaire_qui)+'</span>';
   if (e.sport_type) chips += '<span class="row-chip">🏃 '+esc(e.sport_type)+'</span>';
 
-var myVoteHtml = myVote
+  var myVoteHtml = myVote
     ? '<span class="row-my-vote '+(myVote.present==='oui'?'yes':'no')+'">'+(myVote.present==='oui'?'✅ Présent':'❌ Absent')+'</span>'
     : '';
 
-  // Pour Barathon : pas de barre de présence (sondages vendredi/samedi dans le détail)
+  // Barathon : pas de barre présence (ses sondages sont vendredi/samedi dans le détail)
   var pollHtml = e.categorie === 'Barathon'
     ? '<div class="row-poll"><span class="row-poll-txt" style="font-size:.7rem">🍺 Voir détail</span></div>'
     : '<div class="row-poll">'
@@ -654,8 +652,6 @@ var myVoteHtml = myVote
         + '<span class="row-poll-txt">'+yes+'✅ '+no+'❌</span>'
         + myVoteHtml
         + '</div>';
-
-  return '<div class="event-row'+(isPast?' past-row':'')+'" onclick="openDetail(\''+e.id+'\')">'
 
   return '<div class="event-row'+(isPast?' past-row':'')+'" onclick="openDetail(\''+e.id+'\')">'
     + '<div class="row-stripe" style="background:'+color+'"></div>'
@@ -1090,11 +1086,9 @@ async function openDetail(id) {
   }
 
   // ─ Sondage présence ─
-  if (e.categorie !== 'Barathon') {
-    html += buildPollSection('🗳️ Sondage présence', id, allVotes, 'present',
-      [{val:'oui', lbl:'✅ Présent(e)', cls:'yes'}, {val:'non', lbl:'❌ Absent(e)', cls:'no'}],
-      'castVote');
-  }
+  html += buildPollSection('🗳️ Sondage présence', id, allVotes, 'present',
+    [{val:'oui', lbl:'✅ Présent(e)', cls:'yes'}, {val:'non', lbl:'❌ Absent(e)', cls:'no'}],
+    'castVote');
 
   // ─ Sondages conditionnels ─
 
