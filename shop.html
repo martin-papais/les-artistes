@@ -342,38 +342,40 @@ textarea.minput{resize:vertical;min-height:70px;}
 <div class="bg"></div>
 
 <nav>
-  <a href="events.html" class="nav-logo"><img src="logo-artistes.png" alt="" style="height:36px;width:auto;vertical-align:middle;margin-right:8px;"> Les Artistes</a>
+<a href="events.html" class="nav-logo">
+  <img src="logo-artistes.png" alt="" style="height:42px;width:auto;vertical-align:middle;margin-right:8px;"> Les Artistes
+</a>
   <div class="nav-links">
-    <a href="events.html"   class="nav-link">&#127881; &#201;v&#233;nements</a>
-    <a href="news.html"     class="nav-link">&#128240; Actualit&#233;s</a>
-    <a href="photos.html"   class="nav-link">&#128248; Photos</a>
-    <a href="games.html"    class="nav-link">&#127918; Jeux</a>
-    <a href="shop.html"     class="nav-link active"><span>&#128717; Boutique</span></a>
-    <a href="annuaire.html" class="nav-link">&#128210; Annuaire</a>
+    <a href="events.html"   class="nav-link"> Événements</a>
+    <a href="news.html"     class="nav-link"> Actualités</a>
+    <a href="photos.html"   class="nav-link"> Photos</a>
+    <a href="games.html"    class="nav-link"> Jeux</a>
+    <a href="shop.html"     class="nav-link active"><span> Boutique</span></a>
+    <a href="annuaire.html" class="nav-link"> Annuaire</a>
   </div>
   <div class="nav-right">
     <div class="nav-user">
       <div class="avatar" id="nav-avatar">?</div>
       <span id="nav-name">...</span>
     </div>
-    <button class="btn-logout" onclick="handleLogout()">D&#233;connexion</button>
+    <button class="btn-logout" onclick="handleLogout()">Déconnexion</button>
   </div>
   <button class="hamburger" id="hamburger" onclick="toggleMenu()" aria-label="Menu">
     <span></span><span></span><span></span>
   </button>
 </nav>
 <div class="mobile-menu" id="mobile-menu">
-  <a href="events.html"   class="nav-link">&#127881; &#201;v&#233;nements</a>
-  <a href="news.html"     class="nav-link">&#128240; Actualit&#233;s</a>
-  <a href="photos.html"   class="nav-link">&#128248; Photos</a>
-  <a href="games.html"    class="nav-link">&#127918; Jeux</a>
-  <a href="shop.html"     class="nav-link active">&#128717; Boutique</a>
-  <a href="annuaire.html" class="nav-link">&#128210; Annuaire</a>
+  <a href="events.html"   class="nav-link"> Événements</a>
+  <a href="news.html"     class="nav-link"> Actualités</a>
+  <a href="photos.html"   class="nav-link"> Photos</a>
+  <a href="games.html"    class="nav-link"> Jeux</a>
+  <a href="shop.html"     class="nav-link active"> Boutique</a>
+  <a href="annuaire.html" class="nav-link"> Annuaire</a>
 </div>
 
 <main>
   <section class="hero">
-    <h1>La Boutique &#128717;</h1>
+    <h1>La Boutique</h1>
     <p class="hero-sub">Choisis tes articles, vote pour ta taille — on commande ensemble !</p>
 
     <!-- COUNTDOWN — structure FIXE, jamais écrasée -->
@@ -766,8 +768,10 @@ function buildProductCard(a) {
   var cid  = 'car-' + a.id.replace(/-/g,'');
   var imgHtml;
   if (!imgs.length) {
-    imgHtml = '<div class="product-placeholder\' onclick=\'openOrderModal(\\\'' + a.id + '\\\')\' style=\'cursor:pointer\'><span class="ph-emoji">&#128248;</span><span class="ph-text">Photo '
-      + esc(a.nom) + '<br><em style="font-size:.72rem;opacity:.6">Image &#224; venir</em></span></div>';
+    imgHtml = '<div class="product-placeholder" onclick="openOrderModal(\'' + a.id + '\')" style="cursor:pointer">'
+      + '<span class="ph-emoji">&#128248;</span>'
+      + '<span class="ph-text">Photo ' + esc(a.nom) + '<br><em style="font-size:.72rem;opacity:.6">Image &#224; venir</em></span>'
+      + '</div>';
   } else {
     var slides = imgs.map(function(img) {
       return '<div class="carousel-slide">'
@@ -775,17 +779,16 @@ function buildProductCard(a) {
         + '</div>';
     }).join('');
     var dots = imgs.length > 1 ? '<div class="carousel-dots" id="' + cid + '-dots">'
-      + imgs.map(function(_, i){ return '<span class="carousel-dot' + (i===0?' active':'') + '" onclick="carGo(\\\'' + cid + '\\\',' + i + ');event.stopPropagation()"></span>'; }).join('')
+      + imgs.map(function(_, i){ return '<span class="carousel-dot' + (i===0?' active':'') + '" onclick="carGo(\'' + cid + '\',' + i + ');event.stopPropagation()"></span>'; }).join('')
       + '</div>' : '';
     var arrows = imgs.length > 1
-      ? '<button class="carousel-btn prev" onclick="carPrev(\\\'' + cid + '\\\');event.stopPropagation()">&#8249;</button>'
-        + '<button class="carousel-btn next" onclick="carNext(\\\'' + cid + '\\\');event.stopPropagation()">&#8250;</button>'
+      ? '<button class="carousel-btn prev" onclick="carPrev(\'' + cid + '\');event.stopPropagation()">&#8249;</button>'
+        + '<button class="carousel-btn next" onclick="carNext(\'' + cid + '\');event.stopPropagation()">&#8250;</button>'
       : '';
     imgHtml = '<div class="carousel-track" id="' + cid + '-track">' + slides + '</div>'
-      + '<div class="carousel-overlay" onclick="openOrderModal(\\\'' + a.id + '\\\')"></div>'
+      + '<div class="carousel-overlay" onclick="openOrderModal(\'' + a.id + '\')"></div>'
       + arrows + dots;
   }
-
   var badgeHtml = a.badge === 'new'
     ? '<span class="product-badge badge-new">Nouveau</span>'
     : a.badge === 'hot' ? '<span class="product-badge badge-hot">&#128293; Populaire</span>' : '';
@@ -1304,16 +1307,15 @@ function buildCandidatCard(c, myVotesByCat) {
       return '<div class="carousel-slide"><img class="candidate-img" src="images/' + esc(img) + '" alt="' + esc(c.nom) + '"></div>';
     }).join('');
     var cdots = cimgs.length > 1 ? '<div class="carousel-dots" id="' + ccid + '-dots">'
-      + cimgs.map(function(_, i){ return '<span class="carousel-dot' + (i===0?' active':'') + '" onclick="carGo(\\\'' + ccid + '\\\',' + i + ');event.stopPropagation()"></span>'; }).join('')
+      + cimgs.map(function(_, i){ return '<span class="carousel-dot' + (i===0?' active':'') + '" onclick="carGo(\'' + ccid + '\',' + i + ');event.stopPropagation()"></span>'; }).join('')
       + '</div>' : '';
     var carrows = cimgs.length > 1
-      ? '<button class="carousel-btn prev" onclick="carPrev(\\\'' + ccid + '\\\');event.stopPropagation()">&#8249;</button>'
-        + '<button class="carousel-btn next" onclick="carNext(\\\'' + ccid + '\\\');event.stopPropagation()">&#8250;</button>'
+      ? '<button class="carousel-btn prev" onclick="carPrev(\'' + ccid + '\');event.stopPropagation()">&#8249;</button>'
+        + '<button class="carousel-btn next" onclick="carNext(\'' + ccid + '\');event.stopPropagation()">&#8250;</button>'
       : '';
     imgHtml = '<div class="carousel-track" id="' + ccid + '-track">' + cslides + '</div>'
       + carrows + cdots;
   }
-
   var adminBtnsHtml = isAdmin
     ? '<div style="padding:0 10px 10px;display:flex;gap:5px">'
       + '<button class="pa-btn" style="font-size:.7rem" onclick="event.stopPropagation();openEditCandidat(\'' + c.id + '\')">&#9998;</button>'
