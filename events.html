@@ -274,14 +274,14 @@ textarea.minput{resize:vertical;min-height:70px;}
 <div class="bg"></div>
 
 <nav>
-  <a href="events.html" class="nav-logo">🎨 Les Artistes</a>
+  <a href="events.html" class="nav-logo"><img src="logo-artistes.png" alt="" style="height:42px;width:auto;vertical-align:middle;margin-right:8px;"> Les Artistes</a>
   <div class="nav-links">
-    <a href="events.html"   class="nav-link active"><span>🎉 Événements</span></a>
-    <a href="news.html"     class="nav-link">📰 Actualités</a>
-    <a href="photos.html"   class="nav-link">📸 Photos</a>
-    <a href="games.html"    class="nav-link">🎮 Jeux</a>
-    <a href="shop.html"     class="nav-link">🛍️ Boutique</a>
-    <a href="annuaire.html" class="nav-link">📒 Annuaire</a>
+    <a href="events.html"   class="nav-link active"><span> Événements</span></a>
+    <a href="news.html"     class="nav-link"> Actualités</a>
+    <a href="photos.html"   class="nav-link"> Photos</a>
+    <a href="games.html"    class="nav-link"> Jeux</a>
+    <a href="shop.html"     class="nav-link"> Boutique</a>
+    <a href="annuaire.html" class="nav-link"> Annuaire</a>
   </div>
   <div class="nav-right">
     <div class="nav-user">
@@ -296,12 +296,12 @@ textarea.minput{resize:vertical;min-height:70px;}
 </nav>
 
 <div class="mobile-menu" id="mobile-menu">
-  <a href="events.html"   class="nav-link active">🎉 Événements</a>
-  <a href="news.html"     class="nav-link">📰 Actualités</a>
-  <a href="photos.html"   class="nav-link">📸 Photos</a>
-  <a href="games.html"    class="nav-link">🎮 Jeux</a>
-  <a href="shop.html"     class="nav-link">🛍️ Boutique</a>
-  <a href="annuaire.html" class="nav-link">📒 Annuaire</a>
+  <a href="events.html"   class="nav-link active"> Événements</a>
+  <a href="news.html"     class="nav-link"> Actualités</a>
+  <a href="photos.html"   class="nav-link"> Photos</a>
+  <a href="games.html"    class="nav-link"> Jeux</a>
+  <a href="shop.html"     class="nav-link"> Boutique</a>
+  <a href="annuaire.html" class="nav-link"> Annuaire</a>
 </div>
 
 <main>
@@ -1372,7 +1372,7 @@ async function deleteEvent(id) {
   await sb.from('event_comments').delete().eq('event_id',id);
   await sb.from('event_votes').delete().eq('event_id',id);
   await sb.from('event_food_votes').delete().eq('event_id',id);
-  await sb.from('event_courses_votes').delete().eq('event_id',id).catch(function(){});
+  try { await sb.from('event_courses_votes').delete().eq('event_id',id); } catch(e) {}
   await sb.from('events').delete().eq('id',id);
   closeModal('modal-detail');
   loadEvents();
