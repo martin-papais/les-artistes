@@ -288,7 +288,7 @@ textarea.minput{resize:vertical;min-height:70px;}
       <div class="avatar" id="nav-avatar">?</div>
       <span id="nav-name">...</span>
     </div>
-    <button class="btn-logout" onclick="handleLogout()">Déconnexion</button>
+    <button class="btn-logout" onclick="handleLogout()">Déco</button>
   </div>
   <button class="hamburger" id="hamburger" onclick="toggleMenu()" aria-label="Menu">
     <span></span><span></span><span></span>
@@ -673,6 +673,7 @@ function buildTitle(e) {
     case 'Vacances':     return '✈️ Vacances'+(e.lieu?' — '+esc(e.lieu):'');
     case 'Féria':        return '🎠 Féria '+(e.feria_ville?'de '+esc(e.feria_ville):'');
     case 'Sport':        return '🏃 '+(e.sport_type?esc(e.sport_type):'Sport');
+    case 'Barathon':     return '🍺 Barathon'+(e.lieu?' — '+esc(e.lieu):'');
     case 'Autre':        return '💫 '+(e.raison?esc(e.raison):e.categorie);
     default:             return esc(e.categorie)+(e.chez_qui?' chez '+esc(e.chez_qui):'');
   }
@@ -859,6 +860,10 @@ function buildFormFields(cat) {
         + note;
       break;
 
+    case 'Barathon':
+      h = '<div class="mfield-row">'        + '<div>'+fld('Date *', inp('f-date','date','',true))+'</div>'        + '<div>'+fld('Heure d\'arrivée', inp('f-heure','time',''))+'</div>'        + '</div>'        + fld('Lieu de départ', inp('f-lieu','text','Ex: Bar Le Central...'))        + fld('Sondages créés automatiquement :', '<div style="display:flex;flex-wrap:wrap;gap:5px">'          + '<span style="padding:3px 9px;border-radius:8px;background:rgba(78,205,196,.15);border:1px solid rgba(78,205,196,.3);font-size:.75rem;color:var(--teal)">✅ Présent vendredi</span>'          + '<span style="padding:3px 9px;border-radius:8px;background:rgba(199,125,255,.15);border:1px solid rgba(199,125,255,.3);font-size:.75rem;color:var(--violet)">✅ Présent samedi</span>'          + '</div>')        + note;
+      break;
+
     case 'Autre':
       h = fld('Nom / Raison de l\'événement *', inp('f-raison','text','Ex: Soirée photo, atelier cuisine...', true))
         + chezQui + dateHeure + note;
@@ -975,6 +980,7 @@ async function submitEvent() {
 // ── MODAL DÉTAIL ──────────────────────────────────────────────────────────────
 async function openDetail(id) {
   openModal('modal-detail');
+  initPollDelegate();
   document.getElementById('detail-title').textContent = 'Chargement...';
   document.getElementById('detail-body').innerHTML = '<div class="loading-wrap"><div class="loading-spinner" style="margin:0 auto"></div></div>';
 
@@ -1097,6 +1103,12 @@ async function openDetail(id) {
     html += buildFoodPoll('🍽️ Qui mange ensemble ?', id, foodVotes, 'ensemble', 'castFoodVote');
   }
 
+  // Barathon : vendredi + samedi via food_votes (meal='vendredi' / 'samedi')
+  if (e.categorie === 'Barathon') {
+    html += buildFoodPoll('🍺 Présent vendredi ?', id, foodVotes, 'vendredi', 'castFoodVote', '✅ Présent', '❌ Absent');
+    html += buildFoodPoll('🍺 Présent samedi ?',  id, foodVotes, 'samedi',   'castFoodVote', '✅ Présent', '❌ Absent');
+  }
+
   // Barbecue : présence + courses
   if (e.categorie === 'Barbecue') {
     html += buildFoodPoll('🍗 Qui mange au barbecue ?', id, foodVotes, 'barbecue', 'castFoodVote');
@@ -1135,18 +1147,7 @@ async function openDetail(id) {
   document.getElementById('detail-body').innerHTML = html;
 
   // Délégation : clic sur .poll-opt → vote
-  document.getElementById('detail-body').addEventListener('click', function(e) {
-    var opt = e.target.closest('.poll-opt');
-    if (!opt) return;
-    var fn   = opt.dataset.fn;
-    var eid  = opt.dataset.eid;
-    var val  = opt.dataset.val;
-    var meal = opt.dataset.meal;
-    if (!fn || !eid || !val) return;
-    if (fn === 'castVote')        castVote(eid, val);
-    else if (fn === 'castFoodVote')    castFoodVote(eid, val, meal);
-    else if (fn === 'castCoursesVote') castCoursesVote(eid, val);
-  }, { once: true }); // once:true car openDetail re-render à chaque vote
+  // Délégation gérée globalement via initPollDelegate()
 }
 
 // ── POLL BUILDER ──────────────────────────────────────────────────────────────
@@ -1175,7 +1176,9 @@ function buildPollSection(title, eventId, votes, field, options, castFn) {
 }
 
 
-function buildFoodPoll(title, eventId, allFoodVotes, meal, castFn) {
+function buildFoodPoll(title, eventId, allFoodVotes, meal, castFn, lblYes, lblNo) {
+  lblYes = lblYes || '&#127860; Je mange';
+  lblNo  = lblNo  || '&#9940; Je mange pas';
   var relevant = allFoodVotes.filter(function(v){ return v.meal === meal; });
   var myVote   = relevant.find(function(v){ return v.user_id===currentUser.id; });
   var yes = relevant.filter(function(v){ return (v.repas||v.mange)==='oui'; });
@@ -1188,14 +1191,14 @@ function buildFoodPoll(title, eventId, allFoodVotes, meal, castFn) {
 
   return '<div class="d-section"><h3>'+title+'</h3>'
     + '<div class="poll-opt'+(myY?' voted-yes':'')+'" data-fn="'+castFn+'" data-eid="'+esc(eventId)+'" data-val="oui" data-meal="'+esc(meal)+'">'
-    +   '<span class="poll-lbl">&#127860; Je mange</span>'
+    +   '<span class="poll-lbl">'+lblYes+'</span>'
     +   '<div class="poll-bar-wrap"><div class="poll-bar yes" style="width:'+yP+'%"></div></div>'
     +   '<span class="poll-cnt">'+yes.length+'</span>'
     +   (myY ? '<span style="font-size:.7rem;margin-left:6px;color:var(--teal)">&#10003;</span>' : '<span style="font-size:.7rem;margin-left:6px;color:var(--muted);opacity:.4">Voter</span>')
     + '</div>'
     + '<div class="vote-names">'+nameChips(yes)+'</div>'
     + '<div class="poll-opt'+(myN?' voted-no':'')+'" data-fn="'+castFn+'" data-eid="'+esc(eventId)+'" data-val="non" data-meal="'+esc(meal)+'">'
-    +   '<span class="poll-lbl">&#9940; Je mange pas</span>'
+    +   '<span class="poll-lbl">'+lblNo+'</span>'
     +   '<div class="poll-bar-wrap"><div class="poll-bar no" style="width:'+nP+'%"></div></div>'
     +   '<span class="poll-cnt">'+no.length+'</span>'
     +   (myN ? '<span style="font-size:.7rem;margin-left:6px;color:var(--teal)">&#10003;</span>' : '<span style="font-size:.7rem;margin-left:6px;color:var(--muted);opacity:.4">Voter</span>')
@@ -1224,6 +1227,26 @@ async function enrichWithProfiles(list, userField) {
   var pm = {};
   (pr.data||[]).forEach(function(p){ pm[p.id]=p; });
   list.forEach(function(v){ v.profiles=pm[v[userField]]||null; });
+}
+
+// ── DÉLÉGATION GLOBALE SONDAGES ──────────────────────────────────────────────
+// Une seule délégation sur detail-body — pas de once:true pour éviter le 409
+var _pollDelegateInit = false;
+function initPollDelegate() {
+  if (_pollDelegateInit) return;
+  _pollDelegateInit = true;
+  document.getElementById('detail-body').addEventListener('click', function(e) {
+    var opt = e.target.closest('.poll-opt');
+    if (!opt) return;
+    var fn   = opt.dataset.fn;
+    var eid  = opt.dataset.eid;
+    var val  = opt.dataset.val;
+    var meal = opt.dataset.meal;
+    if (!fn || !eid || !val) return;
+    if (fn === 'castVote')             castVote(eid, val);
+    else if (fn === 'castFoodVote')    castFoodVote(eid, val, meal);
+    else if (fn === 'castCoursesVote') castCoursesVote(eid, val);
+  });
 }
 
 // ── VOTES ─────────────────────────────────────────────────────────────────────
