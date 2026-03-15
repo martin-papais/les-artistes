@@ -642,9 +642,20 @@ function buildRow(e, isPast) {
   if (e.anniversaire_qui) chips += '<span class="row-chip">🥳 '+esc(e.anniversaire_qui)+'</span>';
   if (e.sport_type) chips += '<span class="row-chip">🏃 '+esc(e.sport_type)+'</span>';
 
-  var myVoteHtml = myVote
+var myVoteHtml = myVote
     ? '<span class="row-my-vote '+(myVote.present==='oui'?'yes':'no')+'">'+(myVote.present==='oui'?'✅ Présent':'❌ Absent')+'</span>'
     : '';
+
+  // Pour Barathon : pas de barre de présence (sondages vendredi/samedi dans le détail)
+  var pollHtml = e.categorie === 'Barathon'
+    ? '<div class="row-poll"><span class="row-poll-txt" style="font-size:.7rem">🍺 Voir détail</span></div>'
+    : '<div class="row-poll">'
+        + '<div class="row-poll-bar"><div class="row-poll-yes" style="width:'+yPct+'%"></div></div>'
+        + '<span class="row-poll-txt">'+yes+'✅ '+no+'❌</span>'
+        + myVoteHtml
+        + '</div>';
+
+  return '<div class="event-row'+(isPast?' past-row':'')+'" onclick="openDetail(\''+e.id+'\')">'
 
   return '<div class="event-row'+(isPast?' past-row':'')+'" onclick="openDetail(\''+e.id+'\')">'
     + '<div class="row-stripe" style="background:'+color+'"></div>'
@@ -661,11 +672,7 @@ function buildRow(e, isPast) {
     +     '<span class="row-date">'+dateStr+'</span>'
     +     countdownHtml
     +   '</div>'
-    +   '<div class="row-poll">'
-    +     '<div class="row-poll-bar"><div class="row-poll-yes" style="width:'+yPct+'%"></div></div>'
-    +     '<span class="row-poll-txt">'+yes+'✅ '+no+'❌</span>'
-    +     myVoteHtml
-    +   '</div>'
+    +   pollHtml
     + '</div></div>';
 }
 
