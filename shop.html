@@ -99,7 +99,7 @@ main{padding-top:64px;position:relative;z-index:1;}
 /* CARROUSEL */
 .carousel-track{display:flex;height:100%;transition:transform .35s cubic-bezier(.4,0,.2,1);}
 .carousel-slide{min-width:100%;height:100%;flex-shrink:0;position:relative;}
-.product-img{width:100%;height:100%;object-fit:cover;display:block;}
+.product-img{width:100%;height:100%;object-fit:cover;object-position:center center;display:block;}
 .carousel-btn{position:absolute;top:50%;transform:translateY(-50%);z-index:5;width:30px;height:30px;border-radius:50%;border:none;background:rgba(0,0,0,.55);backdrop-filter:blur(4px);color:#fff;font-size:.85rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s;line-height:1;}
 .carousel-btn:hover{background:rgba(0,0,0,.8);}
 .carousel-btn.prev{left:8px;}
@@ -278,8 +278,14 @@ textarea.minput{resize:vertical;min-height:70px;}
 .btn-admin-violet:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(199,125,255,.35);}
 .btn-admin-violet-sec{padding:9px 14px;border-radius:10px;border:1px solid rgba(199,125,255,.4);background:transparent;color:var(--violet);font-family:'DM Sans',sans-serif;font-size:.8rem;cursor:pointer;transition:var(--trans);}
 .btn-admin-violet-sec:hover{background:rgba(199,125,255,.1);}
-.votes-input{padding:8px 11px;background:rgba(255,255,255,.08);border:1.5px solid rgba(199,125,255,.3);border-radius:9px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.83rem;outline:none;width:80px;}
+.votes-input{padding:8px 11px;background:rgba(255,255,255,.08);border:1.5px solid rgba(199,125,255,.3);border-radius:9px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.83rem;outline:none;width:64px;}
 .votes-input:focus{border-color:var(--violet);}
+/* Tableau votes max par catégorie */
+.cat-votes-table{width:100%;border-collapse:collapse;margin-top:10px;}
+.cat-votes-table td{padding:5px 8px;font-size:.8rem;border-bottom:1px solid rgba(199,125,255,.1);}
+.cat-votes-table td:first-child{color:var(--text);font-weight:600;}
+.cat-votes-table td:last-child{text-align:right;}
+.cat-votes-table .cat-votes-label{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--violet);padding:8px 8px 4px;border-bottom:1px solid rgba(199,125,255,.2);}
 
 /* Catégories sondage */
 .sondage-cats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px;}
@@ -299,7 +305,9 @@ textarea.minput{resize:vertical;min-height:70px;}
 .candidate-card.maxed{opacity:.55;cursor:not-allowed;}
 .candidate-card.maxed:hover{border-color:var(--border);box-shadow:none;}
 .candidate-img-wrap{aspect-ratio:1;overflow:hidden;background:#1a1530;position:relative;}
-.candidate-img{width:100%;height:100%;object-fit:cover;display:block;}
+.candidate-img{width:100%;height:100%;object-fit:cover;object-position:center center;display:block;}
+.carousel-slide{display:flex;align-items:center;justify-content:center;}
+.carousel-slide img{width:100%;height:100%;object-fit:cover;object-position:center center;display:block;}
 .candidate-placeholder{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,rgba(199,125,255,.1),rgba(255,107,107,.06));}
 .voted-badge{position:absolute;top:8px;right:8px;padding:3px 9px;border-radius:20px;font-size:.68rem;font-weight:700;background:rgba(199,125,255,.35);color:var(--violet);backdrop-filter:blur(6px);}
 .candidate-info{padding:10px 12px 12px;}
@@ -327,7 +335,10 @@ textarea.minput{resize:vertical;min-height:70px;}
 .lb-section{margin-bottom:28px;}
 .lb-section-title{font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:8px;}
 .lb-section-title::after{content:'';flex:1;height:1px;background:var(--border);}
-.my-votes-left{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;background:rgba(199,125,255,.12);border:1px solid rgba(199,125,255,.3);font-size:.78rem;color:var(--violet);font-weight:600;margin-bottom:16px;}
+.my-votes-left{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:8px 14px;border-radius:14px;background:rgba(199,125,255,.12);border:1px solid rgba(199,125,255,.3);font-size:.78rem;color:var(--violet);font-weight:600;margin-bottom:16px;}
+.votes-info-item{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:20px;background:rgba(199,125,255,.15);border:1px solid rgba(199,125,255,.2);}
+.votes-info-cat{font-size:.75rem;color:var(--text);font-weight:600;}
+.votes-info-count{font-size:.78rem;font-weight:700;}
 
 @media(max-width:768px){
   .shop-tabs{padding:0 16px 20px;gap:8px;}
@@ -342,9 +353,7 @@ textarea.minput{resize:vertical;min-height:70px;}
 <div class="bg"></div>
 
 <nav>
-<a href="events.html" class="nav-logo">
-  <img src="logo-artistes.png" alt="" style="height:42px;width:auto;vertical-align:middle;margin-right:8px;"> Les Artistes
-</a>
+  <a href="events.html" class="nav-logo"><img src="logo-artistes.png" alt="" style="height:42px;width:auto;vertical-align:middle;margin-right:8px;"> Les Artistes</a>
   <div class="nav-links">
     <a href="events.html"   class="nav-link"> Événements</a>
     <a href="news.html"     class="nav-link"> Actualités</a>
@@ -369,7 +378,7 @@ textarea.minput{resize:vertical;min-height:70px;}
   <a href="news.html"     class="nav-link"> Actualités</a>
   <a href="photos.html"   class="nav-link"> Photos</a>
   <a href="games.html"    class="nav-link"> Jeux</a>
-  <a href="shop.html"     class="nav-link active"> Boutique</a>
+  <a href="shop.html"     class="nav-link active">&#128717; Boutique</a>
   <a href="annuaire.html" class="nav-link"> Annuaire</a>
 </div>
 
@@ -468,9 +477,11 @@ textarea.minput{resize:vertical;min-height:70px;}
           <label style="font-size:.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Date de fin du sondage</label>
           <input type="datetime-local" class="admin-input" id="sondage-deadline-input" style="border-color:rgba(199,125,255,.3)">
         </div>
-        <div class="admin-field">
-          <label style="font-size:.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Votes max par cat&#233;gorie</label>
-          <input type="number" class="votes-input" id="sondage-votes-max" min="1" max="10" value="3" placeholder="3">
+        <div class="admin-field" style="min-width:100%">
+          <label style="font-size:.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Votes max par catégorie</label>
+          <div id="cat-votes-config" style="background:rgba(199,125,255,.05);border:1px solid rgba(199,125,255,.2);border-radius:10px;padding:8px 10px;margin-top:4px">
+            <span style="font-size:.75rem;color:var(--muted)">Chargement des catégories...</span>
+          </div>
         </div>
         <button class="btn-admin-violet" onclick="saveSondageSettings()">&#128190; Enregistrer</button>
         <button class="btn-admin-violet-sec" onclick="clearSondageTimer()">Effacer timer</button>
@@ -842,7 +853,8 @@ function buildDetailSection(cardId, orders, sizes) {
       var p    = o.profile;
       var name = p ? ((p.prenom && p.nom) ? p.prenom + ' ' + p.nom : p.prenom || p.pseudo || '?') : '?';
       var isMe = o.user_id === currentUser.id;
-      return '<span class="name-chip' + (isMe ? ' me' : '') + '">' + (isMe ? '&#128100; ' : '') + esc(name) + '</span>';
+      var persoTag = o.personnalisation ? '<span style="font-size:.65rem;opacity:.7;margin-left:3px">✏️ '+esc(o.personnalisation)+'</span>' : '';
+      return '<span class="name-chip' + (isMe ? ' me' : '') + '">' + (isMe ? '&#128100; ' : '') + esc(name) + persoTag + '</span>';
     }).join('');
 
     return '<div class="detail-size-row">'
@@ -984,11 +996,12 @@ async function confirmOrder() {
 
   // Insère les nouvelles lignes (1 ligne par unité)
   if (sizes.length) {
+    var persoVal = document.getElementById('order-perso-input').value.trim() || null;
     var toInsert = [];
     sizes.forEach(function(sz) {
       var qty = pendingOrders[sz] || 1;
       for (var i = 0; i < qty; i++) {
-        toInsert.push({ article_id: orderProductId, user_id: currentUser.id, taille: sz });
+        toInsert.push({ article_id: orderProductId, user_id: currentUser.id, taille: sz, personnalisation: persoVal });
       }
     });
     var insRes = await sb.from('shop_orders').insert(toInsert);
@@ -1094,7 +1107,8 @@ async function deleteArticle(id) {
 // ── SONDAGE : variables ───────────────────────────────────────────────────────
 var sondageDeadline  = null;
 var sondageInterval  = null;
-var sondageVotesMax  = 3;
+var sondageVotesMax  = {}; // { categorie: max } — remplace l'ancien global
+var sondageVotesMaxDefault = 3; // fallback si cat pas configurée
 var allCandidats     = [];
 var allSVotes        = [];
 var activeSondageCat = 'all';
@@ -1131,7 +1145,7 @@ function setSondageState(state) {
 }
 
 async function loadSondageSettings() {
-  var r = await sb.from('shop_config').select('*').in('key', ['sondage_deadline','sondage_votes_max']);
+  var r = await sb.from('shop_config').select('*').in('key', ['sondage_deadline','sondage_votes_max_by_cat']);
   (r.data || []).forEach(function(row) {
     if (row.key === 'sondage_deadline' && row.value) {
       sondageDeadline = new Date(row.value);
@@ -1141,9 +1155,8 @@ async function loadSondageSettings() {
       }
       startSondageTimer();
     }
-    if (row.key === 'sondage_votes_max' && row.value) {
-      sondageVotesMax = parseInt(row.value) || 3;
-      document.getElementById('sondage-votes-max').value = sondageVotesMax;
+    if (row.key === 'sondage_votes_max_by_cat' && row.value) {
+      try { sondageVotesMax = JSON.parse(row.value); } catch(e) { sondageVotesMax = {}; }
     }
   });
   if (!sondageDeadline) setSondageState('none');
@@ -1166,10 +1179,16 @@ function startSondageTimer() {
 
 async function saveSondageSettings() {
   var dlVal = document.getElementById('sondage-deadline-input').value;
-  var vmVal = parseInt(document.getElementById('sondage-votes-max').value) || 3;
-  sondageVotesMax = vmVal;
+  // Lire les valeurs max par catégorie depuis les inputs générés
+  var newMax = {};
+  document.querySelectorAll('.cat-votes-input').forEach(function(inp) {
+    var cat = inp.dataset.cat;
+    var val = parseInt(inp.value) || sondageVotesMaxDefault;
+    if (cat) newMax[cat] = val;
+  });
+  sondageVotesMax = newMax;
 
-  var rows = [{ key:'sondage_votes_max', value: String(vmVal) }];
+  var rows = [{ key:'sondage_votes_max_by_cat', value: JSON.stringify(newMax) }];
   if (dlVal) {
     sondageDeadline = new Date(dlVal);
     rows.push({ key:'sondage_deadline', value: sondageDeadline.toISOString() });
@@ -1177,6 +1196,7 @@ async function saveSondageSettings() {
   }
   await sb.from('shop_config').upsert(rows, { onConflict:'key' });
   renderCandidates();
+  alert('Paramètres enregistrés ✓');
 }
 
 async function clearSondageTimer() {
@@ -1201,6 +1221,7 @@ async function loadSondage() {
   allSVotes = vr.data || [];
 
   renderSondageCats();
+  renderCatVotesConfig();
   renderCandidates();
   renderLeaderboard();
 }
@@ -1241,6 +1262,22 @@ function filterSondageCat(cat) {
   renderLeaderboard();
 }
 
+// Génère le tableau admin des votes max par catégorie
+function renderCatVotesConfig() {
+  if (!isAdmin) return;
+  var el = document.getElementById('cat-votes-config');
+  if (!el) return;
+  var cats = [];
+  allCandidats.forEach(function(c) { if (cats.indexOf(c.categorie) === -1) cats.push(c.categorie); });
+  if (!cats.length) { el.innerHTML = '<span style="font-size:.75rem;color:var(--muted)">Aucune catégorie — ajoutez des candidats d&#39;abord</span>'; return; }
+  el.innerHTML = '<table class="cat-votes-table"><tr><td class="cat-votes-label" colspan="2">Votes max par catégorie</td></tr>'
+    + cats.map(function(cat) {
+        var cur = (typeof sondageVotesMax === 'object' && sondageVotesMax[cat] !== undefined) ? sondageVotesMax[cat] : sondageVotesMaxDefault;
+        return '<tr><td>' + esc(cat) + '</td><td><input type="number" class="votes-input cat-votes-input" data-cat="' + esc(cat) + '" min="1" max="20" value="' + cur + '"></td></tr>';
+      }).join('')
+    + '</table>';
+}
+
 // ── SONDAGE : candidats ────────────────────────────────────────────────────────
 function renderCandidates() {
   var list = activeSondageCat === 'all'
@@ -1279,12 +1316,16 @@ function renderCandidates() {
   allCandidats.forEach(function(c) { if (cats.indexOf(c.categorie) === -1) cats.push(c.categorie); });
 
   if (cats.length) {
-    var infos = cats.map(function(cat) {
+    var infoParts = cats.map(function(cat) {
       var used = (myVotesByCat[cat] || 0);
-      var left = sondageVotesMax - used;
-      return esc(cat) + ' : <strong style="color:' + (left > 0 ? 'var(--teal)' : 'var(--coral)') + '">' + left + ' vote' + (left !== 1 ? 's' : '') + '</strong> restant' + (left !== 1 ? 's' : '');
-    }).join(' &nbsp;|&nbsp; ');
-    infoEl.innerHTML = '<div class="my-votes-left">&#127931; ' + infos + ' (max ' + sondageVotesMax + ' par cat&#233;gorie)</div>';
+      var max  = getVotesMax(cat);
+      var left = max - used;
+      return '<span class="votes-info-item">'
+        + '<span class="votes-info-cat">' + esc(cat) + '</span>'
+        + '<span class="votes-info-count" style="color:' + (left > 0 ? 'var(--teal)' : 'var(--coral)') + '">'
+        + left + '/' + max + '</span></span>';
+    }).join('');
+    infoEl.innerHTML = '<div class="my-votes-left">&#127931; ' + infoParts + '</div>';
   } else {
     infoEl.innerHTML = '';
   }
@@ -1294,7 +1335,7 @@ function buildCandidatCard(c, myVotesByCat) {
   var myVotes    = allSVotes.filter(function(v) { return v.user_id === currentUser.id && v.candidat_id === c.id; });
   var voted      = myVotes.length > 0;
   var catUsed    = myVotesByCat[c.categorie] || 0;
-  var maxReached = !voted && catUsed >= sondageVotesMax;
+  var maxReached = !voted && catUsed >= getVotesMax(c.categorie);
   var totalVotes = allSVotes.filter(function(v) { return v.candidat_id === c.id; }).length;
 
   var cimgs = [c.image, c.image2, c.image3, c.image4].filter(function(x){ return !!x; });
@@ -1349,7 +1390,7 @@ async function castSVote(candidatId, categorie) {
   } else {
     // Vérifie quota
     var catUsed = allSVotes.filter(function(v) { return v.user_id === currentUser.id && v.categorie === categorie; }).length;
-    if (catUsed >= sondageVotesMax) return;
+    if (catUsed >= getVotesMax(categorie)) return;
     await sb.from('sondage_votes').insert({ candidat_id: candidatId, user_id: currentUser.id, categorie: categorie });
   }
   // Reload votes seulement
@@ -1469,6 +1510,14 @@ async function deleteCandidat(id) {
   await sb.from('sondage_votes').delete().eq('candidat_id', id);
   await sb.from('sondage_candidats').delete().eq('id', id);
   loadSondage();
+}
+
+// ── HELPER votes max par cat ────────────────────────────────────────────────
+function getVotesMax(cat) {
+  if (typeof sondageVotesMax === 'object' && sondageVotesMax[cat] !== undefined) {
+    return sondageVotesMax[cat];
+  }
+  return sondageVotesMaxDefault;
 }
 
 // ── CARROUSEL ────────────────────────────────────────────────────────────────
