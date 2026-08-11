@@ -75,51 +75,31 @@ main{padding-top:64px;position:relative;z-index:1;}
 .section-label span{font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.9px;color:var(--muted);white-space:nowrap;}
 .section-label::after{content:'';flex:1;height:1px;background:var(--border);}
 
-/* HEADER D'ÉDITION — résumé + stats unifiés */
-.year-header{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:26px 28px;}
-.year-header-top{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:10px;}
-.year-header h2{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;}
-.year-champion-badge{display:inline-flex;align-items:center;gap:7px;padding:8px 16px;border-radius:14px;background:rgba(255,217,61,.12);border:1px solid rgba(255,217,61,.3);font-weight:700;font-size:.82rem;color:var(--yellow);white-space:nowrap;}
-.year-header p{color:rgba(255,255,255,.75);font-size:.9rem;line-height:1.7;}
-.year-stats{display:flex;flex-wrap:wrap;gap:10px;margin:18px 0 4px;}
-.stat-pill{display:flex;align-items:center;gap:7px;padding:8px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;font-size:.8rem;}
-.stat-pill .sp-icon{font-size:.95rem;}
-.stat-pill .sp-label{color:var(--muted);font-size:.68rem;text-transform:uppercase;letter-spacing:.4px;margin-right:2px;}
-.stat-pill .sp-val{font-weight:700;}
-.overview-quote{border-left:3px solid var(--violet);padding:10px 16px;background:rgba(0,0,0,.15);border-radius:0 12px 12px 0;font-size:.86rem;font-style:italic;color:rgba(255,255,255,.8);margin-top:18px;}
+/* WRAP : infobox + résumé, alignés sur le haut */
+.overview-wrap{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap-reverse;}
+.overview-text{flex:1;min-width:260px;}
+.overview-text h2{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;margin-bottom:10px;}
+.overview-quote{border-left:3px solid var(--violet);padding:10px 16px;background:var(--surface);border-radius:0 12px 12px 0;font-size:.86rem;font-style:italic;color:rgba(255,255,255,.8);margin-top:14px;}
 .overview-quote cite{display:block;margin-top:6px;font-style:normal;font-size:.72rem;color:var(--muted);}
 
-/* PROGRAMME DE LA JOURNÉE */
-.planning-strip{display:flex;flex-wrap:wrap;gap:12px;}
-.planning-step{flex:1;min-width:140px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:12px 14px;}
-.planning-time{font-family:'Playfair Display',serif;font-weight:900;color:var(--teal);font-size:.92rem;}
-.planning-label{font-size:.78rem;color:rgba(255,255,255,.75);margin-top:3px;}
+/* INFOBOX style wiki */
+.infobox{flex:0 0 280px;width:280px;background:var(--surface);border:1px solid var(--border);border-radius:18px;overflow:hidden;}
+.infobox-title{font-family:'Playfair Display',serif;font-weight:700;font-size:1rem;text-align:center;padding:14px 12px;border-bottom:1px solid var(--border);}
+.infobox-table{width:100%;border-collapse:collapse;}
+.infobox-table tr{border-bottom:1px solid rgba(255,255,255,.06);}
+.infobox-table tr:last-child{border-bottom:none;}
+.infobox-table th{text-align:left;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);padding:9px 8px 9px 12px;width:38%;vertical-align:top;}
+.infobox-table td{font-size:.8rem;padding:9px 12px 9px 4px;vertical-align:top;}
+.infobox-champ{display:flex;align-items:center;gap:6px;padding:11px 12px;background:rgba(255,217,61,.1);border-top:1px solid rgba(255,217,61,.25);font-size:.82rem;font-weight:700;}
 
-/* CARTES INFOS (BBQ / Loto / etc.) */
-.info-card{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:18px 20px;margin-bottom:14px;}
-.info-card-head{display:flex;align-items:center;gap:12px;margin-bottom:9px;flex-wrap:wrap;}
-.info-card-icon{font-size:1.6rem;}
-.info-card-title{font-family:'Playfair Display',serif;font-size:1.05rem;font-weight:700;}
-.info-card-time{margin-left:auto;font-size:.75rem;color:var(--muted);background:var(--surface2);padding:4px 10px;border-radius:20px;white-space:nowrap;}
-.info-card-desc{font-size:.85rem;color:rgba(255,255,255,.7);line-height:1.6;}
+/* TEXTE SIMPLE — réutilisé pour BBQ, Loto, Repas partagé, Anecdote */
+.text-block{color:rgba(255,255,255,.75);font-size:.9rem;line-height:1.75;max-width:760px;}
 
-/* QUINE / LOTO */
-.quine-list{display:flex;flex-direction:column;gap:8px;margin-top:14px;}
-.quine-item{display:flex;align-items:center;gap:10px;padding:9px 12px;background:rgba(0,0,0,.15);border-radius:10px;flex-wrap:wrap;}
-.quine-num{width:26px;height:26px;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.72rem;flex-shrink:0;}
-.quine-num.super{background:rgba(255,217,61,.25);color:var(--gold);}
-.quine-name{font-weight:700;font-size:.82rem;flex:1;min-width:140px;}
-.quine-lot{font-size:.78rem;color:var(--muted);}
-.quine-item.super{border:1px solid rgba(255,217,61,.3);}
-.quine-item.super .quine-lot{color:var(--gold);font-weight:700;}
-
-/* REPAS PARTAGÉ */
-.repas-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
-.repas-chip{display:flex;align-items:center;gap:6px;padding:7px 12px;background:var(--surface2);border-radius:20px;font-size:.8rem;}
-.repas-chip b{font-weight:700;}
-
-/* ANECDOTE DE CLOTURE */
-.closing-quote{border-left:3px solid var(--coral);padding:14px 18px;background:var(--surface);border-radius:0 14px 14px 0;font-size:.88rem;line-height:1.65;color:rgba(255,255,255,.85);}
+/* Petite carte : gagnant de la Super Quine */
+.super-winner-card{display:flex;align-items:center;gap:14px;background:rgba(255,217,61,.08);border:1px solid rgba(255,217,61,.3);border-radius:16px;padding:14px 18px;margin-top:12px;max-width:480px;}
+.super-winner-icon{font-size:1.8rem;flex-shrink:0;}
+.super-winner-name{font-weight:700;font-size:.92rem;color:var(--gold);}
+.super-winner-prize{font-size:.8rem;color:rgba(255,255,255,.75);margin-top:2px;}
 
 /* PODIUM */
 .podium-wrap{display:flex;align-items:flex-end;justify-content:center;gap:10px;padding:20px 10px 6px;flex-wrap:wrap;}
@@ -305,32 +285,10 @@ var OLYMPIADES = {
     resume: "Première édition officielle des Olympiades, organisée chez Timothée. Le week-end a démarré sous une chaleur écrasante et s'est terminé au bord de la piscine, entre deux chants de victoire et pas mal de verres renversés.",
     citation: "\"On savait que ça allait mal finir quand Quentin a proposé le Flip Cup juste après le repas.\"",
     citationAuteur: "— Antoine, capitaine de Louis la tortue jaune",
-    planning: [
-      { time: "11h00", label: "Arrivée / RDV" },
-      { time: "11h30", label: "Tirage des équipes" },
-      { time: "12h00 – 13h30", label: "Repas / BBQ" },
-      { time: "13h30 – 14h30", label: "Loto / Quine" }
-    ],
-    bbq: {
-      time: "12h00 – 13h30",
-      desc: "Chaque équipe apporte une viande et un accompagnement à partager, le tout grillé ensemble avant l'après-midi sportif. Un bon moyen de faire connaissance avant de s'affronter."
-    },
-    loto: {
-      time: "13h30 – 14h30",
-      desc: "Un loto/quine en 4 parties pour clôturer la pause de midi en douceur (ou pas). Les trois premières quines offrent des petits lots par ligne, deux lignes et carton plein. La quatrième, la Super Quine, ne récompense que le carton plein — mais avec un gros lot à la clé.",
-      quines: [
-        { nom: "Quine 1 — Une ligne", lot: "🎁 Petit lot", isSuper: false },
-        { nom: "Quine 2 — Deux lignes", lot: "🎁 Petit lot", isSuper: false },
-        { nom: "Quine 3 — Carton plein", lot: "🎁 Petit lot", isSuper: false },
-        { nom: "Super Quine — Carton plein uniquement", lot: "🏆 Gros lot", isSuper: true }
-      ]
-    },
-    repas: [
-      { nom: "Chloé", plat: "Salade de pâtes au pesto" },
-      { nom: "Lisa", plat: "Tarte aux tomates" },
-      { nom: "Quentin", plat: "Planche de charcuterie" },
-      { nom: "Antoine", plat: "Brownies au chocolat" }
-    ],
+    bbq: "De 12h à 13h30, tout le monde s'est retrouvé autour du barbecue : merguez, brochettes de poulet mariné et légumes grillés, avec la salade de pâtes au pesto de Chloé qui a fait un carton. Un bon moment convivial avant de repartir batailler sur le terrain.",
+    loto: "Le loto/quine a suivi le repas, entre digestion et fous rires. Sur les trois premières quines, Lisa et Mattéo ont chacun décroché une ligne, et c'est Quentin qui a raflé la deuxième quine avec ses deux lignes d'un coup. Parmi les petits lots à gagner : un paquet de Chamallows géant, un gobelet réutilisable à l'effigie des Olympiades et une bouteille de rosé bas de gamme gagnée par Antoine, qui l'a évidemment ouverte sur-le-champ.",
+    superQuine: { gagnant: "Lorette", equipeId: "spartiates", lot: "Un jambon et sa planche pour le découper" },
+    repas: "Le repas partagé a réuni salade de pâtes au pesto (Chloé), tarte aux tomates (Lisa), planche de charcuterie (Quentin) et brownies au chocolat en dessert (Antoine) — de quoi tenir jusqu'au bout de l'après-midi.",
     anecdote: "Le clou du spectacle : Théo a plongé tout habillé dans la piscine pour fêter la victoire finale des Spartiates, téléphone dans la poche compris.",
     teams: [
       {
@@ -399,33 +357,11 @@ var OLYMPIADES = {
     resume: "Deuxième édition, organisée chez Thomas Grima. Nouvelle règle testée cette année : le tirage au sort des équipes s'est fait à l'aveugle, pour mélanger les habitués et casser les alliances de 2025.",
     citation: "\"On menait toute la journée avant de se faire doubler par le bonus fair-play des BleuBites... on portera plainte en 2027.\"",
     citationAuteur: "— Cédric, capitaine des Redmorts",
-    planning: [
-      { time: "11h00", label: "Arrivée / RDV" },
-      { time: "11h30", label: "Tirage des équipes" },
-      { time: "12h00 – 13h30", label: "Repas / BBQ" },
-      { time: "13h30 – 14h30", label: "Loto / Quine" }
-    ],
-    bbq: {
-      time: "12h00 – 13h30",
-      desc: "Chaque équipe apporte une viande et un accompagnement à partager, le tout grillé ensemble avant l'après-midi sportif. Un bon moyen de faire connaissance avant de s'affronter."
-    },
-    loto: {
-      time: "13h30 – 14h30",
-      desc: "Un loto/quine en 4 parties pour clôturer la pause de midi en douceur (ou pas). Les trois premières quines offrent des petits lots par ligne, deux lignes et carton plein. La quatrième, la Super Quine, ne récompense que le carton plein — mais avec un gros lot à la clé.",
-      quines: [
-        { nom: "Quine 1 — Une ligne", lot: "🎁 Petit lot", isSuper: false },
-        { nom: "Quine 2 — Deux lignes", lot: "🎁 Petit lot", isSuper: false },
-        { nom: "Quine 3 — Carton plein", lot: "🎁 Petit lot", isSuper: false },
-        { nom: "Super Quine — Carton plein uniquement", lot: "🏆 Gros lot", isSuper: true }
-      ]
-    },
-    repas: [
-      { nom: "Clément", plat: "Chili con carne" },
-      { nom: "Quentin", plat: "Salade grecque" },
-      { nom: "Cédric", plat: "Tarte aux pommes" },
-      { nom: "Carla", plat: "Gâteau au yaourt" }
-    ],
-    anecdote: "Carla a décroché le gros lot de la Super Quine sur le tout dernier numéro tiré, sous les huées amicales des Redmorts qui y croyaient dur comme fer.",
+    bbq: "De 12h à 13h30, barbecue façon saloon : chili con carne de Clément, épis de maïs grillés et grosses saucisses fumées, avec la tarte aux pommes de Cédric dévorée en quelques minutes. De quoi reprendre des forces avant les épreuves de l'après-midi.",
+    loto: "Le loto/quine de cette édition a été particulièrement disputé. Sur les trois premières quines, Anaïs et Timothée ont chacun gagné une ligne, et Emilie a raflé la deuxième quine. Côté petits lots, il y avait un chapeau de cowboy en plastique, un jeu de cartes complet et une plaque de chocolat gagnée par Barnabé, aussitôt partagée avec toute la table.",
+    superQuine: { gagnant: "Carla", equipeId: "bleubites", lot: "Un Wonderbox en duo de 50€ pour un moment détente/activité/sport" },
+    repas: "Au menu du repas partagé : chili con carne (Clément), salade grecque (Quentin), tarte aux pommes (Cédric) et gâteau au yaourt pour le dessert (Carla).",
+    anecdote: "Le Jeu du Bluff a viré au chaos total quand Dimitri a fini par avouer avoir triché en pleine partie, provoquant une mutinerie générale des Mittralleurs contre leur propre équipe.",
     teams: [
       {
         id: "mitralleurs", nom: "Les Mittralleurs", emoji: "🤠", couleur: "jaune",
@@ -551,60 +487,48 @@ function buildYearPanel(year, isFirst){
 
   var html = '<div class="year-panel'+(isFirst?' show':'')+'" data-year="'+year+'">';
 
-  // ── Header d'édition : résumé + stats + citation ──
-  html += '<div class="year-header">'
-    + '<div class="year-header-top">'
-    +   '<h2>🏅 Olympiades '+year+'</h2>'
-    +   '<span class="year-champion-badge">🏆 '+champion.emoji+' '+esc(champion.nom)+'</span>'
-    + '</div>'
-    + '<p>'+esc(d.resume)+'</p>'
-    + '<div class="year-stats">'
-    +   '<span class="stat-pill"><span class="sp-icon">'+d.meteo.emoji+'</span><span class="sp-label">Météo</span><span class="sp-val">'+esc(d.meteo.desc)+' · '+esc(d.meteo.temp)+'</span></span>'
-    +   '<span class="stat-pill"><span class="sp-icon">📅</span><span class="sp-label">Dates</span><span class="sp-val">'+esc(d.date)+'</span></span>'
-    +   '<span class="stat-pill"><span class="sp-icon">📍</span><span class="sp-label">Lieu</span><span class="sp-val">'+esc(d.lieu)+'</span></span>'
-    +   '<span class="stat-pill"><span class="sp-icon">👥</span><span class="sp-label">Équipes</span><span class="sp-val">'+d.teams.length+' · '+totalMembres+' participants</span></span>'
-    +   '<span class="stat-pill"><span class="sp-icon">🎯</span><span class="sp-label">Épreuves</span><span class="sp-val">'+d.epreuves.length+'</span></span>'
-    + '</div>'
+  // ── Vue d'ensemble : résumé + citation, alignés avec le haut de l'encadré ──
+  html += '<div class="overview-wrap">';
+  html += '<div class="overview-text">'
+    + '<h2>🏅 Olympiades '+year+'</h2>'
+    + '<div class="text-block">'+esc(d.resume)+'</div>'
     + '<div class="overview-quote">'+esc(d.citation)+'<cite>'+esc(d.citationAuteur)+'</cite></div>'
     + '</div>';
 
-  // ── Programme de la journée ──
-  if (d.planning && d.planning.length) {
-    html += '<div class="section-label"><span>🕐 Programme de la journée</span></div>';
-    html += '<div class="planning-strip">';
-    d.planning.forEach(function(p){
-      html += '<div class="planning-step"><div class="planning-time">'+esc(p.time)+'</div><div class="planning-label">'+esc(p.label)+'</div></div>';
-    });
-    html += '</div>';
-  }
+  html += '<div class="infobox">'
+    + '<div class="infobox-title">Olympiades '+year+'</div>'
+    + '<table class="infobox-table">'
+    +   '<tr><th>Météo</th><td>'+d.meteo.emoji+' '+esc(d.meteo.desc)+' ('+esc(d.meteo.temp)+')</td></tr>'
+    +   '<tr><th>Dates</th><td>'+esc(d.date)+'</td></tr>'
+    +   '<tr><th>Lieu</th><td>'+esc(d.lieu)+'</td></tr>'
+    +   '<tr><th>Équipes</th><td>'+d.teams.length+' équipes · '+totalMembres+' participants</td></tr>'
+    +   '<tr><th>Épreuves</th><td>'+d.epreuves.length+' épreuves</td></tr>'
+    + '</table>'
+    + '<div class="infobox-champ">🏆 '+champion.emoji+' '+esc(champion.nom)+'</div>'
+    + '</div>';
+  html += '</div>';
 
   // ── BBQ ──
   if (d.bbq) {
     html += '<div class="section-label"><span>🍖 BBQ</span></div>';
-    html += '<div class="info-card">'
-      + '<div class="info-card-head"><span class="info-card-icon">🍖</span><span class="info-card-title">Repas / BBQ</span><span class="info-card-time">'+esc(d.bbq.time)+'</span></div>'
-      + '<div class="info-card-desc">'+esc(d.bbq.desc)+'</div>'
-      + '</div>';
+    html += '<div class="text-block">'+esc(d.bbq)+'</div>';
   }
 
   // ── Loto / Quine ──
   if (d.loto) {
     html += '<div class="section-label"><span>🎟️ Loto / Quine</span></div>';
-    html += '<div class="info-card">'
-      + '<div class="info-card-head"><span class="info-card-icon">🎟️</span><span class="info-card-title">Loto / Quine</span><span class="info-card-time">'+esc(d.loto.time)+'</span></div>'
-      + '<div class="info-card-desc">'+esc(d.loto.desc)+'</div>';
-    if (d.loto.quines && d.loto.quines.length) {
-      html += '<div class="quine-list">';
-      d.loto.quines.forEach(function(q, qi){
-        html += '<div class="quine-item'+(q.isSuper?' super':'')+'">'
-          + '<span class="quine-num'+(q.isSuper?' super':'')+'">'+(q.isSuper?'★':qi+1)+'</span>'
-          + '<span class="quine-name">'+esc(q.nom)+'</span>'
-          + '<span class="quine-lot">'+esc(q.lot)+'</span>'
-          + '</div>';
-      });
-      html += '</div>';
+    html += '<div class="text-block">'+esc(d.loto)+'</div>';
+    if (d.superQuine) {
+      var sq = d.superQuine;
+      var sqTeam = byId[sq.equipeId];
+      html += '<div class="super-winner-card">'
+        + '<span class="super-winner-icon">🏆</span>'
+        + '<div>'
+        +   '<div class="super-winner-name">'+esc(sq.gagnant)+(sqTeam?' · '+sqTeam.emoji+' '+esc(sqTeam.nom):'')+'</div>'
+        +   '<div class="super-winner-prize">Gagnant·e de la Super Quine — '+esc(sq.lot)+'</div>'
+        + '</div>'
+        + '</div>';
     }
-    html += '</div>';
   }
 
   // ── Podium / classement général (calculé automatiquement) ──
@@ -716,12 +640,8 @@ function buildYearPanel(year, isFirst){
 
   // ── Repas partagé ──
   html += '<div class="section-label"><span>🍽️ Repas partagé</span></div>';
-  if (d.repas && d.repas.length) {
-    html += '<div class="repas-list">';
-    d.repas.forEach(function(r){
-      html += '<span class="repas-chip"><b>'+esc(r.nom)+'</b> — '+esc(r.plat)+'</span>';
-    });
-    html += '</div>';
+  if (d.repas) {
+    html += '<div class="text-block">'+esc(d.repas)+'</div>';
   } else {
     html += '<div style="color:var(--muted);font-size:.82rem">Aucun repas partagé répertorié pour cette édition.</div>';
   }
@@ -729,7 +649,7 @@ function buildYearPanel(year, isFirst){
   // ── Anecdote de clôture ──
   if (d.anecdote) {
     html += '<div class="section-label"><span>🎉 L\'anecdote de l\'édition</span></div>';
-    html += '<div class="closing-quote">'+esc(d.anecdote)+'</div>';
+    html += '<div class="text-block">'+esc(d.anecdote)+'</div>';
   }
 
   // ── Galerie ──
