@@ -71,19 +71,19 @@ main{padding-top:64px;position:relative;z-index:1;}
 .year-panel.show{display:block;}
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
-.section-label{display:flex;align-items:center;gap:12px;margin:34px 0 16px;}
-.section-label span{font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.9px;color:var(--muted);white-space:nowrap;}
+.section-label{display:flex;align-items:center;gap:14px;margin:52px 0 20px;}
+.section-label span{font-size:1rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,.85);white-space:nowrap;}
 .section-label::after{content:'';flex:1;height:1px;background:var(--border);}
 
 /* WRAP : infobox + résumé, alignés sur le haut */
-.overview-wrap{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap-reverse;}
-.overview-text{flex:1;min-width:260px;}
+.overview-wrap{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap;}
+.overview-text{flex:1;min-width:260px;align-self:flex-start;}
 .overview-text h2{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;margin-bottom:10px;}
 .overview-quote{border-left:3px solid var(--violet);padding:10px 16px;background:var(--surface);border-radius:0 12px 12px 0;font-size:.86rem;font-style:italic;color:rgba(255,255,255,.8);margin-top:14px;}
 .overview-quote cite{display:block;margin-top:6px;font-style:normal;font-size:.72rem;color:var(--muted);}
 
 /* INFOBOX style wiki */
-.infobox{flex:0 0 280px;width:280px;background:var(--surface);border:1px solid var(--border);border-radius:18px;overflow:hidden;}
+.infobox{flex:0 0 280px;width:280px;background:var(--surface);border:1px solid var(--border);border-radius:18px;overflow:hidden;align-self:flex-start;}
 .infobox-title{font-family:'Playfair Display',serif;font-weight:700;font-size:1rem;text-align:center;padding:14px 12px;border-bottom:1px solid var(--border);}
 .infobox-table{width:100%;border-collapse:collapse;}
 .infobox-table tr{border-bottom:1px solid rgba(255,255,255,.06);}
