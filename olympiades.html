@@ -287,12 +287,12 @@ var OLYMPIADES = {
     citationAuteur: "— Antoine, capitaine de Louis la tortue jaune",
     bbq: "De 12h à 13h30, tout le monde s'est retrouvé autour du barbecue : merguez, brochettes de poulet mariné et légumes grillés, avec la salade de pâtes au pesto de Chloé qui a fait un carton. Un bon moment convivial avant de repartir batailler sur le terrain.",
     loto: "Le loto/quine a suivi le repas, entre digestion et fous rires. Sur les trois premières quines, Lisa et Mattéo ont chacun décroché une ligne, et c'est Quentin qui a raflé la deuxième quine avec ses deux lignes d'un coup. Parmi les petits lots à gagner : un paquet de Chamallows géant, un gobelet réutilisable à l'effigie des Olympiades et une bouteille de rosé bas de gamme gagnée par Antoine, qui l'a évidemment ouverte sur-le-champ.",
-    superQuine: { gagnant: "Lorette", equipeId: "spartiates", lot: "Un jambon et sa planche pour le découper" },
+    superQuine: { gagnant: "Lorette", equipeId: "ciels", lot: "Un jambon et sa planche pour le découper" },
     repas: "Le repas partagé a réuni salade de pâtes au pesto (Chloé), tarte aux tomates (Lisa), planche de charcuterie (Quentin) et brownies au chocolat en dessert (Antoine) — de quoi tenir jusqu'au bout de l'après-midi.",
-    anecdote: "Le clou du spectacle : Théo a plongé tout habillé dans la piscine pour fêter la victoire finale des Spartiates, téléphone dans la poche compris.",
+    anecdote: "Le clou du spectacle : Théo a plongé tout habillé dans la piscine pour fêter la victoire finale  ciels, téléphone dans la poche compris.",
     teams: [
       {
-        id: "spartiates", nom: "Les Spartiates Ivres", emoji: "🍷", couleur: "rouge",
+        id: "ciels", nom: "Les ciels Ivres", emoji: "🍷", couleur: "rouge",
         capitaine: "Chloé",
         membres: ["Lucas","Mattéo","Lorette","Chloé","Théo"]
       },
@@ -316,36 +316,38 @@ var OLYMPIADES = {
       {
         nom: "Le Flip Cup", num: 1,
         desc: "Course à relais aller-retour où chaque changement de témoin nécessite de boire son verre cul-sec et de retourner son verre à 180° en lui donnant une impulsion avec son doigt.",
-        scores: { spartiates: 10, sangria: 8, patoches: 6, tortue: 4 }
+        scores: { ciels: 10, sangria: 8, patoches: 6, tortue: 4 }
       },
       {
         nom: "Parcours du combattant", num: 2,
         desc: "Un parcours en relais chronométré pour chaque équipes. Cette année il est consititué de 15 verres à boire par équipe, d'une traversé d'une piscine sur une structure en bois, d'un ventriglisse et d'un sprint final",
-        scores: { spartiates: 6, sangria: 10, patoches: 8, tortue: 4 }
+        scores: { ciels: 6, sangria: 10, patoches: 8, tortue: 4 }
       },
       {
         nom: "Lancé de balles", num: 3,
         desc: "Chaque équipes qui s'affronte ont un quota de 15 verres par équipe. L'obejctif est de viser les trous d'une structure en bois. Certains (gros) valent un verre tandis que d'autre (plus petit) valent 2 ou 3 verres. Chaque fois qu'une balle rentre dans le trou, l'équipe adverse bois le nombre de verre correspondant. La première équipe à ne plus avoir de verre à perdue",
-        scores: { spartiates: 10, sangria: 6, patoches: 4, tortue: 8 }
+        scores: { ciels: 10, sangria: 6, patoches: 4, tortue: 8 }
       },
       {
         nom: "Les Pastèques", num: 4,
         desc: "L'objectif est de manger le plus rapidement une certaine quantité de pastèque par équipe",
-        scores: { spartiates: 4, sangria: 6, patoches: 10, tortue: 2 }
+        scores: { ciels: 4, sangria: 6, patoches: 10, tortue: 2 }
       },
       {
         nom: "Quizz", num: 5,
         desc: "Épreuve finale : Quizz plus ou moins à culture général et blind test. Celui qui attrape le verre en premier peut répondre",
-        scores: { spartiates: 8, sangria: 3, patoches: 2, tortue: 4 }
+        scores: { ciels: 8, sangria: 3, patoches: 2, tortue: 4 }
       }
     ],
     extras: [
-      { equipeId: "spartiates", type: "bonus", points: 2, motif: "Bonus ambiance : la seule équipe présente pile à l'heure au premier verre" },
-      { equipeId: "patoches",   type: "malus", points: -2, motif: "Retard de 20 minutes au début du Parcours du combattant" }
+      { equipeId: "patoches", type: "bonus", points:+1 , motif: "Bonus vomit : Un beau vomit de Nicolas sur l'épreuve des pastèques" },
+      { equipeId: "sangria",   type: "malus", points: -1, motif: "Retard de Cédric" }
+      { equipeId: "louis",   type: "malus", points: -2, motif: "Retard de Mathis et d'Emilie" }
     ],
     absents: [
-      { nom: "Mathis", equipeId: "tortue",   type: "blessure", raison: "Entorse à la cheville pendant l'échauffement, forfait pour la journée." },
-      { nom: "Elise",  equipeId: "patoches", type: "absent",   raison: "Grippe de dernière minute, prévenue la veille au soir." }
+      { nom: "Elisa", equipeId: "tortue",   type: "blessure", raison: "Entorse à la cheville donc légèrement handicapé pour le parcours du combattant" },
+      { nom: "Thomas G",  equipeId: "Absent", type: "absent",   raison: "Un beau voyage à Malte au même moment l'attendait" }
+      { nom: "Carla",  equipeId: "Absent", type: "absent",   raison: "Partit voir la famille, c'est toujours imporatnt" }
     ],
     galerie: 4
   },
@@ -412,12 +414,12 @@ var OLYMPIADES = {
       }
     ],
     extras: [
-      { equipeId: "bleubites",   type: "bonus", points: 3,  motif: "Fair-play exemplaire toute la journée" },
-      { equipeId: "mitralleurs", type: "malus", points: -2, motif: "Triche repérée pendant le Jeu du Bluff" }
+      { equipeId: "bleubites",   type: "bonus", points: 3,  motif: "Beau vomit de Thomas G lors de l'épreuve du bluff" },
     ],
     absents: [
-      { nom: "Barnabé", equipeId: "redmorts", type: "absent",   raison: "A raté son train, arrivé seulement pour la remise des prix." },
-      { nom: "Théo",    equipeId: "verts",    type: "blessure", raison: "Genou tordu sur le ventriglisse du Parcours du combattant, a fini spectateur avec une bière." }
+      { nom: "Maxime", equipeId: "verts", type: "blessure",   raison: "Bléssé à la cheville, ne pouvait faire le parcours du combattant. A quand même voulu faire le tir à la corde pour aider son équipe" },
+      { nom: "Anaïs", equipeId: "redmorts", type: "blessure",   raison: "Bléssé au poigné l'handicapant sur de nombreuse épreuve (parcours du combattant, lancé de cerceaux et tir à la corde). A cela s'ajoute une belle commotion reçu sur le parcours du combattant lors d'une chute sur le ventriglisse" },
+      { nom: "Elisa",    equipeId: "Absent",    type: "absent", raison: "Chez la famille de Lucas dans les Alpes, pas disponible cette fois" }
     ],
     galerie: 8
   }
