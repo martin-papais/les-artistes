@@ -24,7 +24,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--deep);color:var(--text);m
     radial-gradient(ellipse 80% 40% at 50% 100%,rgba(199,125,255,.2) 0%,transparent 55%),#1A1025;
   animation:bgP 15s ease-in-out infinite alternate;}
 @keyframes bgP{0%{filter:hue-rotate(0deg)}100%{filter:hue-rotate(20deg)brightness(1.05)}}
-
 /* NAV — identique au reste du site */
 nav{position:fixed;top:0;left:0;right:0;z-index:100;height:64px;background:rgba(26,16,37,.9);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 24px;gap:12px;}
 .nav-logo{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:900;background:linear-gradient(135deg,var(--yellow),var(--coral),var(--violet));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;white-space:nowrap;text-decoration:none;}
@@ -47,16 +46,13 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;height:64px;background:rgba(
 .mobile-menu.open{display:flex;}
 .mobile-menu .nav-link{font-size:.9rem;padding:12px 16px;border-radius:12px;}
 .mobile-menu .nav-link.active{background:var(--surface2);}
-
 main{padding-top:64px;position:relative;z-index:1;}
-
 /* HERO */
 .hero{padding:44px 24px 24px;text-align:center;}
 .hero-eyebrow{display:inline-flex;align-items:center;gap:8px;padding:5px 14px;border-radius:20px;background:var(--surface);border:1px solid var(--border);font-size:.72rem;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);margin-bottom:14px;}
 .hero-title{font-family:'Playfair Display',serif;font-size:clamp(2rem,5vw,3.1rem);font-weight:900;line-height:1.05;margin-bottom:10px;}
 .hero-title .accent{background:linear-gradient(135deg,var(--yellow),var(--coral),var(--violet));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
 .hero-sub{color:var(--muted);font-size:.95rem;max-width:560px;margin:0 auto 24px;line-height:1.6;}
-
 /* YEAR TABS */
 .year-tabs{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;}
 .year-tab{position:relative;padding:12px 26px;border-radius:16px;background:var(--surface);border:1.5px solid var(--border);cursor:pointer;transition:var(--trans);text-align:center;min-width:120px;}
@@ -65,23 +61,19 @@ main{padding-top:64px;position:relative;z-index:1;}
 .year-tab .yt-num{font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:900;}
 .year-tab .yt-theme{font-size:.7rem;color:var(--muted);margin-top:2px;}
 .year-tab.active .yt-theme{color:var(--pink);}
-
 .page{max-width:1100px;margin:0 auto;padding:26px 24px 90px;}
 .year-panel{display:none;animation:fadeIn .35s ease both;}
 .year-panel.show{display:block;}
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-
 .section-label{display:flex;align-items:center;gap:14px;margin:52px 0 20px;}
 .section-label span{font-size:1rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,.85);white-space:nowrap;}
 .section-label::after{content:'';flex:1;height:1px;background:var(--border);}
-
 /* WRAP : infobox + résumé, alignés sur le haut */
 .overview-wrap{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap;}
 .overview-text{flex:1;min-width:260px;align-self:flex-start;}
 .overview-text h2{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;margin-bottom:10px;}
 .overview-quote{border-left:3px solid var(--violet);padding:10px 16px;background:var(--surface);border-radius:0 12px 12px 0;font-size:.86rem;font-style:italic;color:rgba(255,255,255,.8);margin-top:14px;}
 .overview-quote cite{display:block;margin-top:6px;font-style:normal;font-size:.72rem;color:var(--muted);}
-
 /* INFOBOX style wiki */
 .infobox{flex:0 0 280px;width:280px;background:var(--surface);border:1px solid var(--border);border-radius:18px;overflow:hidden;align-self:flex-start;}
 .infobox-title{font-family:'Playfair Display',serif;font-weight:700;font-size:1rem;text-align:center;padding:14px 12px;border-bottom:1px solid var(--border);}
@@ -91,16 +83,13 @@ main{padding-top:64px;position:relative;z-index:1;}
 .infobox-table th{text-align:left;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);padding:9px 8px 9px 12px;width:38%;vertical-align:top;}
 .infobox-table td{font-size:.8rem;padding:9px 12px 9px 4px;vertical-align:top;}
 .infobox-champ{display:flex;align-items:center;gap:6px;padding:11px 12px;background:rgba(255,217,61,.1);border-top:1px solid rgba(255,217,61,.25);font-size:.82rem;font-weight:700;}
-
 /* TEXTE SIMPLE — réutilisé pour BBQ, Loto, Repas partagé, Anecdote */
 .text-block{color:rgba(255,255,255,.75);font-size:.9rem;line-height:1.75;max-width:760px;}
-
 /* Petite carte : gagnant de la Super Quine */
 .super-winner-card{display:flex;align-items:center;gap:14px;background:rgba(255,217,61,.08);border:1px solid rgba(255,217,61,.3);border-radius:16px;padding:14px 18px;margin-top:12px;max-width:480px;}
 .super-winner-icon{font-size:1.8rem;flex-shrink:0;}
 .super-winner-name{font-weight:700;font-size:.92rem;color:var(--gold);}
 .super-winner-prize{font-size:.8rem;color:rgba(255,255,255,.75);margin-top:2px;}
-
 /* PODIUM */
 .podium-wrap{display:flex;align-items:flex-end;justify-content:center;gap:10px;padding:20px 10px 6px;flex-wrap:wrap;}
 .podium-col{display:flex;flex-direction:column;align-items:center;width:130px;}
@@ -113,7 +102,6 @@ main{padding-top:64px;position:relative;z-index:1;}
 .podium-4 .podium-bar{background:var(--surface);border:1.5px solid var(--border);color:var(--muted);}
 .podium-1{order:2}.podium-2{order:1}.podium-3{order:3}.podium-4{order:4}
 .color-dot{display:inline-block;width:9px;height:9px;border-radius:50%;flex-shrink:0;}
-
 /* TEAMS */
 .teams-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;}
 .team-card{background:var(--surface);border:1px solid var(--border);border-radius:18px;overflow:hidden;transition:var(--trans);}
@@ -127,7 +115,6 @@ main{padding-top:64px;position:relative;z-index:1;}
 .team-members{padding:10px 18px 16px;display:flex;flex-wrap:wrap;gap:6px;}
 .member-chip{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:var(--surface2);border-radius:20px;font-size:.76rem;}
 .member-chip.captain{background:rgba(255,217,61,.14);border:1px solid rgba(255,217,61,.35);color:var(--yellow);font-weight:700;}
-
 /* EPREUVES */
 .epreuve-card{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:18px 20px;margin-bottom:14px;}
 .epreuve-top{display:flex;align-items:flex-start;gap:14px;margin-bottom:12px;flex-wrap:wrap;}
@@ -139,7 +126,6 @@ main{padding-top:64px;position:relative;z-index:1;}
 .es-item{background:rgba(0,0,0,.18);border-radius:10px;padding:8px 10px;text-align:center;}
 .es-team{font-size:.68rem;color:var(--muted);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .es-pts{font-size:.95rem;font-weight:800;font-family:'Playfair Display',serif;}
-
 /* PALMARES TABLE */
 .palma-table{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;}
 .palma-table th{text-align:left;font-size:.68rem;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);padding:11px 14px;background:rgba(255,255,255,.04);}
@@ -150,7 +136,6 @@ main{padding-top:64px;position:relative;z-index:1;}
 .pos-2{background:rgba(214,222,232,.18);color:var(--silver);}
 .pos-3{background:rgba(224,151,92,.2);color:var(--bronze);}
 .pos-4{background:var(--surface2);color:var(--muted);}
-
 /* ABSENTS / BLESSURES */
 .absence-list{display:flex;flex-direction:column;gap:8px;}
 .absence-item{display:flex;align-items:center;gap:12px;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:12px;flex-wrap:wrap;}
@@ -162,7 +147,6 @@ main{padding-top:64px;position:relative;z-index:1;}
 .absence-badge{font-size:.65rem;font-weight:700;padding:2px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:.4px;flex-shrink:0;}
 .absence-badge.blessure{background:rgba(255,107,107,.15);border:1px solid rgba(255,107,107,.35);color:var(--coral);}
 .absence-badge.absent{background:rgba(255,255,255,.08);border:1px solid var(--border);color:var(--muted);}
-
 /* BONUS / MALUS */
 .bm-list{display:flex;flex-direction:column;gap:8px;}
 .bm-item{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:12px;border:1px solid var(--border);flex-wrap:wrap;}
@@ -173,14 +157,12 @@ main{padding-top:64px;position:relative;z-index:1;}
 .bm-item.malus .bm-pts{color:var(--coral);}
 .bm-team{font-weight:700;font-size:.85rem;display:flex;align-items:center;gap:6px;flex-shrink:0;}
 .bm-motif{font-size:.78rem;color:var(--muted);margin-left:auto;text-align:right;max-width:300px;}
-
 /* GALLERY */
 .gallery-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
 .gallery-ph{aspect-ratio:1;border-radius:14px;border:1.5px dashed var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--muted);font-size:.68rem;text-align:center;padding:8px;transition:var(--trans);cursor:pointer;}
 .gallery-ph:hover{border-color:rgba(255,255,255,.3);background:var(--surface);}
 .gallery-ph .gp-emoji{font-size:1.6rem;opacity:.6;}
 .gallery-note{margin-top:10px;font-size:.76rem;color:var(--muted);}
-
 /* HALL OF FAME (bas de page, tous les ans) */
 .hof-wrap{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:20px 22px;margin-top:46px;}
 .hof-title{font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
@@ -189,7 +171,6 @@ main{padding-top:64px;position:relative;z-index:1;}
 .hof-year{font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:900;width:60px;flex-shrink:0;}
 .hof-theme{font-size:.76rem;color:var(--muted);flex:1;min-width:140px;}
 .hof-champ{font-size:.85rem;font-weight:700;color:var(--yellow);display:flex;align-items:center;gap:6px;}
-
 @media(max-width:768px){
   nav{padding:0 14px;}
   .nav-links{display:none;}
@@ -210,7 +191,6 @@ main{padding-top:64px;position:relative;z-index:1;}
 </head>
 <body>
 <div class="bg"></div>
-
 <nav>
   <a href="events.html" class="nav-logo"><img src="logo-artistes.png" alt="" style="height:42px;width:auto;vertical-align:middle;margin-right:8px;"> Les Artistes</a>
   <div class="nav-links">
@@ -234,7 +214,6 @@ main{padding-top:64px;position:relative;z-index:1;}
     <span></span><span></span><span></span>
   </button>
 </nav>
-
 <div class="mobile-menu" id="mobile-menu">
   <a href="events.html"     class="nav-link"> Événements</a>
   <a href="olympiades.html" class="nav-link active"> Olympiades</a>
@@ -245,19 +224,15 @@ main{padding-top:64px;position:relative;z-index:1;}
   <a href="annuaire.html"   class="nav-link"> Annuaire</a>
   <a href="notes.html"      class="nav-link"> Notes</a>
 </div>
-
 <main>
   <section class="hero">
     <div class="hero-eyebrow">📜 Archives officielles</div>
     <h1 class="hero-title">Les <span class="accent">Olympiades</span></h1>
     <p class="hero-sub">Chaque année, quatre équipes s'affrontent dans une série d'épreuves aussi sportives qu'arrosées. Ici est archivée, édition après édition, toute l'histoire glorieuse (ou pas) de la compétition.</p>
-
     <div class="year-tabs" id="year-tabs"></div>
   </section>
-
   <div class="page" id="page-content"></div>
 </main>
-
 <script>
 // ─────────────────────────────────────────────────────────────────────────────
 // PALETTE DE COULEURS D'ÉQUIPE — 4 couleurs fixes, chaque équipe en choisit une.
@@ -271,7 +246,6 @@ var COLOR_MAP = {
 };
 function colorHex(key){ return (COLOR_MAP[key] || {}).hex || '#999'; }
 function colorLabel(key){ return (COLOR_MAP[key] || {}).label || ''; }
-
 // ─────────────────────────────────────────────────────────────────────────────
 // DONNÉES — à brancher sur Supabase plus tard si besoin. Noms, équipes,
 // épreuves, descriptions et points = les vraies données de 2025 et 2026.
@@ -289,7 +263,7 @@ var OLYMPIADES = {
     loto: "Le loto/quine a suivi le repas, entre digestion et fous rires. Sur les trois premières quines, Lisa et Mattéo ont chacun décroché une ligne, et c'est Quentin qui a raflé la deuxième quine avec ses deux lignes d'un coup. Parmi les petits lots à gagner : un paquet de Chamallows géant, un gobelet réutilisable à l'effigie des Olympiades et une bouteille de rosé bas de gamme gagnée par Antoine, qui l'a évidemment ouverte sur-le-champ.",
     superQuine: { gagnant: "Lorette", equipeId: "ciels", lot: "Un jambon et sa planche pour le découper" },
     repas: "Le repas partagé a réuni salade de pâtes au pesto (Chloé), tarte aux tomates (Lisa), planche de charcuterie (Quentin) et brownies au chocolat en dessert (Antoine) — de quoi tenir jusqu'au bout de l'après-midi.",
-    anecdote: "Le clou du spectacle : Théo a plongé tout habillé dans la piscine pour fêter la victoire finale  ciels, téléphone dans la poche compris.",
+    anecdote: "Le clou du spectacle : Théo a plongé tout habillé dans la piscine pour fêter la victoire finale des ciels, téléphone dans la poche compris.",
     teams: [
       {
         id: "ciels", nom: "Les ciels Ivres", emoji: "🍷", couleur: "rouge",
@@ -340,18 +314,17 @@ var OLYMPIADES = {
       }
     ],
     extras: [
-      { equipeId: "patoches", type: "bonus", points:+1 , motif: "Bonus vomit : Un beau vomit de Nicolas sur l'épreuve des pastèques" },
-      { equipeId: "sangria",   type: "malus", points: -1, motif: "Retard de Cédric" }
-      { equipeId: "louis",   type: "malus", points: -2, motif: "Retard de Mathis et d'Emilie" }
+      { equipeId: "patoches", type: "bonus", points: 1, motif: "Bonus vomit : Un beau vomit de Nicolas sur l'épreuve des pastèques" },
+      { equipeId: "sangria",  type: "malus", points: -1, motif: "Retard de Cédric" },
+      { equipeId: "tortue",   type: "malus", points: -2, motif: "Retard de Mathis et d'Emilie" }
     ],
     absents: [
-      { nom: "Elisa", equipeId: "tortue",   type: "blessure", raison: "Entorse à la cheville donc légèrement handicapé pour le parcours du combattant" },
-      { nom: "Thomas G",  equipeId: "Absent", type: "absent",   raison: "Un beau voyage à Malte au même moment l'attendait" }
-      { nom: "Carla",  equipeId: "Absent", type: "absent",   raison: "Partit voir la famille, c'est toujours imporatnt" }
+      { nom: "Elisa",     equipeId: "patoches", type: "blessure", raison: "Entorse à la cheville donc légèrement handicapé pour le parcours du combattant" },
+      { nom: "Thomas G",  equipeId: null,       type: "absent",   raison: "Un beau voyage à Malte au même moment l'attendait" },
+      { nom: "Carla",     equipeId: null,       type: "absent",   raison: "Partie voir la famille, c'est toujours important" }
     ],
     galerie: 4
   },
-
   2026: {
     date: "4 – 5 juillet 2026",
     lieu: "Chez Thomas Grima",
@@ -414,19 +387,17 @@ var OLYMPIADES = {
       }
     ],
     extras: [
-      { equipeId: "bleubites",   type: "bonus", points: 3,  motif: "Beau vomit de Thomas G lors de l'épreuve du bluff" },
+      { equipeId: "bleubites", type: "bonus", points: 3, motif: "Beau vomit de Thomas G lors de l'épreuve du bluff" }
     ],
     absents: [
-      { nom: "Maxime", equipeId: "verts", type: "blessure",   raison: "Bléssé à la cheville, ne pouvait faire le parcours du combattant. A quand même voulu faire le tir à la corde pour aider son équipe" },
-      { nom: "Anaïs", equipeId: "redmorts", type: "blessure",   raison: "Bléssé au poigné l'handicapant sur de nombreuse épreuve (parcours du combattant, lancé de cerceaux et tir à la corde). A cela s'ajoute une belle commotion reçu sur le parcours du combattant lors d'une chute sur le ventriglisse" },
-      { nom: "Elisa",    equipeId: "Absent",    type: "absent", raison: "Chez la famille de Lucas dans les Alpes, pas disponible cette fois" }
+      { nom: "Maxime", equipeId: "verts",    type: "blessure", raison: "Blessé à la cheville, ne pouvait faire le parcours du combattant. A quand même voulu faire le tir à la corde pour aider son équipe" },
+      { nom: "Anaïs",  equipeId: "redmorts", type: "blessure", raison: "Blessée au poignet, l'handicapant sur de nombreuses épreuves (parcours du combattant, lancé de cerceaux et tir à la corde). A cela s'ajoute une belle commotion reçue sur le parcours du combattant lors d'une chute sur le ventriglisse" },
+      { nom: "Elisa",  equipeId: null,       type: "absent",   raison: "Chez la famille de Lucas dans les Alpes, pas disponible cette fois" }
     ],
     galerie: 8
   }
 };
-
 var YEARS = Object.keys(OLYMPIADES).sort(function(a,b){ return b-a; }); // plus récent d'abord
-
 // ─────────────────────────────────────────────────────────────────────────────
 // CALCUL — classement général et vainqueur de chaque épreuve 100% automatiques,
 // à partir des scores + bonus/malus. Rien n'est codé en dur.
@@ -434,7 +405,6 @@ var YEARS = Object.keys(OLYMPIADES).sort(function(a,b){ return b-a; }); // plus 
 function computeYear(d){
   var byId = {};
   d.teams.forEach(function(t){ t.totalPoints = 0; byId[t.id] = t; });
-
   d.epreuves.forEach(function(ep){
     var bestId = null, bestVal = -Infinity;
     Object.keys(ep.scores).forEach(function(id){
@@ -443,21 +413,17 @@ function computeYear(d){
     });
     ep.vainqueurId = bestId;
   });
-
   (d.extras || []).forEach(function(ex){
     if (byId[ex.equipeId]) byId[ex.equipeId].totalPoints += ex.points;
   });
-
   var sorted = d.teams.slice().sort(function(a,b){ return b.totalPoints - a.totalPoints; });
   sorted.forEach(function(t,i){ t.classement = i + 1; });
   return sorted;
 }
-
 // ─────────────────────────────────────────────────────────────────────────────
 // RENDER
 // ─────────────────────────────────────────────────────────────────────────────
 function esc(s){ if(!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-
 function initTabs(){
   var wrap = document.getElementById('year-tabs');
   wrap.innerHTML = YEARS.map(function(y, i){
@@ -468,17 +434,14 @@ function initTabs(){
       + '</div>';
   }).join('');
 }
-
 function switchYear(year){
   document.querySelectorAll('.year-tab').forEach(function(t){ t.classList.toggle('active', t.dataset.year===year); });
   document.querySelectorAll('.year-panel').forEach(function(p){ p.classList.toggle('show', p.dataset.year===year); });
 }
-
 function renderPage(){
   var container = document.getElementById('page-content');
   container.innerHTML = YEARS.map(function(y, i){ return buildYearPanel(y, i===0); }).join('') + buildHallOfFame();
 }
-
 function buildYearPanel(year, isFirst){
   var d = OLYMPIADES[year];
   var sortedTeams = computeYear(d);
@@ -486,9 +449,7 @@ function buildYearPanel(year, isFirst){
   d.teams.forEach(function(t){ byId[t.id] = t; });
   var champion = sortedTeams[0];
   var totalMembres = d.teams.reduce(function(sum,t){ return sum + t.membres.filter(Boolean).length; }, 0);
-
   var html = '<div class="year-panel'+(isFirst?' show':'')+'" data-year="'+year+'">';
-
   // ── Vue d'ensemble : résumé + citation, alignés avec le haut de l'encadré ──
   html += '<div class="overview-wrap">';
   html += '<div class="overview-text">'
@@ -496,7 +457,6 @@ function buildYearPanel(year, isFirst){
     + '<div class="text-block">'+esc(d.resume)+'</div>'
     + '<div class="overview-quote">'+esc(d.citation)+'<cite>'+esc(d.citationAuteur)+'</cite></div>'
     + '</div>';
-
   html += '<div class="infobox">'
     + '<div class="infobox-title">Olympiades '+year+'</div>'
     + '<table class="infobox-table">'
@@ -509,13 +469,11 @@ function buildYearPanel(year, isFirst){
     + '<div class="infobox-champ">🏆 '+champion.emoji+' '+esc(champion.nom)+'</div>'
     + '</div>';
   html += '</div>';
-
   // ── BBQ ──
   if (d.bbq) {
     html += '<div class="section-label"><span>🍖 BBQ</span></div>';
     html += '<div class="text-block">'+esc(d.bbq)+'</div>';
   }
-
   // ── Loto / Quine ──
   if (d.loto) {
     html += '<div class="section-label"><span>🎟️ Loto / Quine</span></div>';
@@ -532,7 +490,6 @@ function buildYearPanel(year, isFirst){
         + '</div>';
     }
   }
-
   // ── Podium / classement général (calculé automatiquement) ──
   html += '<div class="section-label"><span>🏆 Classement général</span></div>';
   var maxPts = Math.max.apply(null, sortedTeams.map(function(t){ return t.totalPoints; }));
@@ -547,7 +504,6 @@ function buildYearPanel(year, isFirst){
       + '</div>';
   });
   html += '</div>';
-
   html += '<table class="palma-table" style="margin-top:16px">'
     + '<tr><th>Rang</th><th>Équipe</th><th>Couleur</th><th>Capitaine</th><th>Points</th></tr>'
     + sortedTeams.map(function(t){
@@ -558,7 +514,6 @@ function buildYearPanel(year, isFirst){
           + '<td style="font-weight:700">'+t.totalPoints+' pts</td></tr>';
       }).join('')
     + '</table>';
-
   // ── Équipes ──
   html += '<div class="section-label"><span>👥 Les équipes</span></div>';
   html += '<div class="teams-grid">';
@@ -580,7 +535,6 @@ function buildYearPanel(year, isFirst){
       + '</div>';
   });
   html += '</div>';
-
   // ── Épreuves (vainqueur calculé automatiquement) ──
   html += '<div class="section-label"><span>🎯 Les épreuves</span></div>';
   d.epreuves.forEach(function(ep){
@@ -601,7 +555,6 @@ function buildYearPanel(year, isFirst){
     });
     html += '</div></div>';
   });
-
   // ── Grands absents & blessures ──
   html += '<div class="section-label"><span>🤕 Grands absents & blessures</span></div>';
   if (d.absents && d.absents.length) {
@@ -622,7 +575,6 @@ function buildYearPanel(year, isFirst){
   } else {
     html += '<div style="color:var(--muted);font-size:.82rem">Aucun absent ni blessé répertorié pour cette édition.</div>';
   }
-
   // ── Bonus / Malus ──
   html += '<div class="section-label"><span>⚖️ Bonus & malus</span></div>';
   if (d.extras && d.extras.length) {
@@ -639,7 +591,6 @@ function buildYearPanel(year, isFirst){
   } else {
     html += '<div style="color:var(--muted);font-size:.82rem">Aucun bonus ni malus appliqué pour cette édition.</div>';
   }
-
   // ── Repas partagé ──
   html += '<div class="section-label"><span>🍽️ Repas partagé</span></div>';
   if (d.repas) {
@@ -647,13 +598,11 @@ function buildYearPanel(year, isFirst){
   } else {
     html += '<div style="color:var(--muted);font-size:.82rem">Aucun repas partagé répertorié pour cette édition.</div>';
   }
-
   // ── Anecdote de clôture ──
   if (d.anecdote) {
     html += '<div class="section-label"><span>🎉 L\'anecdote de l\'édition</span></div>';
     html += '<div class="text-block">'+esc(d.anecdote)+'</div>';
   }
-
   // ── Galerie ──
   html += '<div class="section-label"><span>📸 Galerie</span></div>';
   html += '<div class="gallery-grid">';
@@ -662,11 +611,9 @@ function buildYearPanel(year, isFirst){
   }
   html += '</div>';
   html += '<div class="gallery-note">Emplacement réservé — les photos de l\'édition '+year+' viendront compléter cette galerie.</div>';
-
   html += '</div>'; // year-panel
   return html;
 }
-
 function buildHallOfFame(){
   var html = '<div class="hof-wrap">'
     + '<div class="hof-title">📖 Palmarès des éditions</div>';
@@ -683,7 +630,6 @@ function buildHallOfFame(){
   html += '</div>';
   return html;
 }
-
 // ─────────────────────────────────────────────────────────────────────────────
 // AUTH / NAV — même logique que le reste du site
 // ─────────────────────────────────────────────────────────────────────────────
@@ -706,9 +652,7 @@ var sb = null;
   };
   document.head.appendChild(script);
 })();
-
 async function handleLogout(){ if(sb) await sb.auth.signOut(); window.location.href='login.html'; }
-
 function toggleMenu(){
   var menu = document.getElementById('mobile-menu');
   var hamb = document.getElementById('hamburger');
@@ -723,7 +667,6 @@ document.addEventListener('click', function(e){
     hamb.classList.remove('open');
   }
 });
-
 initTabs();
 renderPage();
 </script>
