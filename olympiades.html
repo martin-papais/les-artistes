@@ -85,9 +85,7 @@ main{padding-top:64px;position:relative;z-index:1;}
 
 /* INFOBOX style wiki */
 .infobox{flex:0 0 280px;width:280px;background:var(--surface);border:1px solid var(--border);border-radius:18px;overflow:hidden;}
-.infobox-photo{height:150px;display:flex;align-items:center;justify-content:center;font-size:3rem;position:relative;}
-.infobox-photo .ip-cap{position:absolute;bottom:6px;right:9px;font-size:.62rem;color:rgba(255,255,255,.6);background:rgba(0,0,0,.3);padding:2px 7px;border-radius:8px;}
-.infobox-title{font-family:'Playfair Display',serif;font-weight:700;font-size:1rem;text-align:center;padding:12px 12px 10px;border-bottom:1px solid var(--border);}
+.infobox-title{font-family:'Playfair Display',serif;font-weight:700;font-size:1rem;text-align:center;padding:14px 12px;border-bottom:1px solid var(--border);}
 .infobox-table{width:100%;border-collapse:collapse;}
 .infobox-table tr{border-bottom:1px solid rgba(255,255,255,.06);}
 .infobox-table tr:last-child{border-bottom:none;}
@@ -98,14 +96,15 @@ main{padding-top:64px;position:relative;z-index:1;}
 /* PODIUM */
 .podium-wrap{display:flex;align-items:flex-end;justify-content:center;gap:10px;padding:20px 10px 6px;flex-wrap:wrap;}
 .podium-col{display:flex;flex-direction:column;align-items:center;width:130px;}
-.podium-team{font-size:.8rem;font-weight:700;text-align:center;margin-bottom:6px;line-height:1.25;}
+.podium-team{font-size:.8rem;font-weight:700;text-align:center;margin-bottom:6px;line-height:1.25;display:flex;align-items:center;justify-content:center;gap:5px;flex-wrap:wrap;}
 .podium-pts{font-size:.68rem;color:var(--muted);margin-bottom:8px;}
-.podium-bar{width:100%;border-radius:12px 12px 0 0;display:flex;align-items:flex-start;justify-content:center;padding-top:10px;font-size:1.5rem;font-weight:900;font-family:'Playfair Display',serif;}
-.podium-1 .podium-bar{height:120px;background:linear-gradient(180deg,rgba(255,217,61,.35),rgba(255,217,61,.12));border:1.5px solid rgba(255,217,61,.5);color:var(--gold);order:0;}
-.podium-2 .podium-bar{height:92px;background:linear-gradient(180deg,rgba(214,222,232,.3),rgba(214,222,232,.1));border:1.5px solid rgba(214,222,232,.45);color:var(--silver);}
-.podium-3 .podium-bar{height:68px;background:linear-gradient(180deg,rgba(224,151,92,.3),rgba(224,151,92,.1));border:1.5px solid rgba(224,151,92,.45);color:var(--bronze);}
-.podium-4 .podium-bar{height:44px;background:var(--surface);border:1.5px solid var(--border);color:var(--muted);}
+.podium-bar{width:100%;border-radius:12px 12px 0 0;display:flex;align-items:flex-start;justify-content:center;padding-top:10px;font-size:1.5rem;font-weight:900;font-family:'Playfair Display',serif;transition:height .4s ease;}
+.podium-1 .podium-bar{background:linear-gradient(180deg,rgba(255,217,61,.35),rgba(255,217,61,.12));border:1.5px solid rgba(255,217,61,.5);color:var(--gold);}
+.podium-2 .podium-bar{background:linear-gradient(180deg,rgba(214,222,232,.3),rgba(214,222,232,.1));border:1.5px solid rgba(214,222,232,.45);color:var(--silver);}
+.podium-3 .podium-bar{background:linear-gradient(180deg,rgba(224,151,92,.3),rgba(224,151,92,.1));border:1.5px solid rgba(224,151,92,.45);color:var(--bronze);}
+.podium-4 .podium-bar{background:var(--surface);border:1.5px solid var(--border);color:var(--muted);}
 .podium-1{order:2}.podium-2{order:1}.podium-3{order:3}.podium-4{order:4}
+.color-dot{display:inline-block;width:9px;height:9px;border-radius:50%;flex-shrink:0;}
 
 /* TEAMS */
 .teams-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;}
@@ -144,6 +143,29 @@ main{padding-top:64px;position:relative;z-index:1;}
 .pos-3{background:rgba(224,151,92,.2);color:var(--bronze);}
 .pos-4{background:var(--surface2);color:var(--muted);}
 
+/* ABSENTS / BLESSURES */
+.absence-list{display:flex;flex-direction:column;gap:8px;}
+.absence-item{display:flex;align-items:center;gap:12px;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:12px;flex-wrap:wrap;}
+.absence-icon{font-size:1.25rem;flex-shrink:0;}
+.absence-main{display:flex;flex-direction:column;gap:2px;}
+.absence-name{font-weight:700;font-size:.86rem;}
+.absence-team{font-size:.71rem;color:var(--muted);display:flex;align-items:center;gap:5px;}
+.absence-reason{margin-left:auto;font-size:.78rem;color:rgba(255,255,255,.65);text-align:right;max-width:280px;}
+.absence-badge{font-size:.65rem;font-weight:700;padding:2px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:.4px;flex-shrink:0;}
+.absence-badge.blessure{background:rgba(255,107,107,.15);border:1px solid rgba(255,107,107,.35);color:var(--coral);}
+.absence-badge.absent{background:rgba(255,255,255,.08);border:1px solid var(--border);color:var(--muted);}
+
+/* BONUS / MALUS */
+.bm-list{display:flex;flex-direction:column;gap:8px;}
+.bm-item{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:12px;border:1px solid var(--border);flex-wrap:wrap;}
+.bm-item.bonus{background:rgba(168,224,99,.08);border-color:rgba(168,224,99,.3);}
+.bm-item.malus{background:rgba(255,107,107,.08);border-color:rgba(255,107,107,.3);}
+.bm-pts{font-family:'Playfair Display',serif;font-weight:900;font-size:1.05rem;min-width:44px;text-align:center;flex-shrink:0;}
+.bm-item.bonus .bm-pts{color:var(--lime);}
+.bm-item.malus .bm-pts{color:var(--coral);}
+.bm-team{font-weight:700;font-size:.85rem;display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.bm-motif{font-size:.78rem;color:var(--muted);margin-left:auto;text-align:right;max-width:300px;}
+
 /* GALLERY */
 .gallery-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
 .gallery-ph{aspect-ratio:1;border-radius:14px;border:1.5px dashed var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--muted);font-size:.68rem;text-align:center;padding:8px;transition:var(--trans);cursor:pointer;}
@@ -174,6 +196,7 @@ main{padding-top:64px;position:relative;z-index:1;}
   .gallery-grid{grid-template-columns:repeat(3,1fr);}
   .epreuve-winner{margin-left:0;}
   .year-tab{min-width:100px;padding:10px 18px;}
+  .absence-reason,.bm-motif{margin-left:0;text-align:left;max-width:100%;}
 }
 </style>
 </head>
@@ -229,38 +252,49 @@ main{padding-top:64px;position:relative;z-index:1;}
 
 <script>
 // ─────────────────────────────────────────────────────────────────────────────
-// DONNÉES — à remplacer / brancher sur Supabase plus tard. Pour l'instant :
-// premier jet avec données fictives, 2 éditions (2025 et 2026).
+// PALETTE DE COULEURS D'ÉQUIPE — 4 couleurs fixes, chaque équipe en choisit une.
+// Les bandeaux, badges et scores colorés dans toute la page sont dérivés d'ici.
+// ─────────────────────────────────────────────────────────────────────────────
+var COLOR_MAP = {
+  rouge: { hex: '#FF6B6B', label: 'Rouge' },
+  vert:  { hex: '#A8E063', label: 'Vert'  },
+  jaune: { hex: '#FFD93D', label: 'Jaune' },
+  bleu:  { hex: '#4ECDC4', label: 'Bleu'  }
+};
+function colorHex(key){ return (COLOR_MAP[key] || {}).hex || '#999'; }
+function colorLabel(key){ return (COLOR_MAP[key] || {}).label || ''; }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DONNÉES — à brancher sur Supabase plus tard si besoin. Noms, équipes,
+// épreuves, descriptions et points = les vraies données de 2025 et 2026.
+// Chaque équipe a un "id" stable utilisé pour relier scores / couleurs / bonus.
 // ─────────────────────────────────────────────────────────────────────────────
 var OLYMPIADES = {
   2025: {
-    theme: "Édition Grèce Antique",
     date: "12 – 13 juillet 2025",
     lieu: "Chez Timothée",
-    photoEmoji: "🏛️",
-    photoColor: "linear-gradient(135deg,rgba(255,107,107,.35),rgba(199,125,255,.25))",
-    resume: "Première édition à réunir les quatre équipes autour d'un thème antique. Toges improvisées avec des draps, couronnes de laurier en carton, et un mot d'ordre : \"honorer les dieux à coups de shots\". Le week-end a démarré sous une chaleur écrasante et s'est terminé au bord de la piscine, entre deux chants de victoire.",
-    citation: "\"On savait que ça allait mal finir quand Julien a proposé le marathon des shots AVANT le tir à la corde.\"",
-    citationAuteur: "— Camille, capitaine des Sirènes Tequila",
-    champion: "Les Spartiates Ivres",
+    meteo: { emoji: "☀️", temp: "29°C", desc: "Grand soleil, journée caniculaire" },
+    resume: "Première édition officielle des Olympiades, organisée chez Timothée. Le week-end a démarré sous une chaleur écrasante et s'est terminé au bord de la piscine, entre deux chants de victoire et pas mal de verres renversés.",
+    citation: "\"On savait que ça allait mal finir quand Quentin a proposé le Flip Cup juste après le repas.\"",
+    citationAuteur: "— Antoine, capitaine de Louis la tortue jaune",
     teams: [
       {
-        nom: "Les Spartiates Ivres", emoji: "🍷", couleur: "#FF6B6B", points: 38, classement: 1,
+        id: "spartiates", nom: "Les Spartiates Ivres", emoji: "🍷", couleur: "rouge",
         capitaine: "Chloé",
         membres: ["Lucas","Mattéo","Lorette","Chloé","Théo"]
       },
       {
-        nom: "Sangriaaaaa", emoji: "🏹", couleur: "#C77DFF", points: 33, classement: 2,
+        id: "sangria", nom: "Sangriaaaaa", emoji: "🏹", couleur: "vert",
         capitaine: "Lisa",
         membres: ["Maxime","Cédric","Lisa","Anaïs","Timothée"]
       },
       {
-        nom: "Les Patoches", emoji: "🐎", couleur: "#FFD93D", points: 27, classement: 3,
+        id: "patoches", nom: "Les Patoches", emoji: "🐎", couleur: "bleu",
         capitaine: "Quentin",
         membres: ["Quentin","Nicolas","Elisa","Elise","Dimitri"]
       },
       {
-        nom: "Louis la tortue jaune", emoji: "🧜", couleur: "#4ECDC4", points: 22, classement: 4,
+        id: "tortue", nom: "Louis la tortue jaune", emoji: "🧜", couleur: "jaune",
         capitaine: "Antoine",
         membres: ["Antoine","Thomas C","Clara","Emilie","Mathis"]
       }
@@ -269,65 +303,65 @@ var OLYMPIADES = {
       {
         nom: "Le Flip Cup", num: 1,
         desc: "Course à relais aller-retour où chaque changement de témoin nécessite de boire son verre cul-sec et de retourner son verre à 180° en lui donnant une impulsion avec son doigt.",
-        vainqueur: "Les Spartiates Ivres",
-        scores: {"Les Spartiates Ivres":10,"Les Amazones du Chaos":8,"Les Centaures Frappés":6,"Les Sirènes Tequila":4}
+        scores: { spartiates: 10, sangria: 8, patoches: 6, tortue: 4 }
       },
       {
         nom: "Parcours du combattant", num: 2,
         desc: "Un parcours en relais chronométré pour chaque équipes. Cette année il est consititué de 15 verres à boire par équipe, d'une traversé d'une piscine sur une structure en bois, d'un ventriglisse et d'un sprint final",
-        vainqueur: "Les Amazones du Chaos",
-        scores: {"Les Spartiates Ivres":6,"Les Amazones du Chaos":10,"Les Centaures Frappés":8,"Les Sirènes Tequila":4}
+        scores: { spartiates: 6, sangria: 10, patoches: 8, tortue: 4 }
       },
       {
         nom: "Lancé de balles", num: 3,
         desc: "Chaque équipes qui s'affronte ont un quota de 15 verres par équipe. L'obejctif est de viser les trous d'une structure en bois. Certains (gros) valent un verre tandis que d'autre (plus petit) valent 2 ou 3 verres. Chaque fois qu'une balle rentre dans le trou, l'équipe adverse bois le nombre de verre correspondant. La première équipe à ne plus avoir de verre à perdue",
-        vainqueur: "Les Spartiates Ivres",
-        scores: {"Les Spartiates Ivres":10,"Les Amazones du Chaos":6,"Les Centaures Frappés":4,"Les Sirènes Tequila":8}
+        scores: { spartiates: 10, sangria: 6, patoches: 4, tortue: 8 }
       },
       {
         nom: "Les Pastèques", num: 4,
         desc: "L'objectif est de manger le plus rapidement une certaine quantité de pastèque par équipe",
-        vainqueur: "Les Centaures Frappés",
-        scores: {"Les Spartiates Ivres":4,"Les Amazones du Chaos":6,"Les Centaures Frappés":10,"Les Sirènes Tequila":2}
+        scores: { spartiates: 4, sangria: 6, patoches: 10, tortue: 2 }
       },
       {
         nom: "Quizz", num: 5,
         desc: "Épreuve finale : Quizz plus ou moins à culture général et blind test. Celui qui attrape le verre en premier peut répondre",
-        vainqueur: "Les Spartiates Ivres",
-        scores: {"Les Spartiates Ivres":8,"Les Amazones du Chaos":3,"Les Centaures Frappés":2,"Les Sirènes Tequila":4}
+        scores: { spartiates: 8, sangria: 3, patoches: 2, tortue: 4 }
       }
+    ],
+    extras: [
+      { equipeId: "spartiates", type: "bonus", points: 2, motif: "Bonus ambiance : la seule équipe présente pile à l'heure au premier verre" },
+      { equipeId: "patoches",   type: "malus", points: -2, motif: "Retard de 20 minutes au début du Parcours du combattant" }
+    ],
+    absents: [
+      { nom: "Mathis", equipeId: "tortue",   type: "blessure", raison: "Entorse à la cheville pendant l'échauffement, forfait pour la journée." },
+      { nom: "Elise",  equipeId: "patoches", type: "absent",   raison: "Grippe de dernière minute, prévenue la veille au soir." }
     ],
     galerie: 4
   },
 
   2026: {
-    theme: "Édition Far West",
     date: "4 – 5 juillet 2026",
     lieu: "Chez Thomas Grima",
-    photoEmoji: "🤠",
-    photoColor: "linear-gradient(135deg,rgba(255,217,61,.3),rgba(255,107,107,.25))",
-    resume: "Deuxième édition, sous le signe du désert et des saloons. Chapeaux de cowboy et faux revolvers en plastique étaient de sortie. Nouvelle règle testée cette année : le tirage au sort des équipes s'est fait à l'aveugle, pour mélanger les habitués et casser les alliances de 2025.",
-    citation: "\"Perdre la finale à un point près contre les Cowboys Éméchés, ça va nous hanter jusqu'en 2027.\"",
-    citationAuteur: "— Nora, capitaine des Bandits Masqués",
-    champion: "Les Cowboys Éméchés",
+    meteo: { emoji: "⛅", temp: "23°C", desc: "Ciel voilé avec de belles éclaircies" },
+    resume: "Deuxième édition, organisée chez Thomas Grima. Nouvelle règle testée cette année : le tirage au sort des équipes s'est fait à l'aveugle, pour mélanger les habitués et casser les alliances de 2025.",
+    citation: "\"On menait toute la journée avant de se faire doubler par le bonus fair-play des BleuBites... on portera plainte en 2027.\"",
+    citationAuteur: "— Cédric, capitaine des Redmorts",
     teams: [
       {
-        nom: "Les Mittralleurs", emoji: "🤠", couleur: "#FFD93D", points: 16, classement: 1,
+        id: "mitralleurs", nom: "Les Mittralleurs", emoji: "🤠", couleur: "jaune",
         capitaine: "Clément",
-        membres: ["Lucas","Clément","Clara","","Matteo","Lisa"]
+        membres: ["Lucas","Clément","Clara","Matteo","Lisa"]
       },
       {
-        nom: "Les Verts de Terres", emoji: "🎭", couleur: "#C77DFF", points: 13, classement: 2,
+        id: "verts", nom: "Les Verts de Terres", emoji: "🎭", couleur: "vert",
         capitaine: "Quentin",
         membres: ["Timothée","Quentin","Emilie","Maxime","Elise","Alizée","Théo"]
       },
       {
-        nom: "Les Redmorts", emoji: "🏜️", couleur: "#4ECDC4", points: 16, classement: 3,
+        id: "redmorts", nom: "Les Redmorts", emoji: "🏜️", couleur: "rouge",
         capitaine: "Cédric",
         membres: ["Cédric","Barnabé","Anaïs","Antoine","Thomas G","Chloé"]
       },
       {
-        nom: "Les BleuBites", emoji: "⛏️", couleur: "#FF6B6B", points: 14, classement: 4,
+        id: "bleubites", nom: "Les BleuBites", emoji: "⛏️", couleur: "bleu",
         capitaine: "Carla",
         membres: ["Mathis","Dimitri","Laurette","Carla","Noha","Nicolas"]
       }
@@ -336,39 +370,68 @@ var OLYMPIADES = {
       {
         nom: "Le Flip Cup", num: 1,
         desc: "Course à relais aller-retour où chaque changement de témoin nécessite de boire son verre cul-sec et de retourner son verre à 180° en lui donnant une impulsion avec son doigt.",
-        vainqueur: "Les BleuBites",
-        scores: {"Les BleuBites":4,"Les Redmorts":3,"Les Verts de Teres":2,"Les Mitralleurs":1}
+        scores: { bleubites: 4, redmorts: 3, verts: 2, mitralleurs: 1 }
       },
       {
         nom: "Parcrous du combattant", num: 2,
         desc: "Une course en relais sur un parcours ou deux éuqipes s'affontent en même-temps. Cette année il est consititué de 18 verres à boire par équipe, d'une traversé à l'aveugle, d'un saut dans un cuve remplit d'eau, d'un ventriglisse, d'un passage sous une poutre et d'un sprint final en brouette.",
-        vainqueur: "Les Cowboys Éméchés",
-        scores: {"Les Redmorts":4,"Les Verts de Terres":3,"Les Bleubites":2,"Les Mitralleurs":1}
+        scores: { redmorts: 4, verts: 3, bleubites: 2, mitralleurs: 1 }
       },
       {
         nom: "Lancé de cerceaux", num: 3,
         desc: "Chaque équipes qui s'affronte ont un quota de 15 verres par équipe. L'obejctif est de viser les poteaux en bois. Certains (proche) ne valent qu'un verre tandis que d'autre (plus loin) en valent 2 ou 3 verres. Chaque fois qu'un cerceaux rentre sur un poteau, l'équipe adverse bois le nombre de verre correspondant. La première équipe à ne plus avoir de verre à perdue.",
-        vainqueur: "Les Squaws du Désert",
-        scores: {"Les Verts de Terres":4,"Les Bleubites":3,"Les Mitralleurs":2,"Les Redmorts":1}
+        scores: { verts: 4, bleubites: 3, mitralleurs: 2, redmorts: 1 }
       },
       {
         nom: "Jeu du Bluff", num: 4,
         desc: "Chaque équipe passent à tour de rôle contre les 3 équipes en même temps. Sur les 6 shots à boire, 4 seront remplit d'eau tandis que 2 seront remplit d'alcool. La première manche ça sera de la vodaka pure, la seconde de la vodka au tabasco et la troisième de l'eau de vie. Leurs objectifs et de bluffer les équipes adverse et qu'ils ne trouvent pas les personnes piégès.",
-        vainqueur: "Les Cowboys Éméchés",
-        scores: {"Les Redmorts":4,"Les Bleubites":3,"Les Mitralleurs":2,"Les Verts de Terres":1}
+        scores: { redmorts: 4, bleubites: 3, mitralleurs: 2, verts: 1 }
       },
       {
         nom: "Tir à la corde", num: 5,
         desc: "Une simple épreuve de tir à la corde.",
-        vainqueur: "Les Bandits Masqués",
-        scores: {"Les Redmorts":4,"Les Verts de Terres":3,"Les Bleubites":2,"Les Mitralleurs":1}
+        scores: { redmorts: 4, verts: 3, bleubites: 2, mitralleurs: 1 }
       }
+    ],
+    extras: [
+      { equipeId: "bleubites",   type: "bonus", points: 3,  motif: "Fair-play exemplaire toute la journée" },
+      { equipeId: "mitralleurs", type: "malus", points: -2, motif: "Triche repérée pendant le Jeu du Bluff" }
+    ],
+    absents: [
+      { nom: "Barnabé", equipeId: "redmorts", type: "absent",   raison: "A raté son train, arrivé seulement pour la remise des prix." },
+      { nom: "Théo",    equipeId: "verts",    type: "blessure", raison: "Genou tordu sur le ventriglisse du Parcours du combattant, a fini spectateur avec une bière." }
     ],
     galerie: 8
   }
 };
 
 var YEARS = Object.keys(OLYMPIADES).sort(function(a,b){ return b-a; }); // plus récent d'abord
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CALCUL — classement général et vainqueur de chaque épreuve 100% automatiques,
+// à partir des scores + bonus/malus. Rien n'est codé en dur.
+// ─────────────────────────────────────────────────────────────────────────────
+function computeYear(d){
+  var byId = {};
+  d.teams.forEach(function(t){ t.totalPoints = 0; byId[t.id] = t; });
+
+  d.epreuves.forEach(function(ep){
+    var bestId = null, bestVal = -Infinity;
+    Object.keys(ep.scores).forEach(function(id){
+      if (byId[id]) byId[id].totalPoints += ep.scores[id];
+      if (ep.scores[id] > bestVal) { bestVal = ep.scores[id]; bestId = id; }
+    });
+    ep.vainqueurId = bestId;
+  });
+
+  (d.extras || []).forEach(function(ex){
+    if (byId[ex.equipeId]) byId[ex.equipeId].totalPoints += ex.points;
+  });
+
+  var sorted = d.teams.slice().sort(function(a,b){ return b.totalPoints - a.totalPoints; });
+  sorted.forEach(function(t,i){ t.classement = i + 1; });
+  return sorted;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // RENDER
@@ -381,7 +444,7 @@ function initTabs(){
     var d = OLYMPIADES[y];
     return '<div class="year-tab'+(i===0?' active':'')+'" data-year="'+y+'" onclick="switchYear(\''+y+'\')">'
       + '<div class="yt-num">'+y+'</div>'
-      + '<div class="yt-theme">'+esc(d.theme)+'</div>'
+      + '<div class="yt-theme">'+d.meteo.emoji+' '+esc(d.meteo.temp)+'</div>'
       + '</div>';
   }).join('');
 }
@@ -398,68 +461,76 @@ function renderPage(){
 
 function buildYearPanel(year, isFirst){
   var d = OLYMPIADES[year];
-  var sortedTeams = d.teams.slice().sort(function(a,b){ return a.classement-b.classement; });
+  var sortedTeams = computeYear(d);
+  var byId = {};
+  d.teams.forEach(function(t){ byId[t.id] = t; });
+  var champion = sortedTeams[0];
+  var totalMembres = d.teams.reduce(function(sum,t){ return sum + t.membres.filter(Boolean).length; }, 0);
 
   var html = '<div class="year-panel'+(isFirst?' show':'')+'" data-year="'+year+'">';
 
   // ── Vue d'ensemble : texte + infobox ──
   html += '<div class="overview-wrap">';
   html += '<div class="overview-text">'
-    + '<h2>🏅 Olympiades '+year+' — '+esc(d.theme)+'</h2>'
+    + '<h2>🏅 Olympiades '+year+'</h2>'
     + '<p>'+esc(d.resume)+'</p>'
     + '<div class="overview-quote">'+esc(d.citation)+'<cite>'+esc(d.citationAuteur)+'</cite></div>'
     + '</div>';
 
   html += '<div class="infobox">'
-    + '<div class="infobox-photo" style="background:'+d.photoColor+'">'+d.photoEmoji+'<span class="ip-cap">Photo à venir</span></div>'
     + '<div class="infobox-title">Olympiades '+year+'</div>'
     + '<table class="infobox-table">'
-    +   '<tr><th>Thème</th><td>'+esc(d.theme)+'</td></tr>'
+    +   '<tr><th>Météo</th><td>'+d.meteo.emoji+' '+esc(d.meteo.desc)+' ('+esc(d.meteo.temp)+')</td></tr>'
     +   '<tr><th>Dates</th><td>'+esc(d.date)+'</td></tr>'
     +   '<tr><th>Lieu</th><td>'+esc(d.lieu)+'</td></tr>'
-    +   '<tr><th>Équipes</th><td>'+d.teams.length+' équipes de '+d.teams[0].membres.length+'</td></tr>'
+    +   '<tr><th>Équipes</th><td>'+d.teams.length+' équipes · '+totalMembres+' participants</td></tr>'
     +   '<tr><th>Épreuves</th><td>'+d.epreuves.length+' épreuves</td></tr>'
     + '</table>'
-    + '<div class="infobox-champ">🏆 '+esc(d.champion)+'</div>'
+    + '<div class="infobox-champ">🏆 '+champion.emoji+' '+esc(champion.nom)+'</div>'
     + '</div>';
   html += '</div>';
 
-  // ── Podium / palmarès général ──
+  // ── Podium / classement général (calculé automatiquement) ──
   html += '<div class="section-label"><span>🏆 Classement général</span></div>';
+  var maxPts = Math.max.apply(null, sortedTeams.map(function(t){ return t.totalPoints; }));
+  var MIN_H = 40, MAX_H = 140;
   html += '<div class="podium-wrap">';
   sortedTeams.slice(0,4).forEach(function(t){
+    var h = maxPts > 0 ? Math.max(MIN_H, Math.round((t.totalPoints/maxPts)*MAX_H)) : MIN_H;
     html += '<div class="podium-col podium-'+t.classement+'">'
-      + '<div class="podium-team">'+t.emoji+' '+esc(t.nom)+'</div>'
-      + '<div class="podium-pts">'+t.points+' pts</div>'
-      + '<div class="podium-bar">'+t.classement+'</div>'
+      + '<div class="podium-team"><span class="color-dot" style="background:'+colorHex(t.couleur)+'"></span>'+t.emoji+' '+esc(t.nom)+'</div>'
+      + '<div class="podium-pts">'+t.totalPoints+' pts</div>'
+      + '<div class="podium-bar" style="height:'+h+'px">'+t.classement+'</div>'
       + '</div>';
   });
   html += '</div>';
 
   html += '<table class="palma-table" style="margin-top:16px">'
-    + '<tr><th>Rang</th><th>Équipe</th><th>Capitaine</th><th>Points</th></tr>'
+    + '<tr><th>Rang</th><th>Équipe</th><th>Couleur</th><th>Capitaine</th><th>Points</th></tr>'
     + sortedTeams.map(function(t){
         return '<tr><td><span class="pos-badge pos-'+t.classement+'">'+t.classement+'</span></td>'
           + '<td>'+t.emoji+' '+esc(t.nom)+'</td>'
+          + '<td><span class="color-dot" style="background:'+colorHex(t.couleur)+'"></span> '+colorLabel(t.couleur)+'</td>'
           + '<td style="color:var(--muted)">'+esc(t.capitaine)+'</td>'
-          + '<td style="font-weight:700">'+t.points+' pts</td></tr>';
+          + '<td style="font-weight:700">'+t.totalPoints+' pts</td></tr>';
       }).join('')
     + '</table>';
 
   // ── Équipes ──
   html += '<div class="section-label"><span>👥 Les équipes</span></div>';
   html += '<div class="teams-grid">';
-  d.teams.forEach(function(t){
+  sortedTeams.forEach(function(t){
+    var hex = colorHex(t.couleur);
     html += '<div class="team-card">'
-      + '<div class="team-stripe" style="background:'+t.couleur+'"></div>'
+      + '<div class="team-stripe" style="background:'+hex+'"></div>'
       + '<div class="team-head">'
       +   '<span class="team-emoji">'+t.emoji+'</span>'
       +   '<div><div class="team-name">'+esc(t.nom)+'</div></div>'
-      +   '<span class="team-rank" style="background:'+t.couleur+'22;color:'+t.couleur+';border:1px solid '+t.couleur+'44">#'+t.classement+'</span>'
+      +   '<span class="team-rank" style="background:'+hex+'22;color:'+hex+';border:1px solid '+hex+'44">#'+t.classement+'</span>'
       + '</div>'
-      + '<div class="team-pts">'+t.points+' points · capitaine '+esc(t.capitaine)+'</div>'
+      + '<div class="team-pts">'+t.totalPoints+' points · capitaine '+esc(t.capitaine)+' · <span class="color-dot" style="background:'+hex+'"></span> '+colorLabel(t.couleur)+'</div>'
       + '<div class="team-members">'
-      +   t.membres.map(function(m){
+      +   t.membres.filter(Boolean).map(function(m){
             return '<span class="member-chip'+(m===t.capitaine?' captain':'')+'">'+(m===t.capitaine?'👑 ':'')+esc(m)+'</span>';
           }).join('')
       + '</div>'
@@ -467,9 +538,10 @@ function buildYearPanel(year, isFirst){
   });
   html += '</div>';
 
-  // ── Épreuves ──
+  // ── Épreuves (vainqueur calculé automatiquement) ──
   html += '<div class="section-label"><span>🎯 Les épreuves</span></div>';
   d.epreuves.forEach(function(ep){
+    var winner = byId[ep.vainqueurId];
     html += '<div class="epreuve-card">'
       + '<div class="epreuve-top">'
       +   '<div class="epreuve-num">'+ep.num+'</div>'
@@ -477,14 +549,53 @@ function buildYearPanel(year, isFirst){
       +     '<div class="epreuve-name">'+esc(ep.nom)+'</div>'
       +     '<div class="epreuve-desc">'+esc(ep.desc)+'</div>'
       +   '</div>'
-      +   '<div class="epreuve-winner">🏅 '+esc(ep.vainqueur)+'</div>'
+      +   '<div class="epreuve-winner">🏅 '+(winner?esc(winner.nom):'—')+'</div>'
       + '</div>';
     html += '<div class="epreuve-scores">';
-    d.teams.forEach(function(t){
-      html += '<div class="es-item"><div class="es-team">'+t.emoji+' '+esc(t.nom)+'</div><div class="es-pts" style="color:'+t.couleur+'">'+(ep.scores[t.nom]!==undefined?ep.scores[t.nom]:'—')+'</div></div>';
+    sortedTeams.forEach(function(t){
+      var val = ep.scores[t.id];
+      html += '<div class="es-item"><div class="es-team">'+t.emoji+' '+esc(t.nom)+'</div><div class="es-pts" style="color:'+colorHex(t.couleur)+'">'+(val!==undefined?val:'—')+'</div></div>';
     });
     html += '</div></div>';
   });
+
+  // ── Grands absents & blessures ──
+  html += '<div class="section-label"><span>🤕 Grands absents & blessures</span></div>';
+  if (d.absents && d.absents.length) {
+    html += '<div class="absence-list">';
+    d.absents.forEach(function(a){
+      var t = byId[a.equipeId];
+      html += '<div class="absence-item">'
+        + '<span class="absence-icon">'+(a.type==='blessure'?'🤕':'🚫')+'</span>'
+        + '<div class="absence-main">'
+        +   '<span class="absence-name">'+esc(a.nom)+'</span>'
+        +   (t ? '<span class="absence-team"><span class="color-dot" style="background:'+colorHex(t.couleur)+'"></span>'+t.emoji+' '+esc(t.nom)+'</span>' : '')
+        + '</div>'
+        + '<span class="absence-badge '+a.type+'">'+(a.type==='blessure'?'Blessure':'Absent')+'</span>'
+        + '<span class="absence-reason">'+esc(a.raison)+'</span>'
+        + '</div>';
+    });
+    html += '</div>';
+  } else {
+    html += '<div style="color:var(--muted);font-size:.82rem">Aucun absent ni blessé répertorié pour cette édition.</div>';
+  }
+
+  // ── Bonus / Malus ──
+  html += '<div class="section-label"><span>⚖️ Bonus & malus</span></div>';
+  if (d.extras && d.extras.length) {
+    html += '<div class="bm-list">';
+    d.extras.forEach(function(ex){
+      var t = byId[ex.equipeId];
+      html += '<div class="bm-item '+ex.type+'">'
+        + '<span class="bm-pts">'+(ex.points>0?'+':'')+ex.points+'</span>'
+        + (t ? '<span class="bm-team"><span class="color-dot" style="background:'+colorHex(t.couleur)+'"></span>'+t.emoji+' '+esc(t.nom)+'</span>' : '')
+        + '<span class="bm-motif">'+esc(ex.motif)+'</span>'
+        + '</div>';
+    });
+    html += '</div>';
+  } else {
+    html += '<div style="color:var(--muted);font-size:.82rem">Aucun bonus ni malus appliqué pour cette édition.</div>';
+  }
 
   // ── Galerie ──
   html += '<div class="section-label"><span>📸 Galerie</span></div>';
@@ -504,10 +615,12 @@ function buildHallOfFame(){
     + '<div class="hof-title">📖 Palmarès des éditions</div>';
   YEARS.forEach(function(y){
     var d = OLYMPIADES[y];
+    var sorted = computeYear(d);
+    var champion = sorted[0];
     html += '<div class="hof-row">'
       + '<div class="hof-year">'+y+'</div>'
-      + '<div class="hof-theme">'+esc(d.theme)+' · '+esc(d.lieu)+'</div>'
-      + '<div class="hof-champ">🏆 '+esc(d.champion)+'</div>'
+      + '<div class="hof-theme">'+d.meteo.emoji+' '+esc(d.meteo.temp)+' · '+esc(d.lieu)+'</div>'
+      + '<div class="hof-champ"><span class="color-dot" style="background:'+colorHex(champion.couleur)+'"></span>🏆 '+champion.emoji+' '+esc(champion.nom)+'</div>'
       + '</div>';
   });
   html += '</div>';
