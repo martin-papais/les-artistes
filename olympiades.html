@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Les Artistes — Olympiades</title>
+<link rel="icon" type="image/png" href="logo-artistes.png">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --coral:#FF6B6B;--yellow:#FFD93D;--teal:#4ECDC4;--violet:#C77DFF;
+  --pink:#FF9EBC;--lime:#A8E063;--deep:#1A1025;
+  --surface:rgba(255,255,255,.06);--surface2:rgba(255,255,255,.10);
+  --surface3:rgba(255,255,255,.16);--border:rgba(255,255,255,.12);
+  --text:#fff;--muted:rgba(255,255,255,.5);--trans:all .3s cubic-bezier(.4,0,.2,1);
+  --gold:#FFD93D;--silver:#D6DEE8;--bronze:#E0975C;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'DM Sans',sans-serif;background:var(--deep);color:var(--text);min-height:100vh;overflow-x:hidden;}
+.bg{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse 70% 50% at 0% 0%,rgba(255,107,107,.3) 0%,transparent 60%),
+    radial-gradient(ellipse 60% 60% at 100% 30%,rgba(78,205,196,.25) 0%,transparent 60%),
+    radial-gradient(ellipse 80% 40% at 50% 100%,rgba(199,125,255,.2) 0%,transparent 55%),#1A1025;
+  animation:bgP 15s ease-in-out infinite alternate;}
+@keyframes bgP{0%{filter:hue-rotate(0deg)}100%{filter:hue-rotate(20deg)brightness(1.05)}}
+
+/* NAV — identique au reste du site */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;height:64px;background:rgba(26,16,37,.9);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 24px;gap:12px;}
+.nav-logo{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:900;background:linear-gradient(135deg,var(--yellow),var(--coral),var(--violet));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;white-space:nowrap;text-decoration:none;}
+.nav-links{display:flex;gap:2px;align-items:center;}
+.nav-link{padding:7px 12px;border-radius:10px;color:var(--muted);font-size:.8rem;font-weight:600;text-decoration:none;transition:var(--trans);white-space:nowrap;}
+.nav-link:hover{color:var(--text);background:var(--surface2);}
+.nav-link.active{color:var(--text);background:var(--surface2);}
+.nav-link.active span{background:linear-gradient(135deg,var(--coral),var(--violet));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.nav-right{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.nav-user{display:flex;align-items:center;gap:7px;padding:5px 10px;border-radius:10px;background:var(--surface);border:1px solid var(--border);font-size:.8rem;color:var(--muted);}
+.avatar{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--coral),var(--violet));display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;color:#fff;}
+.btn-logout{padding:6px 12px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:.78rem;cursor:pointer;transition:var(--trans);font-family:'DM Sans',sans-serif;}
+.btn-logout:hover{background:rgba(255,107,107,.15);color:var(--coral);}
+.hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;padding:8px;background:none;border:none;flex-shrink:0;}
+.hamburger span{width:22px;height:2px;background:var(--muted);border-radius:2px;transition:var(--trans);display:block;}
+.hamburger.open span:nth-child(1){transform:translateY(7px) rotate(45deg);}
+.hamburger.open span:nth-child(2){opacity:0;}
+.hamburger.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg);}
+.mobile-menu{display:none;position:fixed;top:64px;left:0;right:0;z-index:99;background:rgba(26,16,37,.98);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);flex-direction:column;gap:2px;padding:12px;}
+.mobile-menu.open{display:flex;}
+.mobile-menu .nav-link{font-size:.9rem;padding:12px 16px;border-radius:12px;}
+.mobile-menu .nav-link.active{background:var(--surface2);}
+
+main{padding-top:64px;position:relative;z-index:1;}
+
+/* HERO */
+.hero{padding:44px 24px 24px;text-align:center;}
+.hero-eyebrow{display:inline-flex;align-items:center;gap:8px;padding:5px 14px;border-radius:20px;background:var(--surface);border:1px solid var(--border);font-size:.72rem;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);margin-bottom:14px;}
+.hero-title{font-family:'Playfair Display',serif;font-size:clamp(2rem,5vw,3.1rem);font-weight:900;line-height:1.05;margin-bottom:10px;}
+.hero-title .accent{background:linear-gradient(135deg,var(--yellow),var(--coral),var(--violet));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.hero-sub{color:var(--muted);font-size:.95rem;max-width:560px;margin:0 auto 24px;line-height:1.6;}
+
+/* YEAR TABS */
+.year-tabs{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;}
+.year-tab{position:relative;padding:12px 26px;border-radius:16px;background:var(--surface);border:1.5px solid var(--border);cursor:pointer;transition:var(--trans);text-align:center;min-width:120px;}
+.year-tab:hover{background:var(--surface2);border-color:rgba(255,255,255,.25);}
+.year-tab.active{background:linear-gradient(135deg,rgba(255,107,107,.18),rgba(199,125,255,.18));border-color:var(--violet);}
+.year-tab .yt-num{font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:900;}
+.year-tab .yt-theme{font-size:.7rem;color:var(--muted);margin-top:2px;}
+.year-tab.active .yt-theme{color:var(--pink);}
+
+.page{max-width:1100px;margin:0 auto;padding:26px 24px 90px;}
+.year-panel{display:none;animation:fadeIn .35s ease both;}
+.year-panel.show{display:block;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+.section-label{display:flex;align-items:center;gap:12px;margin:34px 0 16px;}
+.section-label span{font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.9px;color:var(--muted);white-space:nowrap;}
+.section-label::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* WRAP : infobox + résumé */
+.overview-wrap{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap-reverse;}
+.overview-text{flex:1;min-width:260px;}
+.overview-text h2{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;margin-bottom:10px;}
+.overview-text p{color:rgba(255,255,255,.75);font-size:.9rem;line-height:1.7;margin-bottom:12px;}
+.overview-quote{border-left:3px solid var(--violet);padding:10px 16px;background:var(--surface);border-radius:0 12px 12px 0;font-size:.86rem;font-style:italic;color:rgba(255,255,255,.8);margin-top:14px;}
+.overview-quote cite{display:block;margin-top:6px;font-style:normal;font-size:.72rem;color:var(--muted);}
+
+/* INFOBOX style wiki */
+.infobox{flex:0 0 280px;width:280px;background:var(--surface);border:1px solid var(--border);border-radius:18px;overflow:hidden;}
+.infobox-photo{height:150px;display:flex;align-items:center;justify-content:center;font-size:3rem;position:relative;}
+.infobox-photo .ip-cap{position:absolute;bottom:6px;right:9px;font-size:.62rem;color:rgba(255,255,255,.6);background:rgba(0,0,0,.3);padding:2px 7px;border-radius:8px;}
+.infobox-title{font-family:'Playfair Display',serif;font-weight:700;font-size:1rem;text-align:center;padding:12px 12px 10px;border-bottom:1px solid var(--border);}
+.infobox-table{width:100%;border-collapse:collapse;}
+.infobox-table tr{border-bottom:1px solid rgba(255,255,255,.06);}
+.infobox-table tr:last-child{border-bottom:none;}
+.infobox-table th{text-align:left;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);padding:9px 8px 9px 12px;width:38%;vertical-align:top;}
+.infobox-table td{font-size:.8rem;padding:9px 12px 9px 4px;vertical-align:top;}
+.infobox-champ{display:flex;align-items:center;gap:6px;padding:11px 12px;background:rgba(255,217,61,.1);border-top:1px solid rgba(255,217,61,.25);font-size:.82rem;font-weight:700;}
+
+/* PODIUM */
+.podium-wrap{display:flex;align-items:flex-end;justify-content:center;gap:10px;padding:20px 10px 6px;flex-wrap:wrap;}
+.podium-col{display:flex;flex-direction:column;align-items:center;width:130px;}
+.podium-team{font-size:.8rem;font-weight:700;text-align:center;margin-bottom:6px;line-height:1.25;}
+.podium-pts{font-size:.68rem;color:var(--muted);margin-bottom:8px;}
+.podium-bar{width:100%;border-radius:12px 12px 0 0;display:flex;align-items:flex-start;justify-content:center;padding-top:10px;font-size:1.5rem;font-weight:900;font-family:'Playfair Display',serif;}
+.podium-1 .podium-bar{height:120px;background:linear-gradient(180deg,rgba(255,217,61,.35),rgba(255,217,61,.12));border:1.5px solid rgba(255,217,61,.5);color:var(--gold);order:0;}
+.podium-2 .podium-bar{height:92px;background:linear-gradient(180deg,rgba(214,222,232,.3),rgba(214,222,232,.1));border:1.5px solid rgba(214,222,232,.45);color:var(--silver);}
+.podium-3 .podium-bar{height:68px;background:linear-gradient(180deg,rgba(224,151,92,.3),rgba(224,151,92,.1));border:1.5px solid rgba(224,151,92,.45);color:var(--bronze);}
+.podium-4 .podium-bar{height:44px;background:var(--surface);border:1.5px solid var(--border);color:var(--muted);}
+.podium-1{order:2}.podium-2{order:1}.podium-3{order:3}.podium-4{order:4}
+
+/* TEAMS */
+.teams-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;}
+.team-card{background:var(--surface);border:1px solid var(--border);border-radius:18px;overflow:hidden;transition:var(--trans);}
+.team-card:hover{border-color:rgba(255,255,255,.22);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.25);}
+.team-stripe{height:5px;}
+.team-head{padding:16px 18px 10px;display:flex;align-items:center;gap:12px;}
+.team-emoji{font-size:2rem;line-height:1;}
+.team-name{font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;line-height:1.2;}
+.team-rank{margin-left:auto;font-size:.7rem;font-weight:700;padding:4px 10px;border-radius:20px;white-space:nowrap;}
+.team-pts{padding:0 18px 6px;font-size:.78rem;color:var(--muted);}
+.team-members{padding:10px 18px 16px;display:flex;flex-wrap:wrap;gap:6px;}
+.member-chip{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:var(--surface2);border-radius:20px;font-size:.76rem;}
+.member-chip.captain{background:rgba(255,217,61,.14);border:1px solid rgba(255,217,61,.35);color:var(--yellow);font-weight:700;}
+
+/* EPREUVES */
+.epreuve-card{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:18px 20px;margin-bottom:14px;}
+.epreuve-top{display:flex;align-items:flex-start;gap:14px;margin-bottom:12px;flex-wrap:wrap;}
+.epreuve-num{width:38px;height:38px;min-width:38px;border-radius:12px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-weight:900;font-size:1rem;}
+.epreuve-name{font-family:'Playfair Display',serif;font-size:1.05rem;font-weight:700;margin-bottom:4px;}
+.epreuve-desc{font-size:.82rem;color:rgba(255,255,255,.65);line-height:1.55;}
+.epreuve-winner{margin-left:auto;flex-shrink:0;display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:20px;background:rgba(255,217,61,.12);border:1px solid rgba(255,217,61,.3);font-size:.76rem;font-weight:700;color:var(--yellow);white-space:nowrap;}
+.epreuve-scores{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px;}
+.es-item{background:rgba(0,0,0,.18);border-radius:10px;padding:8px 10px;text-align:center;}
+.es-team{font-size:.68rem;color:var(--muted);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.es-pts{font-size:.95rem;font-weight:800;font-family:'Playfair Display',serif;}
+
+/* PALMARES TABLE */
+.palma-table{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;}
+.palma-table th{text-align:left;font-size:.68rem;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);padding:11px 14px;background:rgba(255,255,255,.04);}
+.palma-table td{padding:11px 14px;font-size:.85rem;border-top:1px solid rgba(255,255,255,.06);}
+.palma-table tr:first-child td{background:rgba(255,217,61,.06);}
+.pos-badge{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;font-size:.75rem;font-weight:800;}
+.pos-1{background:rgba(255,217,61,.2);color:var(--gold);}
+.pos-2{background:rgba(214,222,232,.18);color:var(--silver);}
+.pos-3{background:rgba(224,151,92,.2);color:var(--bronze);}
+.pos-4{background:var(--surface2);color:var(--muted);}
+
+/* GALLERY */
+.gallery-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.gallery-ph{aspect-ratio:1;border-radius:14px;border:1.5px dashed var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--muted);font-size:.68rem;text-align:center;padding:8px;transition:var(--trans);cursor:pointer;}
+.gallery-ph:hover{border-color:rgba(255,255,255,.3);background:var(--surface);}
+.gallery-ph .gp-emoji{font-size:1.6rem;opacity:.6;}
+.gallery-note{margin-top:10px;font-size:.76rem;color:var(--muted);}
+
+/* HALL OF FAME (bas de page, tous les ans) */
+.hof-wrap{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:20px 22px;margin-top:46px;}
+.hof-title{font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.hof-row{display:flex;align-items:center;gap:14px;padding:10px 0;border-top:1px solid rgba(255,255,255,.06);flex-wrap:wrap;}
+.hof-row:first-of-type{border-top:none;}
+.hof-year{font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:900;width:60px;flex-shrink:0;}
+.hof-theme{font-size:.76rem;color:var(--muted);flex:1;min-width:140px;}
+.hof-champ{font-size:.85rem;font-weight:700;color:var(--yellow);display:flex;align-items:center;gap:6px;}
+
+@media(max-width:768px){
+  nav{padding:0 14px;}
+  .nav-links{display:none;}
+  .nav-right{display:none;}
+  .hamburger{display:flex;}
+  .hero{padding:26px 14px 16px;}
+  .page{padding:20px 14px 70px;}
+  .overview-wrap{flex-direction:column;}
+  .infobox{width:100%;flex:none;}
+  .teams-grid{grid-template-columns:1fr;}
+  .epreuve-scores{grid-template-columns:repeat(2,1fr);}
+  .gallery-grid{grid-template-columns:repeat(3,1fr);}
+  .epreuve-winner{margin-left:0;}
+  .year-tab{min-width:100px;padding:10px 18px;}
+}
+</style>
+</head>
+<body>
+<div class="bg"></div>
+
+<nav>
+  <a href="events.html" class="nav-logo"><img src="logo-artistes.png" alt="" style="height:42px;width:auto;vertical-align:middle;margin-right:8px;"> Les Artistes</a>
+  <div class="nav-links">
+    <a href="events.html"     class="nav-link"> Événements</a>
+    <a href="olympiades.html" class="nav-link active"><span> Olympiades</span></a>
+    <a href="news.html"       class="nav-link"> Actualités</a>
+    <a href="photos.html"     class="nav-link"> Photos</a>
+    <a href="games.html"      class="nav-link"> Jeux</a>
+    <a href="shop.html"       class="nav-link"> Boutique</a>
+    <a href="annuaire.html"   class="nav-link"> Annuaire</a>
+    <a href="notes.html"      class="nav-link"> Notes</a>
+  </div>
+  <div class="nav-right">
+    <div class="nav-user">
+      <div class="avatar" id="nav-avatar">?</div>
+      <span id="nav-name">...</span>
+    </div>
+    <button class="btn-logout" onclick="handleLogout()">Déconnexion</button>
+  </div>
+  <button class="hamburger" id="hamburger" onclick="toggleMenu()" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<div class="mobile-menu" id="mobile-menu">
+  <a href="events.html"     class="nav-link"> Événements</a>
+  <a href="olympiades.html" class="nav-link active"> Olympiades</a>
+  <a href="news.html"       class="nav-link"> Actualités</a>
+  <a href="photos.html"     class="nav-link"> Photos</a>
+  <a href="games.html"      class="nav-link"> Jeux</a>
+  <a href="shop.html"       class="nav-link"> Boutique</a>
+  <a href="annuaire.html"   class="nav-link"> Annuaire</a>
+  <a href="notes.html"      class="nav-link"> Notes</a>
+</div>
+
+<main>
+  <section class="hero">
+    <div class="hero-eyebrow">📜 Archives officielles</div>
+    <h1 class="hero-title">Les <span class="accent">Olympiades</span></h1>
+    <p class="hero-sub">Chaque année, quatre équipes s'affrontent dans une série d'épreuves aussi sportives qu'arrosées. Ici est archivée, édition après édition, toute l'histoire glorieuse (ou pas) de la compétition.</p>
+
+    <div class="year-tabs" id="year-tabs"></div>
+  </section>
+
+  <div class="page" id="page-content"></div>
+</main>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// DONNÉES — à remplacer / brancher sur Supabase plus tard. Pour l'instant :
+// premier jet avec données fictives, 2 éditions (2025 et 2026).
+// ─────────────────────────────────────────────────────────────────────────────
+var OLYMPIADES = {
+  2025: {
+    theme: "Édition Grèce Antique",
+    date: "12 – 13 juillet 2025",
+    lieu: "Chez Thomas, Toulouse",
+    photoEmoji: "🏛️",
+    photoColor: "linear-gradient(135deg,rgba(255,107,107,.35),rgba(199,125,255,.25))",
+    resume: "Première édition à réunir les quatre équipes autour d'un thème antique. Toges improvisées avec des draps, couronnes de laurier en carton, et un mot d'ordre : \"honorer les dieux à coups de shots\". Le week-end a démarré sous une chaleur écrasante et s'est terminé au bord de la piscine, entre deux chants de victoire.",
+    citation: "\"On savait que ça allait mal finir quand Julien a proposé le marathon des shots AVANT le tir à la corde.\"",
+    citationAuteur: "— Camille, capitaine des Sirènes Tequila",
+    champion: "Les Spartiates Ivres",
+    teams: [
+      {
+        nom: "Les Spartiates Ivres", emoji: "🍷", couleur: "#FF6B6B", points: 38, classement: 1,
+        capitaine: "Thomas",
+        membres: ["Thomas","Julien","Marion","Antoine","Léa D.","Sarah"]
+      },
+      {
+        nom: "Les Amazones du Chaos", emoji: "🏹", couleur: "#C77DFF", points: 33, classement: 2,
+        capitaine: "Manon",
+        membres: ["Manon","Hugo","Chloé","Baptiste","Inès","Yohan"]
+      },
+      {
+        nom: "Les Centaures Frappés", emoji: "🐎", couleur: "#FFD93D", points: 27, classement: 3,
+        capitaine: "Kevin",
+        membres: ["Kevin","Élise","Romain","Nora","Maxime","Pauline"]
+      },
+      {
+        nom: "Les Sirènes Tequila", emoji: "🧜", couleur: "#4ECDC4", points: 22, classement: 4,
+        capitaine: "Camille",
+        membres: ["Camille","Nicolas","Laurie","Fabien","Justine","Robin"]
+      }
+    ],
+    epreuves: [
+      {
+        nom: "Le Marathon des Shots", num: 1,
+        desc: "Course à relais où chaque changement de témoin nécessite un shot cul-sec. Premier arrivé, mais surtout premier encore debout.",
+        vainqueur: "Les Spartiates Ivres",
+        scores: {"Les Spartiates Ivres":10,"Les Amazones du Chaos":8,"Les Centaures Frappés":6,"Les Sirènes Tequila":4}
+      },
+      {
+        nom: "La Course en Sac à Vin", num: 2,
+        desc: "Version revisitée de la course en sac : un verre de vin à la main, interdiction d'en renverser une goutte sous peine de pénalité.",
+        vainqueur: "Les Amazones du Chaos",
+        scores: {"Les Spartiates Ivres":6,"Les Amazones du Chaos":10,"Les Centaures Frappés":8,"Les Sirènes Tequila":4}
+      },
+      {
+        nom: "Le Tir à la Corde Aquatique", num: 3,
+        desc: "Classique du tir à la corde, mais au-dessus de la piscine. Les perdants finissent trempés — et souvent, les gagnants aussi.",
+        vainqueur: "Les Spartiates Ivres",
+        scores: {"Les Spartiates Ivres":10,"Les Amazones du Chaos":6,"Les Centaures Frappés":4,"Les Sirènes Tequila":8}
+      },
+      {
+        nom: "Le Beer Pong Géant", num: 4,
+        desc: "Tournoi en équipe sur table XXL fabriquée maison, 20 gobelets par côté. Ambiance électrique garantie.",
+        vainqueur: "Les Centaures Frappés",
+        scores: {"Les Spartiates Ivres":4,"Les Amazones du Chaos":6,"Les Centaures Frappés":10,"Les Sirènes Tequila":2}
+      },
+      {
+        nom: "Le Relais Ivre-Nage", num: 5,
+        desc: "Épreuve finale : traversée de la piscine en relais, un verre plein posé en équilibre sur la tête. Décisive pour le classement général.",
+        vainqueur: "Les Spartiates Ivres",
+        scores: {"Les Spartiates Ivres":8,"Les Amazones du Chaos":3,"Les Centaures Frappés":2,"Les Sirènes Tequila":4}
+      }
+    ],
+    galerie: 4
+  },
+
+  2026: {
+    theme: "Édition Far West",
+    date: "4 – 5 juillet 2026",
+    lieu: "Chez Léa, Dax",
+    photoEmoji: "🤠",
+    photoColor: "linear-gradient(135deg,rgba(255,217,61,.3),rgba(255,107,107,.25))",
+    resume: "Deuxième édition, sous le signe du désert et des saloons. Chapeaux de cowboy et faux revolvers en plastique étaient de sortie. Nouvelle règle testée cette année : le tirage au sort des équipes s'est fait à l'aveugle, pour mélanger les habitués et casser les alliances de 2025.",
+    citation: "\"Perdre la finale à un point près contre les Cowboys Éméchés, ça va nous hanter jusqu'en 2027.\"",
+    citationAuteur: "— Nora, capitaine des Bandits Masqués",
+    champion: "Les Cowboys Éméchés",
+    teams: [
+      {
+        nom: "Les Cowboys Éméchés", emoji: "🤠", couleur: "#FFD93D", points: 36, classement: 1,
+        capitaine: "Julien",
+        membres: ["Julien","Élise","Robin","Manon","Antoine","Justine"]
+      },
+      {
+        nom: "Les Bandits Masqués", emoji: "🎭", couleur: "#C77DFF", points: 35, classement: 2,
+        capitaine: "Nora",
+        membres: ["Nora","Thomas","Chloé","Fabien","Sarah","Kevin"]
+      },
+      {
+        nom: "Les Squaws du Désert", emoji: "🏜️", couleur: "#4ECDC4", points: 29, classement: 3,
+        capitaine: "Inès",
+        membres: ["Inès","Maxime","Camille","Hugo","Léa D.","Yohan"]
+      },
+      {
+        nom: "Les Chercheurs d'Or Bourrés", emoji: "⛏️", couleur: "#FF6B6B", points: 24, classement: 4,
+        capitaine: "Baptiste",
+        membres: ["Baptiste","Pauline","Romain","Marion","Laurie","Nicolas"]
+      }
+    ],
+    epreuves: [
+      {
+        nom: "Le Duel du Saloon", num: 1,
+        desc: "Duel de rapidité façon pistolero : premier à décapsuler et vider sa bière remporte le point pour son équipe.",
+        vainqueur: "Les Bandits Masqués",
+        scores: {"Les Cowboys Éméchés":6,"Les Bandits Masqués":10,"Les Squaws du Désert":8,"Les Chercheurs d'Or Bourrés":4}
+      },
+      {
+        nom: "La Chasse au Trésor Bourbon", num: 2,
+        desc: "Chasse au trésor dans le jardin, chaque indice trouvé se célèbre avec une gorgée de bourbon. Le trésor final : la bouteille elle-même.",
+        vainqueur: "Les Cowboys Éméchés",
+        scores: {"Les Cowboys Éméchés":10,"Les Bandits Masqués":8,"Les Squaws du Désert":4,"Les Chercheurs d'Or Bourrés":6}
+      },
+      {
+        nom: "Le Rodéo Gonflable", num: 3,
+        desc: "Taureau mécanique gonflable loué pour l'occasion. Rester en selle le plus longtemps possible, cocktail à la main.",
+        vainqueur: "Les Squaws du Désert",
+        scores: {"Les Cowboys Éméchés":6,"Les Bandits Masqués":4,"Les Squaws du Désert":10,"Les Chercheurs d'Or Bourrés":8}
+      },
+      {
+        nom: "Le Lasso des Bouteilles", num: 4,
+        desc: "Attraper un maximum de bouteilles vides au lasso en 3 minutes chrono. Précision et sang-froid exigés.",
+        vainqueur: "Les Cowboys Éméchés",
+        scores: {"Les Cowboys Éméchés":10,"Les Bandits Masqués":8,"Les Squaws du Désert":6,"Les Chercheurs d'Or Bourrés":2}
+      },
+      {
+        nom: "Le Braquage de la Diligence", num: 5,
+        desc: "Épreuve finale en relais chronométré autour de la maison, plateau de shots à transporter sans en renverser. Le point qui a fait basculer le classement général.",
+        vainqueur: "Les Bandits Masqués",
+        scores: {"Les Cowboys Éméchés":4,"Les Bandits Masqués":5,"Les Squaws du Désert":1,"Les Chercheurs d'Or Bourrés":4}
+      }
+    ],
+    galerie: 8
+  }
+};
+
+var YEARS = Object.keys(OLYMPIADES).sort(function(a,b){ return b-a; }); // plus récent d'abord
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RENDER
+// ─────────────────────────────────────────────────────────────────────────────
+function esc(s){ if(!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function initTabs(){
+  var wrap = document.getElementById('year-tabs');
+  wrap.innerHTML = YEARS.map(function(y, i){
+    var d = OLYMPIADES[y];
+    return '<div class="year-tab'+(i===0?' active':'')+'" data-year="'+y+'" onclick="switchYear(\''+y+'\')">'
+      + '<div class="yt-num">'+y+'</div>'
+      + '<div class="yt-theme">'+esc(d.theme)+'</div>'
+      + '</div>';
+  }).join('');
+}
+
+function switchYear(year){
+  document.querySelectorAll('.year-tab').forEach(function(t){ t.classList.toggle('active', t.dataset.year===year); });
+  document.querySelectorAll('.year-panel').forEach(function(p){ p.classList.toggle('show', p.dataset.year===year); });
+}
+
+function renderPage(){
+  var container = document.getElementById('page-content');
+  container.innerHTML = YEARS.map(function(y, i){ return buildYearPanel(y, i===0); }).join('') + buildHallOfFame();
+}
+
+function buildYearPanel(year, isFirst){
+  var d = OLYMPIADES[year];
+  var sortedTeams = d.teams.slice().sort(function(a,b){ return a.classement-b.classement; });
+
+  var html = '<div class="year-panel'+(isFirst?' show':'')+'" data-year="'+year+'">';
+
+  // ── Vue d'ensemble : texte + infobox ──
+  html += '<div class="overview-wrap">';
+  html += '<div class="overview-text">'
+    + '<h2>🏅 Olympiades '+year+' — '+esc(d.theme)+'</h2>'
+    + '<p>'+esc(d.resume)+'</p>'
+    + '<div class="overview-quote">'+esc(d.citation)+'<cite>'+esc(d.citationAuteur)+'</cite></div>'
+    + '</div>';
+
+  html += '<div class="infobox">'
+    + '<div class="infobox-photo" style="background:'+d.photoColor+'">'+d.photoEmoji+'<span class="ip-cap">Photo à venir</span></div>'
+    + '<div class="infobox-title">Olympiades '+year+'</div>'
+    + '<table class="infobox-table">'
+    +   '<tr><th>Thème</th><td>'+esc(d.theme)+'</td></tr>'
+    +   '<tr><th>Dates</th><td>'+esc(d.date)+'</td></tr>'
+    +   '<tr><th>Lieu</th><td>'+esc(d.lieu)+'</td></tr>'
+    +   '<tr><th>Équipes</th><td>'+d.teams.length+' équipes de '+d.teams[0].membres.length+'</td></tr>'
+    +   '<tr><th>Épreuves</th><td>'+d.epreuves.length+' épreuves</td></tr>'
+    + '</table>'
+    + '<div class="infobox-champ">🏆 '+esc(d.champion)+'</div>'
+    + '</div>';
+  html += '</div>';
+
+  // ── Podium / palmarès général ──
+  html += '<div class="section-label"><span>🏆 Classement général</span></div>';
+  html += '<div class="podium-wrap">';
+  sortedTeams.slice(0,4).forEach(function(t){
+    html += '<div class="podium-col podium-'+t.classement+'">'
+      + '<div class="podium-team">'+t.emoji+' '+esc(t.nom)+'</div>'
+      + '<div class="podium-pts">'+t.points+' pts</div>'
+      + '<div class="podium-bar">'+t.classement+'</div>'
+      + '</div>';
+  });
+  html += '</div>';
+
+  html += '<table class="palma-table" style="margin-top:16px">'
+    + '<tr><th>Rang</th><th>Équipe</th><th>Capitaine</th><th>Points</th></tr>'
+    + sortedTeams.map(function(t){
+        return '<tr><td><span class="pos-badge pos-'+t.classement+'">'+t.classement+'</span></td>'
+          + '<td>'+t.emoji+' '+esc(t.nom)+'</td>'
+          + '<td style="color:var(--muted)">'+esc(t.capitaine)+'</td>'
+          + '<td style="font-weight:700">'+t.points+' pts</td></tr>';
+      }).join('')
+    + '</table>';
+
+  // ── Équipes ──
+  html += '<div class="section-label"><span>👥 Les équipes</span></div>';
+  html += '<div class="teams-grid">';
+  d.teams.forEach(function(t){
+    html += '<div class="team-card">'
+      + '<div class="team-stripe" style="background:'+t.couleur+'"></div>'
+      + '<div class="team-head">'
+      +   '<span class="team-emoji">'+t.emoji+'</span>'
+      +   '<div><div class="team-name">'+esc(t.nom)+'</div></div>'
+      +   '<span class="team-rank" style="background:'+t.couleur+'22;color:'+t.couleur+';border:1px solid '+t.couleur+'44">#'+t.classement+'</span>'
+      + '</div>'
+      + '<div class="team-pts">'+t.points+' points · capitaine '+esc(t.capitaine)+'</div>'
+      + '<div class="team-members">'
+      +   t.membres.map(function(m){
+            return '<span class="member-chip'+(m===t.capitaine?' captain':'')+'">'+(m===t.capitaine?'👑 ':'')+esc(m)+'</span>';
+          }).join('')
+      + '</div>'
+      + '</div>';
+  });
+  html += '</div>';
+
+  // ── Épreuves ──
+  html += '<div class="section-label"><span>🎯 Les épreuves</span></div>';
+  d.epreuves.forEach(function(ep){
+    html += '<div class="epreuve-card">'
+      + '<div class="epreuve-top">'
+      +   '<div class="epreuve-num">'+ep.num+'</div>'
+      +   '<div style="flex:1;min-width:180px">'
+      +     '<div class="epreuve-name">'+esc(ep.nom)+'</div>'
+      +     '<div class="epreuve-desc">'+esc(ep.desc)+'</div>'
+      +   '</div>'
+      +   '<div class="epreuve-winner">🏅 '+esc(ep.vainqueur)+'</div>'
+      + '</div>';
+    html += '<div class="epreuve-scores">';
+    d.teams.forEach(function(t){
+      html += '<div class="es-item"><div class="es-team">'+t.emoji+' '+esc(t.nom)+'</div><div class="es-pts" style="color:'+t.couleur+'">'+(ep.scores[t.nom]!==undefined?ep.scores[t.nom]:'—')+'</div></div>';
+    });
+    html += '</div></div>';
+  });
+
+  // ── Galerie ──
+  html += '<div class="section-label"><span>📸 Galerie</span></div>';
+  html += '<div class="gallery-grid">';
+  for (var i=0;i<d.galerie;i++){
+    html += '<div class="gallery-ph"><span class="gp-emoji">🖼️</span>Photo à venir</div>';
+  }
+  html += '</div>';
+  html += '<div class="gallery-note">Emplacement réservé — les photos de l\'édition '+year+' viendront compléter cette galerie.</div>';
+
+  html += '</div>'; // year-panel
+  return html;
+}
+
+function buildHallOfFame(){
+  var html = '<div class="hof-wrap">'
+    + '<div class="hof-title">📖 Palmarès des éditions</div>';
+  YEARS.forEach(function(y){
+    var d = OLYMPIADES[y];
+    html += '<div class="hof-row">'
+      + '<div class="hof-year">'+y+'</div>'
+      + '<div class="hof-theme">'+esc(d.theme)+' · '+esc(d.lieu)+'</div>'
+      + '<div class="hof-champ">🏆 '+esc(d.champion)+'</div>'
+      + '</div>';
+  });
+  html += '</div>';
+  return html;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AUTH / NAV — même logique que le reste du site
+// ─────────────────────────────────────────────────────────────────────────────
+var sb = null;
+(function initAuth(){
+  var SUPABASE_URL  = 'https://ldchxxkmvepvbvhdokot.supabase.co';
+  var SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkY2h4eGttdmVwdmJ2aGRva290Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0NDQwNTMsImV4cCI6MjA4OTAyMDA1M30.HJw5-GsHCildEQ28HAB30_YKdiZOdeRJIml5wgLvHos';
+  var script = document.createElement('script');
+  script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+  script.onload = async function(){
+    sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+    var s = await sb.auth.getSession();
+    if (!s.data.session) { window.location.href = 'login.html'; return; }
+    var currentUser = s.data.session.user;
+    var p = await sb.from('profiles').select('*').eq('id', currentUser.id).maybeSingle();
+    var meta = currentUser.user_metadata || {};
+    var prenom = (p.data && (p.data.prenom || p.data.pseudo)) || meta.prenom || meta.pseudo || currentUser.email || '?';
+    document.getElementById('nav-name').textContent   = prenom;
+    document.getElementById('nav-avatar').textContent = prenom[0].toUpperCase();
+  };
+  document.head.appendChild(script);
+})();
+
+async function handleLogout(){ if(sb) await sb.auth.signOut(); window.location.href='login.html'; }
+
+function toggleMenu(){
+  var menu = document.getElementById('mobile-menu');
+  var hamb = document.getElementById('hamburger');
+  var isOpen = menu.classList.toggle('open');
+  hamb.classList.toggle('open', isOpen);
+}
+document.addEventListener('click', function(e){
+  var menu = document.getElementById('mobile-menu');
+  var hamb = document.getElementById('hamburger');
+  if (menu && menu.classList.contains('open') && !menu.contains(e.target) && !hamb.contains(e.target)) {
+    menu.classList.remove('open');
+    hamb.classList.remove('open');
+  }
+});
+
+initTabs();
+renderPage();
+</script>
+</body>
+</html>
