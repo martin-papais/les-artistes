@@ -83,7 +83,7 @@ main{padding-top:64px;position:relative;z-index:1;}
 .infobox-table th{text-align:left;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);padding:9px 8px 9px 12px;width:38%;vertical-align:top;}
 .infobox-table td{font-size:.8rem;padding:9px 12px 9px 4px;vertical-align:top;}
 .infobox-champ{display:flex;align-items:center;gap:6px;padding:11px 12px;background:rgba(255,217,61,.1);border-top:1px solid rgba(255,217,61,.25);font-size:.82rem;font-weight:700;}
-/* TEXTE SIMPLE — réutilisé pour BBQ, Loto, auberge espagnole, Anecdote */
+/* TEXTE SIMPLE — réutilisé pour BBQ, Loto, auberge espagnole, Anecdote, Repas legacy */
 .text-block{color:rgba(255,255,255,.75);font-size:.9rem;line-height:1.75;max-width:760px;}
 /* Petite carte : gagnant de la Super Quine */
 .super-winner-card{display:flex;align-items:center;gap:14px;background:rgba(255,217,61,.08);border:1px solid rgba(255,217,61,.3);border-radius:16px;padding:14px 18px;margin-top:12px;max-width:480px;}
@@ -162,7 +162,20 @@ main{padding-top:64px;position:relative;z-index:1;}
 .gallery-ph{aspect-ratio:1;border-radius:14px;border:1.5px dashed var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--muted);font-size:.68rem;text-align:center;padding:8px;transition:var(--trans);cursor:pointer;}
 .gallery-ph:hover{border-color:rgba(255,255,255,.3);background:var(--surface);}
 .gallery-ph .gp-emoji{font-size:1.6rem;opacity:.6;}
+.gallery-photo{position:relative;aspect-ratio:1;border-radius:14px;overflow:hidden;border:1px solid var(--border);background:var(--surface);}
+.gallery-photo img{width:100%;height:100%;object-fit:cover;display:block;}
+.gallery-photo .gp-caption{position:absolute;left:0;right:0;bottom:0;padding:6px 8px;font-size:.68rem;color:#fff;background:linear-gradient(transparent,rgba(0,0,0,.75));}
 .gallery-note{margin-top:10px;font-size:.76rem;color:var(--muted);}
+/* ARCHIVES — mise en forme distincte pour les éditions peu documentées (2022, 2023...) */
+.legacy-meta{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 4px;}
+.legacy-meta span{display:flex;align-items:center;gap:6px;padding:7px 13px;background:var(--surface2);border:1px solid var(--border);border-radius:11px;font-size:.8rem;}
+.legacy-note{font-size:.85rem;font-style:italic;color:rgba(255,255,255,.55);line-height:1.75;margin-top:16px;padding:13px 17px;border-left:3px solid var(--border);background:rgba(0,0,0,.15);border-radius:0 12px 12px 0;max-width:760px;}
+.legacy-epreuve-list{list-style:none;display:flex;flex-direction:column;gap:10px;}
+.legacy-epreuve-list li{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 16px;font-size:.85rem;}
+.legacy-epreuve-list li b{font-family:'Playfair Display',serif;font-weight:700;}
+.legacy-epreuve-list li span{display:block;color:rgba(255,255,255,.6);font-size:.8rem;margin-top:3px;}
+.legacy-winners{display:flex;flex-wrap:wrap;gap:8px;}
+.legacy-winner-chip{padding:6px 14px;background:rgba(255,217,61,.12);border:1px solid rgba(255,217,61,.3);border-radius:20px;font-size:.82rem;font-weight:700;color:var(--yellow);}
 /* HALL OF FAME (bas de page, tous les ans) */
 .hof-wrap{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:20px 22px;margin-top:46px;}
 .hof-title{font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
@@ -247,18 +260,76 @@ var COLOR_MAP = {
 function colorHex(key){ return (COLOR_MAP[key] || {}).hex || '#999'; }
 function colorLabel(key){ return (COLOR_MAP[key] || {}).label || ''; }
 // ─────────────────────────────────────────────────────────────────────────────
-// DONNÉES — à brancher sur Supabase plus tard si besoin. Noms, équipes,
-// épreuves, descriptions et points = les vraies données de 2025 et 2026.
-// Chaque équipe a un "id" stable utilisé pour relier scores / couleurs / bonus.
+// DONNÉES
+// ─────────────────────────────────────────────────────────────────────────────
+// Deux types d'éditions :
+//  - Éditions "complètes" (2025, 2026...) : équipes, scores par épreuve, bonus/
+//    malus, absents, BBQ, loto, auberge espagnole, plusieurs citations possibles.
+//  - Éditions "archives" (2022, 2023...) : marquées `legacy: true`. Beaucoup
+//    moins d'infos disponibles → pas d'équipes complètes, pas de scores, pas de
+//    classement, pas de citation, pas de bonus/malus, pas de BBQ/loto/auberge
+//    espagnole. Une structure plus simple et plus sobre leur est dédiée
+//    (voir buildLegacyYearPanel).
+//
+// PHOTOS : pour CHAQUE année (legacy ou non), ajoute tes photos dans le
+// tableau `photos` de cette année-là, au format :
+//   photos: [
+//     { url: "https://exemple.com/mon-image.jpg", caption: "Le flip cup 2023" },
+//     { url: "https://exemple.com/mon-image2.jpg", caption: "L'équipe gagnante" }
+//   ]
+// Tant que `photos` est vide, des cases "Photo à venir" s'affichent à la place
+// (leur nombre est fixé par le champ `galerie`).
 // ─────────────────────────────────────────────────────────────────────────────
 var OLYMPIADES = {
+  2022: {
+    legacy: true,
+    date: "5 juin 2022",
+    lieu: "Chez Elise (journée), puis chez Thomas C (soirée)",
+    meteo: { emoji: "🌧️", temp: "Pluvieux", desc: "Nuageux avec une légère pluie" },
+    format: "Équipes de 2",
+    note: "Première édition officielle des Olympiades, disputée en équipes de deux. Les souvenirs précis de cette édition (composition des équipes, classement, résultats détaillés) se sont perdus avec le temps — si des photos ou informations refont surface, elles viendront enrichir cette page.",
+    repasNote: "Un grand jambon à l'apéro, puis pizza le soir.",
+    epreuves: [
+      { nom: "Flip Cup" },
+      { nom: "Parcours du combattant", desc: "Tourner autour d'un poteau puis sprint final." },
+      { nom: "Pastèque" },
+      { nom: "Brouette" },
+      { nom: "Ventriglisse", desc: "Amusement libre, non chronométré." }
+    ],
+    vainqueurs: [],
+    participants: [],
+    // ← Ajoute ici les photos de 2022, ex: { url: "...", caption: "..." }
+    photos: [],
+    galerie: 2
+  },
+  2023: {
+    legacy: true,
+    date: "19 août 2023",
+    lieu: "Chez Timothée",
+    meteo: { emoji: "☀️", temp: "Ensoleillé", desc: "Grand soleil" },
+    format: "Équipes de 5",
+    note: "Deuxième édition officielle des Olympiades, cette fois en équipes de cinq. La composition complète des équipes adverses ainsi que le classement général ne se sont pas conservés dans le temps — seule l'équipe victorieuse reste connue.",
+    epreuves: [
+      { nom: "Flip Cup" },
+      { nom: "Parcours du combattant", desc: "Cuve, sprint, poutre, ramper sous une bâche, shot et fléchette." },
+      { nom: "Pastèque" },
+      { nom: "Balle dans le verre" }
+    ],
+    vainqueurs: ["Lorette","Mattéo","Antoine","Cédric","Laurie"],
+    participants: [],
+    // ← Ajoute ici les photos de 2023, ex: { url: "...", caption: "..." }
+    photos: [],
+    galerie: 2
+  },
   2025: {
     date: "9 août 2025",
     lieu: "Chez Timothée",
     meteo: { emoji: "☀️", temp: "29°C", desc: "Grand soleil, journée caniculaire" },
     resume: "Troisième édition officielle des Olympiades, organisée cette année chez Timothée. Une chaleur écrasante s'est fait ressentir tout au long de la journée, mais la présence de la piscine a permis aux participants de se rafraîchir. Cette année marque l'arrivée de deux nouveaux participants dans ce tournois : Clara et Mathis, venus tenter leur chance. Un peu de bricolage a été nécessaire pour préparer les épreuves, avec notamment une superbe structure en bois permettant de traverser la piscine, ainsi que deux autres structures dédiées au lancer de balles. Grande première cette année : les équipes ne se contentent plus d'une simple couleur, elles ont désormais un vrai nom et un cri de guerre bien à elles, et peuvent même se maquiller à l'effigie de leur équipe pour intimider l'adversaire. Cette édition marque également la mise en place d'un loto/quine entre le repas du midi et les épreuves (pour la digestion).",
-    citation: "\"On perd uniquement à cause des bonus/malus ... ce n'est pas juste.\"",
-    citationAuteur: "— Antoine, capitaine de Louis la tortue jaune",
+    citations: [
+      { text: "\"On perd uniquement à cause des bonus/malus ... ce n'est pas juste.\"", auteur: "— Antoine, capitaine de Louis la tortue jaune" }
+      // ← Ajoute d'autres citations ici si besoin, ex: { text: "...", auteur: "— ..." }
+    ],
     bbq: "Au menu cette année, un bel apéritif était au rendez-vous, avec un généreux jambon, de belles ventrèches et des chipolatas. Une pointe de légumes s'est aussi invitée à la fête, probablement pour se donner bonne conscience, accompagnée de pain pour ne rien laisser passer. Côté liquide, rien n'a été laissé au hasard : bières, Ricard, sangria et punch se sont relayés tout au long de l'apéro pour accompagner le tout.",
     loto: "Le loto/quine a suivi le repas, entre digestion et fous rires. Sur les trois premières quines, Lisa et Mattéo ont chacun décroché une ligne, et c'est Quentin qui a raflé la deuxième quine avec ses deux lignes d'un coup. Parmi les petits lots à gagner : un paquet de Chamallows géant, un gobelet réutilisable à l'effigie des Olympiades et une bouteille de rosé bas de gamme gagnée par Antoine, qui l'a évidemment ouverte sur-le-champ.",
     superQuine: { gagnant: "Lorette", equipeId: "ciels", lot: "Un jambon et sa planche pour le découper" },
@@ -323,6 +394,8 @@ var OLYMPIADES = {
       { nom: "Thomas G",  equipeId: null,       type: "absent",   raison: "Un beau voyage à Malte au même moment l'attendait" },
       { nom: "Carla",     equipeId: null,       type: "absent",   raison: "Partie voir la famille, c'est toujours important" }
     ],
+    // ← Ajoute ici les photos de 2025, ex: { url: "...", caption: "..." }
+    photos: [],
     galerie: 4
   },
   2026: {
@@ -330,8 +403,10 @@ var OLYMPIADES = {
     lieu: "Chez Thomas Grima",
     meteo: { emoji: "⛅", temp: "23°C", desc: "Ciel voilé avec de belles éclaircies" },
     resume: "Quatrième édition, organisée cette fois chez Thomas Grima. Quatre nouveaux participants sont venus grossir les rangs cette année : Carla, Barnabé, Clément et Noha, prêts à découvrir dans quoi ils venaient de s'engager. Plusieurs nouveautés sont également à signaler. Tout d'abord, une superbe fontaine à punch, coulant en continu depuis un tonneau, a veillé à ce que personne ne souffre de déshydratation. Mais la véritable révolution de cette édition reste l'arrivée d'un tout nouveau trophée : le bouclier des Olympiades des Artistes. Désormais, chaque année, le nom du vainqueur y sera gravé pour l'éternité (ou du moins jusqu'à la prochaine édition), faisant officiellement entrer ce tournoi dans une nouvelle ère.",
-    citation: "\"Je ne comprend pas ... notre équipe avait pourtant les moyens de gagner ... on a pas su concrétiser\"",
-    citationAuteur: "— Thomas C, membre de l'équipe des Bleubites",
+    citations: [
+      { text: "\"Je ne comprend pas ... notre équipe avait pourtant les moyens de gagner ... on a pas su concrétiser\"", auteur: "— Thomas C, membre de l'équipe des Bleubites" }
+      // ← Ajoute d'autres citations ici si besoin, ex: { text: "...", auteur: "— ..." }
+    ],
     bbq: "Au menu cette année, un apéritif à la hauteur des Olympiades : un saucisson de 2,5 kg qui aurait pu servir d'accessoire pour le lancer de poids, de belles brochettes de poulet et de bœuf, ainsi que du magret de canard cuit à la plancha pour les palais les plus exigeants. Le tout accompagné de poivrons grillés pour la touche de légumes et de pain pour les féculents. Sans oublier des saucisses végétariennes spécialement prévues pour Lorette, histoire que personne ne reste sur sa faim. Côté boissons, le punch a coulé à flots pour accompagner le tout, avec en accompagnement quelques shots de Menthe-Pastille, orchestrés avec brio par Mathis.",
     loto: "Le loto/quine de cette édition a été particulièrement disputé, avec beaucoup plus de diversité parmi les gagnants que l'année dernière — signe que la chance a enfin décidé de tourner. Parmi les nombreux petits lots rigolos mis en jeu, quelques mentions honorables méritent d'être soulignées : le lot BTP (un WD-40 et un mini tractopelle) ainsi que le lot sport (haltère, corde à sauter et balle pour chien) ont tous deux été raflés par Maxime.. Le lot rempli de malice, quant à lui — composé d'une cale-porte peluche, d'un gnome de jardin et d'une peluche anti-stress — est revenu à Barnabé, qui repart avec de quoi décorer son jardin.",
     superQuine: { gagnant: "Carla", equipeId: "bleubites", lot: "Un Wonderbox en duo de 50€ pour un moment détente/activité/sport" },
@@ -394,13 +469,15 @@ var OLYMPIADES = {
       { nom: "Anaïs",  equipeId: "redmorts", type: "blessure", raison: "Blessée au poignet. A cela s'ajoute une belle commotion reçue sur le parcours du combattant lors d'une chute sur le ventriglisse" },
       { nom: "Elisa",  equipeId: null,       type: "absent",   raison: "Chez la famille de Lucas dans les Alpes, pas disponible cette fois" }
     ],
+    // ← Ajoute ici les photos de 2026, ex: { url: "...", caption: "..." }
+    photos: [],
     galerie: 8
   }
 };
 var YEARS = Object.keys(OLYMPIADES).sort(function(a,b){ return b-a; }); // plus récent d'abord
 // ─────────────────────────────────────────────────────────────────────────────
 // CALCUL — classement général et vainqueur de chaque épreuve 100% automatiques,
-// à partir des scores + bonus/malus. Rien n'est codé en dur.
+// à partir des scores + bonus/malus. Rien n'est codé en dur. (Éditions complètes uniquement)
 // ─────────────────────────────────────────────────────────────────────────────
 function computeYear(d){
   var byId = {};
@@ -440,8 +517,32 @@ function switchYear(year){
 }
 function renderPage(){
   var container = document.getElementById('page-content');
-  container.innerHTML = YEARS.map(function(y, i){ return buildYearPanel(y, i===0); }).join('') + buildHallOfFame();
+  container.innerHTML = YEARS.map(function(y, i){
+    var d = OLYMPIADES[y];
+    return d.legacy ? buildLegacyYearPanel(y, d, i===0) : buildYearPanel(y, i===0);
+  }).join('') + buildHallOfFame();
 }
+// ── Galerie photo, partagée par les deux types de page ──
+function buildGallery(d, year){
+  var html = '<div class="section-label"><span>📸 Galerie</span></div>';
+  html += '<div class="gallery-grid">';
+  if (d.photos && d.photos.length) {
+    d.photos.forEach(function(p){
+      html += '<div class="gallery-photo"><img src="'+esc(p.url)+'" alt="'+esc(p.caption||('Olympiades '+year))+'" loading="lazy">'
+        + (p.caption ? '<span class="gp-caption">'+esc(p.caption)+'</span>' : '')
+        + '</div>';
+    });
+  } else {
+    var n = d.galerie || 4;
+    for (var i=0;i<n;i++){
+      html += '<div class="gallery-ph"><span class="gp-emoji">🖼️</span>Photo à venir</div>';
+    }
+  }
+  html += '</div>';
+  html += '<div class="gallery-note">'+((d.photos && d.photos.length) ? ('Photos de l\'édition '+year+'.') : ('Emplacement réservé — les photos de l\'édition '+year+' viendront compléter cette galerie.'))+'</div>';
+  return html;
+}
+// ── Page "édition complète" (2025, 2026, ...) ──
 function buildYearPanel(year, isFirst){
   var d = OLYMPIADES[year];
   var sortedTeams = computeYear(d);
@@ -450,12 +551,15 @@ function buildYearPanel(year, isFirst){
   var champion = sortedTeams[0];
   var totalMembres = d.teams.reduce(function(sum,t){ return sum + t.membres.filter(Boolean).length; }, 0);
   var html = '<div class="year-panel'+(isFirst?' show':'')+'" data-year="'+year+'">';
-  // ── Vue d'ensemble : résumé + citation, alignés avec le haut de l'encadré ──
+  // ── Vue d'ensemble : résumé + citation(s), alignés avec le haut de l'encadré ──
+  var citationsHtml = (d.citations || []).map(function(c){
+    return '<div class="overview-quote">'+esc(c.text)+'<cite>'+esc(c.auteur)+'</cite></div>';
+  }).join('');
   html += '<div class="overview-wrap">';
   html += '<div class="overview-text">'
     + '<h2>🏅 Olympiades '+year+'</h2>'
     + '<div class="text-block">'+esc(d.resume)+'</div>'
-    + '<div class="overview-quote">'+esc(d.citation)+'<cite>'+esc(d.citationAuteur)+'</cite></div>'
+    + citationsHtml
     + '</div>';
   html += '<div class="infobox">'
     + '<div class="infobox-title">Olympiades '+year+'</div>'
@@ -604,13 +708,51 @@ function buildYearPanel(year, isFirst){
     html += '<div class="text-block">'+esc(d.anecdote)+'</div>';
   }
   // ── Galerie ──
-  html += '<div class="section-label"><span>📸 Galerie</span></div>';
-  html += '<div class="gallery-grid">';
-  for (var i=0;i<d.galerie;i++){
-    html += '<div class="gallery-ph"><span class="gp-emoji">🖼️</span>Photo à venir</div>';
+  html += buildGallery(d, year);
+  html += '</div>'; // year-panel
+  return html;
+}
+// ── Page "archive" (2022, 2023, ...) : structure allégée, beaucoup moins de sections ──
+function buildLegacyYearPanel(year, d, isFirst){
+  var html = '<div class="year-panel'+(isFirst?' show':'')+'" data-year="'+year+'">';
+
+  html += '<div class="overview-text" style="max-width:820px">'
+    + '<h2>🏅 Olympiades '+year+'</h2>'
+    + '<div class="legacy-meta">'
+    +   '<span>'+d.meteo.emoji+' '+esc(d.meteo.desc)+'</span>'
+    +   '<span>📅 '+esc(d.date)+'</span>'
+    +   '<span>📍 '+esc(d.lieu)+'</span>'
+    +   '<span>👥 '+esc(d.format)+'</span>'
+    + '</div>'
+    + '<div class="legacy-note">'+esc(d.note)+'</div>'
+    + '</div>';
+
+  if (d.repasNote) {
+    html += '<div class="section-label"><span>🍽️ Repas</span></div>';
+    html += '<div class="text-block">'+esc(d.repasNote)+'</div>';
   }
-  html += '</div>';
-  html += '<div class="gallery-note">Emplacement réservé — les photos de l\'édition '+year+' viendront compléter cette galerie.</div>';
+
+  html += '<div class="section-label"><span>🎯 Les épreuves</span></div>';
+  html += '<ul class="legacy-epreuve-list">';
+  d.epreuves.forEach(function(ep){
+    html += '<li><b>'+esc(ep.nom)+'</b>'+(ep.desc ? '<span>'+esc(ep.desc)+'</span>' : '')+'</li>';
+  });
+  html += '</ul>';
+
+  html += '<div class="section-label"><span>🏆 Équipe victorieuse</span></div>';
+  if (d.vainqueurs && d.vainqueurs.length) {
+    html += '<div class="legacy-winners">' + d.vainqueurs.map(function(n){ return '<span class="legacy-winner-chip">'+esc(n)+'</span>'; }).join('') + '</div>';
+  } else {
+    html += '<div style="color:var(--muted);font-size:.82rem">Non renseignée — cette information ne s\'est pas conservée.</div>';
+  }
+
+  if (d.participants && d.participants.length) {
+    html += '<div class="section-label"><span>👥 Participants</span></div>';
+    html += '<div class="legacy-winners">' + d.participants.map(function(n){ return '<span class="member-chip">'+esc(n)+'</span>'; }).join('') + '</div>';
+  }
+
+  html += buildGallery(d, year);
+
   html += '</div>'; // year-panel
   return html;
 }
@@ -619,13 +761,22 @@ function buildHallOfFame(){
     + '<div class="hof-title">📖 Palmarès des éditions</div>';
   YEARS.forEach(function(y){
     var d = OLYMPIADES[y];
-    var sorted = computeYear(d);
-    var champion = sorted[0];
-    html += '<div class="hof-row">'
-      + '<div class="hof-year">'+y+'</div>'
-      + '<div class="hof-theme">'+d.meteo.emoji+' '+esc(d.meteo.temp)+' · '+esc(d.lieu)+'</div>'
-      + '<div class="hof-champ"><span class="color-dot" style="background:'+colorHex(champion.couleur)+'"></span>🏆 '+champion.emoji+' '+esc(champion.nom)+'</div>'
-      + '</div>';
+    if (d.legacy) {
+      var champLine = (d.vainqueurs && d.vainqueurs.length) ? ('🏆 ' + d.vainqueurs.join(', ')) : 'Vainqueur non renseigné';
+      html += '<div class="hof-row">'
+        + '<div class="hof-year">'+y+'</div>'
+        + '<div class="hof-theme">'+d.meteo.emoji+' '+esc(d.date)+' · '+esc(d.lieu)+'</div>'
+        + '<div class="hof-champ">'+champLine+'</div>'
+        + '</div>';
+    } else {
+      var sorted = computeYear(d);
+      var champion = sorted[0];
+      html += '<div class="hof-row">'
+        + '<div class="hof-year">'+y+'</div>'
+        + '<div class="hof-theme">'+d.meteo.emoji+' '+esc(d.meteo.temp)+' · '+esc(d.lieu)+'</div>'
+        + '<div class="hof-champ"><span class="color-dot" style="background:'+colorHex(champion.couleur)+'"></span>🏆 '+champion.emoji+' '+esc(champion.nom)+'</div>'
+        + '</div>';
+    }
   });
   html += '</div>';
   return html;
