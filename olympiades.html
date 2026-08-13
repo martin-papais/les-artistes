@@ -301,13 +301,11 @@ var OLYMPIADES = {
     citations: [
       // ← Aucune citation connue pour cette édition. Ajoute ici si besoin, ex: { text: "...", auteur: "— ..." }
     ],
-    repasNote: "Un grand jambon à l'apéro, puis pizza le soir.",
-    epreuves: [
-      { nom: "Flip Cup" },
-      { nom: "Parcours du combattant", desc: "Tourner autour d'un poteau puis sprint final." },
-      { nom: "Pastèque" },
-      { nom: "Brouette" },
-      { nom: "Ventriglisse", desc: "Amusement libre, non chronométré." }
+     epreuves: [
+      { nom: "Flip Cup", desc: "Course à relais aller-retour où chaque changement de témoin nécessite de boire son verre cul-sec et de retourner son verre à 180° en lui donnant une impulsion avec son doigt."},
+      { nom: "Parcours du combattant", desc: "Un parcours ou il fallait tournait plusieurs fois sur sois même autour d'un piquet, puis sprinter et faire le tour d'un arbre, puis revenir." },
+      { nom: "Pastèque", desc: "L'objectif est de manger le plus rapidement une certaine quantité de pastèque par équipe."},
+      { nom: "Brouette", desc: "Simplement une course aller retour de brouette en duo. Il fallait échanger de partenaire au milieu."}
     ],
     vainqueurs: [],
     participants: ["Nicolas","Aurélie","Thomas G","Lucas","Anaïs","Antoine","Elise","Quentin","Matteo","Dimitri","Laurie","Thomas C","Chloé","Timothée","Théo","Maxime","Cédric","Martin","Marine","Elisa"],
@@ -321,15 +319,17 @@ var OLYMPIADES = {
     lieu: "Chez Timothée",
     meteo: { emoji: "☀️", temp: "Ensoleillé", desc: "Grand soleil" },
     format: "Équipes de 5",
-    resume: "Deuxième édition officielle des Olympiades, cette fois en équipes de cinq. La composition complète des équipes adverses ainsi que le classement général détaillé ne se sont pas conservés dans le temps — mais la composition des quatre équipes et l'équipe victorieuse, elles, restent connues.",
+    resume: "Deuxième édition officielle des Olympiades, cette fois en équipes de cinq et six. Le classement par épreuve ainsi que le classement général détaillé ne se sont pas conservés dans le temps — mais la composition des quatre équipes et l'équipe victorieuse, elles, restent connues.",
     citations: [
-      // ← Aucune citation connue pour cette édition. Ajoute ici si besoin, ex: { text: "...", auteur: "— ..." }
+      { text: "\"Le punch ... j'ai eu du mal ... surtout le troisème.\"", auteur: "— Théo, évoquant ses difficultés au shot sur le parcours du combattant" },
+      { text: "\"Aïe j'ai mal pour lui ... rien pour que ça (la chute), je lui valide\"", auteur: "— Martin, réagissant à la chute de Lucas sur la poutre" }
+      { text: "\"La poutre elle fait peur ... je me chie dessus\"", auteur: "— Thomas, dialoguant avec Lortte et Nicolas concernant les épreuves" }
     ],
     epreuves: [
-      { nom: "Flip Cup" },
-      { nom: "Parcours du combattant", desc: "Cuve, sprint, poutre, ramper sous une bâche, shot et fléchette." },
-      { nom: "Pastèque" },
-      { nom: "Balle dans le verre" }
+      { nom: "Flip Cup", desc: "Course à relais aller-retour où chaque changement de témoin nécessite de boire son verre cul-sec et de retourner son verre à 180° en lui donnant une impulsion avec son doigt." },
+      { nom: "Parcours du combattant", desc: "Un parcours en relais chronométré pour chaque équipes. Cette année il y avait 15 verres à boire par équipe. Il fallait d'abord sauter dans une cuve glacée, puis sprinter sprint jusqu'à une poutre et marcher en équilibre dessus. Il fallait ensuite ramper sous une bâche, boire plusieurs shots, tirer avec des fléchettes pour éclater des ballons (contenant bonus ou malus). Enfin il fallait sprinter et glisser sur le ventriglisse puis taper dans la mai de son coéquipier." },
+      { nom: "Pastèque", desc: "L'objectif est de manger le plus rapidement une certaine quantité de pastèque par équipe." },
+      { nom: "Bear pong collectif", desc: "Chaque équipe se met respectivement dans un angle d'une table, avec des verres devant et un certain nombre de balles. L'objectif est de rentrer le plus de balles dans les verres des équpipes adverse dans un temps impartit (3min). L'équipe qui en a le plus dans ses verres a perdu. Chaque équipe bois le nombre de balles dans ses verres en nombre de verre." }
     ],
     vainqueurs: ["Lorette","Mattéo","Antoine","Cédric","Laurie"],
     participants: ["Nicolas","Aurélie","Thomas G","Lisa","Lucas","Anaïs","Antoine","Elise","Quentin","Matteo","Dimitri","Laurie","Thomas C","Chloé","Timothée","Théo","Maxime","Lorette","Cédric","Emilie","Martin","Marine","Elisa"],
@@ -356,7 +356,7 @@ var OLYMPIADES = {
     bbq: "Au menu cette année, un bel apéritif était au rendez-vous, avec un généreux jambon, de belles ventrèches et des chipolatas. Une pointe de légumes s'est aussi invitée à la fête, probablement pour se donner bonne conscience, accompagnée de pain pour ne rien laisser passer. Côté liquide, rien n'a été laissé au hasard : bières, Ricard, sangria et punch se sont relayés tout au long de l'apéro pour accompagner le tout.",
     loto: "Le loto/quine a suivi le repas, entre digestion et fous rires. Sur les trois premières quines, Lisa et Mattéo ont chacun décroché une ligne, et c'est Quentin qui a raflé la deuxième quine avec ses deux lignes d'un coup. Parmi les petits lots à gagner : un paquet de Chamallows géant, un gobelet réutilisable à l'effigie des Olympiades et une bouteille de rosé bas de gamme gagnée par Antoine, qui l'a évidemment ouverte sur-le-champ.",
     superQuine: { gagnant: "Lorette", equipeId: "ciels", lot: "Un jambon et sa planche pour le découper" },
-    repas: "L'auberge espagnole a réuni salade de pâtes au pesto (Chloé), tarte aux tomates (Lisa), planche de charcuterie (Quentin) et brownies au chocolat en dessert (Antoine) — de quoi tenir jusqu'au bout de l'après-midi.",
+    repas: "Du côté de l'auberge espagnole, le buffet ne désemplissait pas : quiches, tartes, cake jambon-olives, cookies, pizzas, feuilletés, croque-monsieurs et brochettes de fruits se sont succédé, offrant un savant mélange sucrée/salé pour clore le tout en beauté. Il y en avait une une telle abondance qu'il en restait encore une quantité impressionnante le lendemain — de quoi nourrir l'édition suivante à elle seule.",
     anecdote: "On peut premièrement souligner que le hasard fait bien les choses : c'est la seule végane du groupe, Lorette, présente à ces Olympiades, qui a remporté le gros lot du loto (jambon). On peut ensuite applaudir la belle performance de Lucas et Mathis sur le passage de la structure en bois lors du parcours du combattant — dignes des plus grands sportifs. L'épreuve des pastèques, comme bien souvent, a viré au chaos total, transformée en une véritable bataille d'épluchures, le tout couronné par un superbe vomi de Nicolas.Côté ambiance, la musique 'Attention aux chaises' s'est imposée comme la maîtresse incontestée de la soirée, rythmant les festivités.",
     teams: [
       {
@@ -398,7 +398,7 @@ var OLYMPIADES = {
       },
       {
         nom: "Les Pastèques", num: 4,
-        desc: "L'objectif est de manger le plus rapidement une certaine quantité de pastèque par équipe",
+        desc: "L'objectif est de manger le plus rapidement une certaine quantité de pastèque par équipe.",
         scores: { patoches: 4, tortue: 3, ciels: 2, sangria: 1 }
       },
       {
