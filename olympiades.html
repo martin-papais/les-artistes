@@ -176,6 +176,15 @@ main{padding-top:64px;position:relative;z-index:1;}
 .legacy-epreuve-list li span{display:block;color:rgba(255,255,255,.6);font-size:.8rem;margin-top:3px;}
 .legacy-winners{display:flex;flex-wrap:wrap;gap:8px;}
 .legacy-winner-chip{padding:6px 14px;background:rgba(255,217,61,.12);border:1px solid rgba(255,217,61,.3);border-radius:20px;font-size:.82rem;font-weight:700;color:var(--yellow);}
+.legacy-team-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;}
+.legacy-team-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px;}
+.legacy-team-card.winner{border-color:rgba(255,217,61,.4);background:rgba(255,217,61,.06);}
+.legacy-team-head{display:flex;align-items:center;gap:8px;margin-bottom:9px;}
+.legacy-team-label{font-family:'Playfair Display',serif;font-weight:700;font-size:.9rem;}
+.legacy-team-badge{font-size:.65rem;font-weight:700;padding:2px 9px;border-radius:20px;background:rgba(255,217,61,.18);border:1px solid rgba(255,217,61,.4);color:var(--gold);text-transform:uppercase;letter-spacing:.4px;}
+.legacy-team-card .team-members-inline{display:flex;flex-wrap:wrap;gap:6px;padding:0;}
+.legacy-anecdote-list{list-style:none;display:flex;flex-direction:column;gap:8px;}
+.legacy-anecdote-list li{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:11px 15px;font-size:.85rem;color:rgba(255,255,255,.75);line-height:1.6;}
 /* HALL OF FAME (bas de page, tous les ans) */
 .hof-wrap{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:20px 22px;margin-top:46px;}
 .hof-title{font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
@@ -194,6 +203,7 @@ main{padding-top:64px;position:relative;z-index:1;}
   .overview-wrap{flex-direction:column;}
   .infobox{width:100%;flex:none;}
   .teams-grid{grid-template-columns:1fr;}
+  .legacy-team-grid{grid-template-columns:1fr;}
   .epreuve-scores{grid-template-columns:repeat(2,1fr);}
   .gallery-grid{grid-template-columns:repeat(3,1fr);}
   .epreuve-winner{margin-left:0;}
@@ -297,7 +307,7 @@ var OLYMPIADES = {
       { nom: "Ventriglisse", desc: "Amusement libre, non chronométré." }
     ],
     vainqueurs: [],
-    participants: [],
+    participants: ["Nicolas","Aurélie","Thomas G","Lucas","Anaïs","Antoine","Elise","Quentin","Matteo","Dimitri","Laurie","Thomas C","Chloé","Timothée","Théo","Maxime","Cédric","Martin","Marine","Elisa"],
     // ← Ajoute ici les photos de 2022, ex: { url: "...", caption: "..." }
     photos: [],
     galerie: 2
@@ -316,7 +326,20 @@ var OLYMPIADES = {
       { nom: "Balle dans le verre" }
     ],
     vainqueurs: ["Lorette","Mattéo","Antoine","Cédric","Laurie"],
-    participants: [],
+    participants: ["Nicolas","Aurélie","Thomas G","Lisa","Lucas","Anaïs","Antoine","Elise","Quentin","Matteo","Dimitri","Laurie","Thomas C","Chloé","Timothée","Théo","Maxime","Lorette","Cédric","Emilie","Martin","Marine","Elisa"],
+    teams: [
+      { membres: ["Maxime","Elisa","Lisa","Dimitri","Aurélie"] },
+      { membres: ["Antoine","Lorette","Cédric","Mattéo","Laurie"], vainqueur: true },
+      { membres: ["Thomas G","Théo","Chloé","Marine","Lucas","Quentin"] },
+      { membres: ["Nicolas","Emilie","Thomas C","Timothée","Anaïs","Elise"] }
+    ],
+    anecdotes: [
+      "Chute de Lucas à la poutre.",
+      "Aller-retour de Lucas et Anaïs en fin d'après-midi pour aller voir un match du PSG.",
+      "Départ anticipé de la soirée pour Antoine et Elise, qui partaient en vacances le lendemain.",
+      "Départ anticipé de la soirée pour Cédric et Emilie, qui partaient en vacances le lendemain également.",
+      "Une soirée globalement difficile, tout le monde étant épuisé."
+    ],
     // ← Ajoute ici les photos de 2023, ex: { url: "...", caption: "..." }
     photos: [],
     galerie: 2
@@ -739,16 +762,35 @@ function buildLegacyYearPanel(year, d, isFirst){
   });
   html += '</ul>';
 
-  html += '<div class="section-label"><span>🏆 Équipe victorieuse</span></div>';
-  if (d.vainqueurs && d.vainqueurs.length) {
+  html += '<div class="section-label"><span>🏆 Les équipes</span></div>';
+  if (d.teams && d.teams.length) {
+    html += '<div class="legacy-team-grid">';
+    d.teams.forEach(function(t, i){
+      html += '<div class="legacy-team-card'+(t.vainqueur?' winner':'')+'">'
+        + '<div class="legacy-team-head">'
+        +   '<span class="legacy-team-label">Équipe '+(i+1)+'</span>'
+        +   (t.vainqueur ? '<span class="legacy-team-badge">🏆 Victorieuse</span>' : '')
+        + '</div>'
+        + '<div class="team-members-inline">'
+        +   t.membres.map(function(m){ return '<span class="member-chip">'+esc(m)+'</span>'; }).join('')
+        + '</div>'
+        + '</div>';
+    });
+    html += '</div>';
+  } else if (d.vainqueurs && d.vainqueurs.length) {
     html += '<div class="legacy-winners">' + d.vainqueurs.map(function(n){ return '<span class="legacy-winner-chip">'+esc(n)+'</span>'; }).join('') + '</div>';
   } else {
-    html += '<div style="color:var(--muted);font-size:.82rem">Non renseignée — cette information ne s\'est pas conservée.</div>';
+    html += '<div style="color:var(--muted);font-size:.82rem">Non renseignées — cette information ne s\'est pas conservée.</div>';
   }
 
   if (d.participants && d.participants.length) {
     html += '<div class="section-label"><span>👥 Participants</span></div>';
     html += '<div class="legacy-winners">' + d.participants.map(function(n){ return '<span class="member-chip">'+esc(n)+'</span>'; }).join('') + '</div>';
+  }
+
+  if (d.anecdotes && d.anecdotes.length) {
+    html += '<div class="section-label"><span>🎉 Anecdotes</span></div>';
+    html += '<ul class="legacy-anecdote-list">' + d.anecdotes.map(function(a){ return '<li>'+esc(a)+'</li>'; }).join('') + '</ul>';
   }
 
   html += buildGallery(d, year);
