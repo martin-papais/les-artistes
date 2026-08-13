@@ -297,7 +297,10 @@ var OLYMPIADES = {
     lieu: "Chez Elise (journée), puis chez Thomas C (soirée)",
     meteo: { emoji: "🌧️", temp: "Pluvieux", desc: "Nuageux avec une légère pluie" },
     format: "Équipes de 2",
-    note: "Première édition officielle des Olympiades, disputée en équipes de deux. Les souvenirs précis de cette édition (composition des équipes, classement, résultats détaillés) se sont perdus avec le temps — si des photos ou informations refont surface, elles viendront enrichir cette page.",
+    resume: "Première édition officielle des Olympiades, disputée en équipes de deux. Les souvenirs précis de cette édition (composition des équipes, classement, résultats détaillés) se sont perdus avec le temps — si des photos ou informations refont surface, elles viendront enrichir cette page.",
+    citations: [
+      // ← Aucune citation connue pour cette édition. Ajoute ici si besoin, ex: { text: "...", auteur: "— ..." }
+    ],
     repasNote: "Un grand jambon à l'apéro, puis pizza le soir.",
     epreuves: [
       { nom: "Flip Cup" },
@@ -310,7 +313,7 @@ var OLYMPIADES = {
     participants: ["Nicolas","Aurélie","Thomas G","Lucas","Anaïs","Antoine","Elise","Quentin","Matteo","Dimitri","Laurie","Thomas C","Chloé","Timothée","Théo","Maxime","Cédric","Martin","Marine","Elisa"],
     // ← Ajoute ici les photos de 2022, ex: { url: "...", caption: "..." }
     photos: [],
-    galerie: 2
+    galerie: 8
   },
   2023: {
     legacy: true,
@@ -318,7 +321,10 @@ var OLYMPIADES = {
     lieu: "Chez Timothée",
     meteo: { emoji: "☀️", temp: "Ensoleillé", desc: "Grand soleil" },
     format: "Équipes de 5",
-    note: "Deuxième édition officielle des Olympiades, cette fois en équipes de cinq. La composition complète des équipes adverses ainsi que le classement général ne se sont pas conservés dans le temps — seule l'équipe victorieuse reste connue.",
+    resume: "Deuxième édition officielle des Olympiades, cette fois en équipes de cinq. La composition complète des équipes adverses ainsi que le classement général détaillé ne se sont pas conservés dans le temps — mais la composition des quatre équipes et l'équipe victorieuse, elles, restent connues.",
+    citations: [
+      // ← Aucune citation connue pour cette édition. Ajoute ici si besoin, ex: { text: "...", auteur: "— ..." }
+    ],
     epreuves: [
       { nom: "Flip Cup" },
       { nom: "Parcours du combattant", desc: "Cuve, sprint, poutre, ramper sous une bâche, shot et fléchette." },
@@ -333,16 +339,10 @@ var OLYMPIADES = {
       { membres: ["Thomas G","Théo","Chloé","Marine","Lucas","Quentin"] },
       { membres: ["Nicolas","Emilie","Thomas C","Timothée","Anaïs","Elise"] }
     ],
-    anecdotes: [
-      "Chute de Lucas à la poutre.",
-      "Aller-retour de Lucas et Anaïs en fin d'après-midi pour aller voir un match du PSG.",
-      "Départ anticipé de la soirée pour Antoine et Elise, qui partaient en vacances le lendemain.",
-      "Départ anticipé de la soirée pour Cédric et Emilie, qui partaient en vacances le lendemain également.",
-      "Une soirée globalement difficile, tout le monde étant épuisé."
-    ],
+    anecdote: "On retiendra plusieurs moments marquants de cette édition : la chute de Lucas à la poutre, ainsi que l'aller-retour surprise de Lucas et Anaïs en fin d'après-midi pour aller suivre un match du PSG. En soirée, Antoine et Elise puis Cédric et Emilie ont dû quitter les festivités plus tôt que prévu, tous partant en vacances dès le lendemain. Une soirée globalement éprouvante, tout le monde étant épuisé après une journée bien remplie.",
     // ← Ajoute ici les photos de 2023, ex: { url: "...", caption: "..." }
     photos: [],
-    galerie: 2
+    galerie: 8
   },
   2025: {
     date: "9 août 2025",
@@ -739,16 +739,35 @@ function buildYearPanel(year, isFirst){
 function buildLegacyYearPanel(year, d, isFirst){
   var html = '<div class="year-panel'+(isFirst?' show':'')+'" data-year="'+year+'">';
 
-  html += '<div class="overview-text" style="max-width:820px">'
+  // Équipe / noms gagnants connus, pour l'encadré
+  var winningTeam = (d.teams || []).filter(function(t){ return t.vainqueur; })[0];
+  var champLabel = winningTeam ? winningTeam.membres.join(', ')
+    : (d.vainqueurs && d.vainqueurs.length) ? d.vainqueurs.join(', ')
+    : 'Non renseigné';
+
+  // ── Vue d'ensemble : résumé + citation(s), alignés avec le haut de l'encadré (identique aux éditions modernes) ──
+  var citationsHtml = (d.citations || []).map(function(c){
+    return '<div class="overview-quote">'+esc(c.text)+'<cite>'+esc(c.auteur)+'</cite></div>';
+  }).join('');
+  html += '<div class="overview-wrap">';
+  html += '<div class="overview-text">'
     + '<h2>🏅 Olympiades '+year+'</h2>'
-    + '<div class="legacy-meta">'
-    +   '<span>'+d.meteo.emoji+' '+esc(d.meteo.desc)+'</span>'
-    +   '<span>📅 '+esc(d.date)+'</span>'
-    +   '<span>📍 '+esc(d.lieu)+'</span>'
-    +   '<span>👥 '+esc(d.format)+'</span>'
-    + '</div>'
-    + '<div class="legacy-note">'+esc(d.note)+'</div>'
+    + '<div class="text-block">'+esc(d.resume)+'</div>'
+    + citationsHtml
     + '</div>';
+  html += '<div class="infobox">'
+    + '<div class="infobox-title">Olympiades '+year+'</div>'
+    + '<table class="infobox-table">'
+    +   '<tr><th>Météo</th><td>'+d.meteo.emoji+' '+esc(d.meteo.desc)+'</td></tr>'
+    +   '<tr><th>Dates</th><td>'+esc(d.date)+'</td></tr>'
+    +   '<tr><th>Lieu</th><td>'+esc(d.lieu)+'</td></tr>'
+    +   '<tr><th>Format</th><td>'+esc(d.format)+'</td></tr>'
+    +   '<tr><th>Participants</th><td>'+(d.participants?d.participants.length:0)+'</td></tr>'
+    +   '<tr><th>Épreuves</th><td>'+d.epreuves.length+' épreuves</td></tr>'
+    + '</table>'
+    + '<div class="infobox-champ">🏆 '+esc(champLabel)+'</div>'
+    + '</div>';
+  html += '</div>';
 
   if (d.repasNote) {
     html += '<div class="section-label"><span>🍽️ Repas</span></div>';
@@ -788,9 +807,9 @@ function buildLegacyYearPanel(year, d, isFirst){
     html += '<div class="legacy-winners">' + d.participants.map(function(n){ return '<span class="member-chip">'+esc(n)+'</span>'; }).join('') + '</div>';
   }
 
-  if (d.anecdotes && d.anecdotes.length) {
-    html += '<div class="section-label"><span>🎉 Anecdotes</span></div>';
-    html += '<ul class="legacy-anecdote-list">' + d.anecdotes.map(function(a){ return '<li>'+esc(a)+'</li>'; }).join('') + '</ul>';
+  if (d.anecdote) {
+    html += '<div class="section-label"><span>🎉 L\'anecdote de l\'édition</span></div>';
+    html += '<div class="text-block">'+esc(d.anecdote)+'</div>';
   }
 
   html += buildGallery(d, year);
