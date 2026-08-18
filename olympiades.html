@@ -860,7 +860,7 @@ function buildHallOfFame(){
       var champLine = (d.vainqueurs && d.vainqueurs.length) ? ('🏆 ' + d.vainqueurs.join(', ')) : 'Vainqueur non renseigné';
       html += '<div class="hof-row">'
         + '<div class="hof-year">'+y+'</div>'
-        + '<div class="hof-theme">'+d.meteo.emoji+' '+esc(d.date)+' · '+esc(d.lieu)+'</div>'
+        + '<div class="hof-theme">'+' '+esc(d.date)+' · '+esc(d.lieu)+'</div>'
         + '<div class="hof-champ">'+champLine+'</div>'
         + '</div>';
     } else {
@@ -868,7 +868,7 @@ function buildHallOfFame(){
       var champion = sorted[0];
       html += '<div class="hof-row">'
         + '<div class="hof-year">'+y+'</div>'
-        + '<div class="hof-theme">'+d.meteo.emoji+' '+esc(d.meteo.temp)+' · '+esc(d.lieu)+'</div>'
+        + '<div class="hof-theme">'+' · '+esc(d.lieu)+'</div>'
         + '<div class="hof-champ"><span class="color-dot" style="background:'+colorHex(champion.couleur)+'"></span>🏆 '+champion.emoji+' '+esc(champion.nom)+'</div>'
         + '</div>';
     }
