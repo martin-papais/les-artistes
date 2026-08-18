@@ -86,10 +86,24 @@ main{padding-top:64px;position:relative;z-index:1;}
 /* TEXTE SIMPLE — réutilisé pour BBQ, Loto, auberge espagnole, Anecdote, Repas legacy */
 .text-block{color:rgba(255,255,255,.75);font-size:.9rem;line-height:1.75;max-width:760px;}
 /* Petite carte : gagnant de la Super Quine */
+/* Petite carte : gagnant de la Super Quine */
 .super-winner-card{display:flex;align-items:center;gap:14px;background:rgba(255,217,61,.08);border:1px solid rgba(255,217,61,.3);border-radius:16px;padding:14px 18px;margin-top:12px;max-width:480px;}
 .super-winner-icon{font-size:1.8rem;flex-shrink:0;}
 .super-winner-name{font-weight:700;font-size:.92rem;color:var(--gold);}
 .super-winner-prize{font-size:.8rem;color:rgba(255,255,255,.75);margin-top:2px;}
+/* QUINES — tableaux détaillés du loto */
+.quine-block{margin-top:16px;}
+.quine-block-title{font-family:'Playfair Display',serif;font-weight:700;font-size:.95rem;margin-bottom:8px;color:rgba(255,255,255,.9);}
+.quine-block-title.super{color:var(--gold);}
+.quine-table{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+.quine-table th{text-align:left;font-size:.66rem;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);padding:9px 12px;background:rgba(255,255,255,.04);}
+.quine-table td{padding:10px 12px;font-size:.82rem;border-top:1px solid rgba(255,255,255,.06);vertical-align:top;}
+.quine-table td.qt-type{font-weight:700;white-space:nowrap;}
+.quine-table td.qt-gagnant{font-weight:700;color:var(--teal);white-space:nowrap;}
+.quine-super-wrap{background:rgba(255,217,61,.07);border:1px solid rgba(255,217,61,.35);border-radius:16px;padding:14px 16px;margin-top:20px;}
+.quine-table.super th{background:rgba(255,217,61,.16);color:var(--gold);}
+.quine-table.super{border-color:rgba(255,217,61,.4);}
+.quine-table.super td.qt-gagnant{color:var(--gold);}
 /* PODIUM */
 .podium-wrap{display:flex;align-items:flex-end;justify-content:center;gap:10px;padding:20px 10px 6px;flex-wrap:wrap;}
 .podium-col{display:flex;flex-direction:column;align-items:center;width:130px;}
