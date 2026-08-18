@@ -295,7 +295,7 @@ var OLYMPIADES = {
     legacy: true,
     date: "5 juin 2022",
     lieu: "Chez Elise (journée), puis chez Thomas C (soirée)",
-    meteo: {desc: "Nuageux avec une légère pluie" },
+    meteo: {desc: "🌦️ Nuageux avec une légère pluie" },
     format: "Équipes de 2",
     resume: "Première édition officielle des Olympiades, disputée en équipes de deux. Les souvenirs précis de cette édition (composition des équipes, classement, résultats détaillés) se sont perdus avec le temps — si des photos ou informations refont surface, elles viendront enrichir cette page.",
     citations: [
@@ -326,7 +326,7 @@ var OLYMPIADES = {
     legacy: true,
     date: "19 août 2023",
     lieu: "Chez Timothée",
-    meteo: { emoji: "☀️", temp: "Ensoleillé", desc: "Grand soleil, journée caniculaire" },
+    meteo: {desc: " ☀️ Grand soleil, journée caniculaire" },
     format: "Équipes de 5",
     resume: "Deuxième édition officielle des Olympiades, cette fois en équipes de cinq et six. Le classement par épreuve ainsi que le classement général détaillé ne se sont pas conservés dans le temps — mais la composition des quatre équipes et l'équipe victorieuse, elles, restent connues.",
     citations: [
@@ -364,7 +364,7 @@ var OLYMPIADES = {
   2025: {
     date: "9 août 2025",
     lieu: "Chez Timothée",
-    meteo: { emoji: "☀️", temp: "29°C", desc: "Grand soleil, journée caniculaire" },
+    meteo: {desc: "☀️ Grand soleil, très chaud" },
     resume: "Troisième édition officielle des Olympiades, organisée cette année chez Timothée. Une chaleur écrasante s'est fait ressentir tout au long de la journée, mais la présence de la piscine a permis aux participants de se rafraîchir. Cette année marque l'arrivée de deux nouveaux participants dans ce tournois : Clara et Mathis, venus tenter leur chance. Un peu de bricolage a été nécessaire pour préparer les épreuves, avec notamment une superbe structure en bois permettant de traverser la piscine, ainsi que deux autres structures dédiées au lancer de balles. Grande première cette année : les équipes ne se contentent plus d'une simple couleur, elles ont désormais un vrai nom et un cri de guerre bien à elles, et peuvent même se maquiller à l'effigie de leur équipe pour intimider l'adversaire. Cette édition marque également la mise en place d'un loto/quine entre le repas du midi et les épreuves (pour la digestion).",
     citations: [
       { text: "\"On perd uniquement à cause des bonus/malus ... ce n'est pas juste.\"", auteur: "— Antoine, capitaine de Louis la chèvre jaune" }
@@ -449,7 +449,7 @@ var OLYMPIADES = {
   2026: {
     date: "1 aout 2026",
     lieu: "Chez Thomas Grima",
-    meteo: { emoji: "⛅", temp: "23°C", desc: "Ciel voilé avec de belles éclaircies" },
+    meteo: {desc: "⛅ Ciel voilé dans la matinée et grand soleil dans l'après-midi" },
     resume: "Quatrième édition, organisée cette fois chez Thomas Grima. Quatre nouveaux participants sont venus grossir les rangs cette année : Carla, Barnabé, Clément et Noha, prêts à découvrir dans quoi ils venaient de s'engager. Plusieurs nouveautés sont également à signaler. Tout d'abord, une superbe fontaine à punch, coulant en continu depuis un tonneau, a veillé à ce que personne ne souffre de déshydratation. Mais la véritable révolution de cette édition reste l'arrivée d'un tout nouveau trophée : le bouclier des Olympiades des Artistes. Désormais, chaque année, le nom du vainqueur y sera gravé pour l'éternité (ou du moins jusqu'à la prochaine édition), faisant officiellement entrer ce tournoi dans une nouvelle ère.",
     citations: [
       { text: "\"Je ne comprend pas ... notre équipe avait pourtant les moyens de gagner ... on a pas su concrétiser\"", auteur: "— Thomas C, membre de l'équipe des Bleubites" }
@@ -791,7 +791,7 @@ function buildLegacyYearPanel(year, d, isFirst){
   html += '<div class="infobox">'
     + '<div class="infobox-title">Olympiades '+year+'</div>'
     + '<table class="infobox-table">'
-    +   '<tr><th>Météo</th><td>'+d.meteo.emoji+' '+esc(d.meteo.desc)+'</td></tr>'
+    +   '<tr><th>Météo</th><td>'+esc(d.meteo.desc)+'</td></tr>'
     +   '<tr><th>Dates</th><td>'+esc(d.date)+'</td></tr>'
     +   '<tr><th>Lieu</th><td>'+esc(d.lieu)+'</td></tr>'
     +   '<tr><th>Format</th><td>'+esc(d.format)+'</td></tr>'
