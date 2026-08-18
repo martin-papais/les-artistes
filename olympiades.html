@@ -90,6 +90,19 @@ main{padding-top:64px;position:relative;z-index:1;}
 .super-winner-icon{font-size:1.8rem;flex-shrink:0;}
 .super-winner-name{font-weight:700;font-size:.92rem;color:var(--gold);}
 .super-winner-prize{font-size:.8rem;color:rgba(255,255,255,.75);margin-top:2px;}
+/* QUINES — tableaux détaillés du loto */
+.quine-block{margin-top:16px;}
+.quine-block-title{font-family:'Playfair Display',serif;font-weight:700;font-size:.95rem;margin-bottom:8px;color:rgba(255,255,255,.9);}
+.quine-block-title.super{color:var(--gold);}
+.quine-table{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+.quine-table th{text-align:left;font-size:.66rem;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);padding:9px 12px;background:rgba(255,255,255,.04);}
+.quine-table td{padding:10px 12px;font-size:.82rem;border-top:1px solid rgba(255,255,255,.06);vertical-align:top;}
+.quine-table td.qt-type{font-weight:700;white-space:nowrap;}
+.quine-table td.qt-gagnant{font-weight:700;color:var(--teal);white-space:nowrap;}
+.quine-super-wrap{background:rgba(255,217,61,.07);border:1px solid rgba(255,217,61,.35);border-radius:16px;padding:14px 16px;margin-top:20px;}
+.quine-table.super th{background:rgba(255,217,61,.16);color:var(--gold);}
+.quine-table.super{border-color:rgba(255,217,61,.4);}
+.quine-table.super td.qt-gagnant{color:var(--gold);}
 /* PODIUM */
 .podium-wrap{display:flex;align-items:flex-end;justify-content:center;gap:10px;padding:20px 10px 6px;flex-wrap:wrap;}
 .podium-col{display:flex;flex-direction:column;align-items:center;width:130px;}
@@ -295,107 +308,115 @@ var OLYMPIADES = {
     legacy: true,
     date: "5 juin 2022",
     lieu: "Chez Elise (journée), puis chez Thomas C (soirée)",
-    meteo: {desc: "🌦️ Nuageux avec une légère pluie" },
-    format: "2 Équipes de 10",
-    resume: "Première édition officielle des Olympiades, disputée entre deux équipes de dix. C'est la première fois que nous particiipons à certaines épreuves cultes qui deviendront récurrentes par la suite tel que le flip cup, les pastèques ou bien même les prémisses du parcours du combattant. Cette première olympiades est intervenue juste après les féria de Vic, dans laquelle nous avions pu récupérer une grande quantité de verres qui nous ont servis lors de cette olympiades aisni que les futures. Ceci étant dis, les souvenirs précis de cette édition (résultats détaillés des épreuves) se sont perdus avec le temps.",
+    meteo: { emoji: "🌧️", temp: "Pluvieux", desc: "Nuageux avec une légère pluie" },
+    format: "Équipes de 2",
+    resume: "Première édition officielle des Olympiades, disputée en équipes de deux. Les souvenirs précis de cette édition (composition des équipes, classement, résultats détaillés) se sont perdus avec le temps — si des photos ou informations refont surface, elles viendront enrichir cette page.",
     citations: [
-      { text: "\"Vas-y Antoine ... pousse la, pousse la, pousse la ... .\"", auteur: "— Nicolas, incitant Antoine à pousser son adversersaire lors de la course" },
-      { text: "\"Lui ... il va arriver vite ...\"", auteur: "— Thomas G, anticipant la rapidité de Quentin sur le ventriglisse" }
+      // ← Aucune citation connue pour cette édition. Ajoute ici si besoin, ex: { text: "...", auteur: "— ..." }
     ],
-     epreuves: [
-      { nom: "Flip Cup", desc: "Course à relais aller-retour où chaque changement de témoin nécessite de boire son verre cul-sec et de retourner son verre à 180° en lui donnant une impulsion avec son doigt."},
-      { nom: "Parcours du combattant", desc: "Un parcours ou il fallait tournait plusieurs fois sur sois même autour d'un piquet, puis sprinter et faire le tour d'un arbre, puis revenir." },
-      { nom: "Pastèque", desc: "L'objectif est de manger le plus rapidement une certaine quantité de pastèque par équipe."},
-      { nom: "Brouette", desc: "Simplement une course aller retour de brouette en duo. Il fallait échanger de partenaire au milieu."}
+    repasNote: "Un grand jambon à l'apéro, puis pizza le soir.",
+    epreuves: [
+      { nom: "Flip Cup" },
+      { nom: "Parcours du combattant", desc: "Tourner autour d'un poteau puis sprint final." },
+      { nom: "Pastèque" },
+      { nom: "Brouette" },
+      { nom: "Ventriglisse", desc: "Amusement libre, non chronométré." }
     ],
     vainqueurs: [],
-    teams: [
-      { membres: ["Antoine","Mattéo","Elisa","Dimitri","Chloé","Marine","Thomas G","Timothée","Cédric","Laurie"] },
-      { membres: ["Maxime","Nicolas","Aurélie","Lucas","Anaïs","Thomas C","Quentin","Elise","Théo","Martin"]}
-    ],
-    anecdote: "A retenir de cette première édition : Quelques goûtes de pluies sont tombées en fin d'après-midi n'empêchant pas aux plus téméraire (et moins frileux) de s'amuser sur le ventriglisse après les épreuves. En fin d'après-midi nous avons aussi du changer de lieux pour se déplacer tous chez Thomas Calmettes pour continuer la soirée ",
-    photos: [
-  { url: "https://raw.githubusercontent.com/martin-papais/les-artistes/main/image%20olympiades/2022/IMG_5796.JPG", caption: "" },
-  { url: "https://raw.githubusercontent.com/martin-papais/les-artistes/main/image%20olympiades/2022/IMG_5798.JPG", caption: "" },
-  { url: "https://raw.githubusercontent.com/martin-papais/les-artistes/main/image%20olympiades/2022/parcours1.jpg", caption: "" },
-  { url: "https://raw.githubusercontent.com/martin-papais/les-artistes/main/image%20olympiades/2022/parcours2.jpg", caption: "" },
-  { url: "https://raw.githubusercontent.com/martin-papais/les-artistes/main/image%20olympiades/2022/pasteque.jpg", caption: "" },
-  { url: "https://raw.githubusercontent.com/martin-papais/les-artistes/main/image%20olympiades/2022/ventriglisse1.jpg", caption: "" },
-  { url: "https://raw.githubusercontent.com/martin-papais/les-artistes/main/image%20olympiades/2022/ventriglisse2.jpg", caption: "" },
-  { url: "https://raw.githubusercontent.com/martin-papais/les-artistes/main/image%20olympiades/2022/ventriglisse3.jpg", caption: "" }
-],
+    participants: ["Nicolas","Aurélie","Thomas G","Lucas","Anaïs","Antoine","Elise","Quentin","Matteo","Dimitri","Laurie","Thomas C","Chloé","Timothée","Théo","Maxime","Cédric","Martin","Marine","Elisa"],
+    // ← Ajoute ici les photos de 2022, ex: { url: "...", caption: "..." }
+    photos: [],
     galerie: 8
   },
   2023: {
     legacy: true,
     date: "19 août 2023",
     lieu: "Chez Timothée",
-    meteo: {desc: " ☀️ Grand soleil, journée caniculaire" },
-    format: "4 Équipes de 5/6",
-    resume: "Deuxième édition des Olympiades, cette fois en équipes de cinq et six. L'objectif était de diminuer le nombre de participant par équipe afin que chacun puisses jouer plus vite (et attent moins) et d'augmenter le nombre d'équipes pour plus de compétitivité. Cette année inaugure les premières constructions, la fameuse poutre ainsi qu'une cible de fléchette, réalisées avec l'aide de Nicolas, notre bricoleur officiel. Une journée caniculaire était de la partie cette année.  Ceci étant dis, les souvenirs précis de cette édition (résultats détaillés des épreuves) se sont perdus avec le temps.",
+    meteo: { emoji: "☀️", temp: "Ensoleillé", desc: "Grand soleil" },
+    format: "Équipes de 5",
+    resume: "Deuxième édition officielle des Olympiades, cette fois en équipes de cinq. La composition complète des équipes adverses ainsi que le classement général détaillé ne se sont pas conservés dans le temps — mais la composition des quatre équipes et l'équipe victorieuse, elles, restent connues.",
     citations: [
-      { text: "\"Le punch ... j'ai eu du mal ... surtout le troisème.\"", auteur: "— Théo, évoquant ses difficultés au shot sur le parcours du combattant" },
-      { text: "\"Aïe j'ai mal pour lui ... rien pour que ça (la chute), je lui valide\"", auteur: "— Martin, réagissant à la chute de Lucas sur la poutre" },
-      { text: "\"La poutre elle fait peur ... je me chie dessus\"", auteur: "— Thomas C, dialoguant avec Lorette et Nicolas concernant les épreuves" }
+      // ← Aucune citation connue pour cette édition. Ajoute ici si besoin, ex: { text: "...", auteur: "— ..." }
     ],
     epreuves: [
-      { nom: "Flip Cup", desc: "Course à relais aller-retour où chaque changement de témoin nécessite de boire son verre cul-sec et de retourner son verre à 180° en lui donnant une impulsion avec son doigt." },
-      { nom: "Parcours du combattant", desc: "Un parcours en relais chronométré pour chaque équipes. Cette année il y avait 15 verres à boire par équipe. Il fallait d'abord sauter dans une cuve glacée, puis sprinter jusqu'à une poutre et marcher en équilibre dessus. Il fallait ensuite ramper sous une bâche, boire plusieurs shots, tirer avec des fléchettes pour éclater des ballons (contenant bonus ou malus). Enfin il fallait sprinter et glisser sur le ventriglisse puis taper dans la main de son coéquipier." },
-      { nom: "Pastèque", desc: "L'objectif est de manger le plus rapidement une certaine quantité de pastèque par équipe." },
-      { nom: "Bear pong collectif", desc: "Chaque équipe se met respectivement dans un angle d'une table, avec des verres devant et un certain nombre de balles. L'objectif est de rentrer le plus de balles dans les verres des équpipes adverse dans un temps impartit (3min). L'équipe qui en a le plus dans ses verres a perdu. Chaque équipe bois le nombre de balles dans ses verres en nombre de verre." }
+      { nom: "Flip Cup" },
+      { nom: "Parcours du combattant", desc: "Cuve, sprint, poutre, ramper sous une bâche, shot et fléchette." },
+      { nom: "Pastèque" },
+      { nom: "Balle dans le verre" }
     ],
-    vainqueurs: ["Equipe 2"],
+    vainqueurs: ["Lorette","Mattéo","Antoine","Cédric","Laurie"],
+    participants: ["Nicolas","Aurélie","Thomas G","Lisa","Lucas","Anaïs","Antoine","Elise","Quentin","Matteo","Dimitri","Laurie","Thomas C","Chloé","Timothée","Théo","Maxime","Lorette","Cédric","Emilie","Martin","Marine","Elisa"],
     teams: [
       { membres: ["Maxime","Elisa","Lisa","Dimitri","Aurélie"] },
       { membres: ["Antoine","Lorette","Cédric","Mattéo","Laurie"], vainqueur: true },
       { membres: ["Thomas G","Théo","Chloé","Marine","Lucas","Quentin"] },
       { membres: ["Nicolas","Emilie","Thomas C","Timothée","Anaïs","Elise"] }
     ],
-    anecdote: "On retiendra plusieurs moments marquants de cette édition : la chute de Lucas à la poutre, ainsi que celles de Théo et Lisa sur le ventriglisse. A souligner aussi la descente de Laurie des shots sur le parcours qui a impressionnée tout le monde, emmenant même à la qualifier de 'bouche d'égôut'. A noter aussi l'aller-retour de Lucas et Anaïs en fin d'après-midi pour aller suivre un match du PSG. Une soirée globalement éprouvante, tout le monde étant épuisé après une journée bien remplie, surtout que certaines personnes (Cédric/Emilie et Antoine/Elise) ont dû quitter les festivités plus tôt que prévu, tous partant en vacances dès le lendemain.",
-    photos: [
-  { url: "https://raw.githubusercontent.com/martin-papais/les-artistes/main/image%20olympiades/2023/alcool.jpg", caption: "" },
-  { url: "https://raw.githubusercontent.com/martin-papais/les-artistes/main/image%20olympiades/2023/ballon.jpg", caption: "" },
-  { url: "https://raw.githubusercontent.com/martin-papais/les-artistes/main/image%20olympiades/2023/cuve.jpg", caption: "" },
-  { url: "https://raw.githubusercontent.com/martin-papais/les-artistes/main/image%20olympiades/2023/poutre.jpg", caption: "" },
-  { url: "https://raw.githubusercontent.com/martin-papais/les-artistes/main/image%20olympiades/2023/beerpong.jpg", caption: "" },
-  { url: "https://raw.githubusercontent.com/martin-papais/les-artistes/main/image%20olympiades/2023/gagnant.jpg", caption: "" },
-  { url: "https://raw.githubusercontent.com/martin-papais/les-artistes/main/image%20olympiades/2023/fesse.jpg", caption: "" },
-  { url: "https://raw.githubusercontent.com/martin-papais/les-artistes/main/image%20olympiades/2023/groupe.jpg", caption: "" }
-],
+    anecdote: "On retiendra plusieurs moments marquants de cette édition : la chute de Lucas à la poutre, ainsi que l'aller-retour surprise de Lucas et Anaïs en fin d'après-midi pour aller suivre un match du PSG. En soirée, Antoine et Elise puis Cédric et Emilie ont dû quitter les festivités plus tôt que prévu, tous partant en vacances dès le lendemain. Une soirée globalement éprouvante, tout le monde étant épuisé après une journée bien remplie.",
+    // ← Ajoute ici les photos de 2023, ex: { url: "...", caption: "..." }
+    photos: [],
     galerie: 8
   },
   2025: {
     date: "9 août 2025",
     lieu: "Chez Timothée",
-    meteo: {desc: "☀️ Grand soleil, très chaud" },
+    meteo: { emoji: "☀️", temp: "29°C", desc: "Grand soleil, journée caniculaire" },
     resume: "Troisième édition officielle des Olympiades, organisée cette année chez Timothée. Une chaleur écrasante s'est fait ressentir tout au long de la journée, mais la présence de la piscine a permis aux participants de se rafraîchir. Cette année marque l'arrivée de deux nouveaux participants dans ce tournois : Clara et Mathis, venus tenter leur chance. Un peu de bricolage a été nécessaire pour préparer les épreuves, avec notamment une superbe structure en bois permettant de traverser la piscine, ainsi que deux autres structures dédiées au lancer de balles. Grande première cette année : les équipes ne se contentent plus d'une simple couleur, elles ont désormais un vrai nom et un cri de guerre bien à elles, et peuvent même se maquiller à l'effigie de leur équipe pour intimider l'adversaire. Cette édition marque également la mise en place d'un loto/quine entre le repas du midi et les épreuves (pour la digestion).",
     citations: [
-      { text: "\"On perd uniquement à cause des bonus/malus ... ce n'est pas juste.\"", auteur: "— Antoine, capitaine de Louis la chèvre jaune" }
+      { text: "\"On perd uniquement à cause des bonus/malus ... ce n'est pas juste.\"", auteur: "— Antoine, capitaine de Louis la tortue jaune" }
       // ← Ajoute d'autres citations ici si besoin, ex: { text: "...", auteur: "— ..." }
     ],
     bbq: "Au menu cette année, un bel apéritif était au rendez-vous, avec un généreux jambon, de belles ventrèches et des chipolatas. Une pointe de légumes s'est aussi invitée à la fête, probablement pour se donner bonne conscience, accompagnée de pain pour ne rien laisser passer. Côté liquide, rien n'a été laissé au hasard : bières, Ricard, sangria et punch se sont relayés tout au long de l'apéro pour accompagner le tout.",
-    loto: "Le loto/quine a suivi le repas, entre digestion et fous rires. Sur les trois premières quines, Lisa et Mattéo ont chacun décroché une ligne, et c'est Quentin qui a raflé la deuxième quine avec ses deux lignes d'un coup. Parmi les petits lots à gagner : un paquet de Chamallows géant, un gobelet réutilisable à l'effigie des Olympiades et une bouteille de rosé bas de gamme gagnée par Antoine, qui l'a évidemment ouverte sur-le-champ.",
-    superQuine: { gagnant: "Lorette", equipeId: "ciels", lot: "Un jambon et sa planche pour le découper" },
-    repas: "Du côté de l'auberge espagnole, le buffet ne désemplissait pas : quiches, tartes, cake jambon-olives, cookies, pizzas, feuilletés, croque-monsieurs et brochettes de fruits se sont succédé, offrant un savant mélange sucrée/salé pour clore le tout en beauté. Il y en avait une une telle abondance qu'il en restait encore une quantité impressionnante le lendemain — de quoi nourrir l'édition suivante à elle seule.",
-    anecdote: "On peut premièrement souligner que le hasard fait bien les choses : c'est la seule végane du groupe, Lorette, présente à ces olympiades, qui a remporté le gros lot du loto (jambon). On peut ensuite applaudir la belle performance de Lucas et Mathis sur le passage de la structure en bois lors du parcours du combattant — dignes des plus grands sportifs. L'épreuve des pastèques, comme bien souvent, a viré au chaos total, transformée en une véritable bataille d'épluchures, le tout couronné par un superbe vomi de Nicolas. Côté ambiance, la musique 'Attention aux chaises' s'est imposée comme la maîtresse incontestée de la soirée, rythmant les festivités. On retiendira aussi la venu d'Alizée, qui a pu se libérer pour la soirée",
+    loto: {
+      intro: "Le loto/quine a suivi le repas de midi, entre digestion et fous rires. Trois quines classiques se sont enchaînées, chacune avec un lot pour la première ligne, un pour la double ligne et un pour le carton plein, avant la Super Quine et son gros lot final.",
+      quines: [
+        {
+          titre: "Quine n°1",
+          lignes: [
+            { type: "Ligne",        nom: "Lot Bureau & Féerie",        contenu: "Accessoires de bureau (élastiques) et un jeu de 7 familles fées",          gagnant: "Quentin" },
+            { type: "Double ligne", nom: "Lot Apéro Chic",             contenu: "Un limonadier, des saucisses cocktail et des cacahuètes",                  gagnant: "Quentin" },
+            { type: "Carton plein", nom: "Lot du Gourmand",            contenu: "Un pâté au piment d'Espelette et du miel de Budapest",                     gagnant: "Quentin" }
+          ]
+        },
+        {
+          titre: "Quine n°2",
+          lignes: [
+            { type: "Ligne",        nom: "Lot Petit Chevalier",        contenu: "De la pâte à modeler et un jeu de 7 familles chevaliers",                  gagnant: "Quentin" },
+            { type: "Double ligne", nom: "Lot Soirée Jeux",            contenu: "Un jeu de cartes Bicycle et un tire-bouchon",                              gagnant: "Quentin" },
+            { type: "Carton plein", nom: "Lot Ernesto Édition Limitée",contenu: "La tasse Ernesto et sa maison, avec un mini Ricard",                       gagnant: "Quentin" }
+          ]
+        },
+        {
+          titre: "Quine n°3",
+          lignes: [
+            { type: "Ligne",        nom: "Lot Pirates & Prudence",     contenu: "Un jeu de 7 familles édition pirates et un éthylotest",                    gagnant: "Quentin" },
+            { type: "Double ligne", nom: "Lot Princesse Apéro",        contenu: "Un jeu de 7 familles princesses, un saucisson et une mini bouteille de Ricard", gagnant: "Quentin" },
+            { type: "Carton plein", nom: "Lot Barman en Herbe",        contenu: "Le livre \"Super cocktails faciles\" et un mikado",                         gagnant: "Quentin" }
+          ]
+        }
+      ]
+    },
+    superQuine: { gagnant: "Lorette", equipeId: null, lot: "Le Jambon" },
+    repas: "L'auberge espagnole a réuni salade de pâtes au pesto (Chloé), tarte aux tomates (Lisa), planche de charcuterie (Quentin) et brownies au chocolat en dessert (Antoine) — de quoi tenir jusqu'au bout de l'après-midi.",
+    anecdote: "On peut premièrement souligner que le hasard fait bien les choses : c'est la seule végane du groupe, Lorette, présente à ces Olympiades, qui a remporté le gros lot du loto (jambon). On peut ensuite applaudir la belle performance de Lucas et Mathis sur le passage de la structure en bois lors du parcours du combattant — dignes des plus grands sportifs. L'épreuve des pastèques, comme bien souvent, a viré au chaos total, transformée en une véritable bataille d'épluchures, le tout couronné par un superbe vomi de Nicolas.Côté ambiance, la musique 'Attention aux chaises' s'est imposée comme la maîtresse incontestée de la soirée, rythmant les festivités.",
     teams: [
       {
-        id: "ciels", nom: "Les ciels", emoji: "☁️", couleur: "bleu",
+        id: "ciels", nom: "Les ciels", emoji: "🍷", couleur: "rouge",
         capitaine: "Chloé",
         membres: ["Lucas","Mattéo","Lorette","Chloé","Théo"]
       },
       {
-        id: "sangria", nom: "Sangriaaaaa", emoji: "🍷", couleur: "rouge",
+        id: "sangria", nom: "Sangriaaaaa", emoji: "🏹", couleur: "vert",
         capitaine: "Lisa",
         membres: ["Maxime","Cédric","Lisa","Anaïs","Timothée"]
       },
       {
-        id: "patoches", nom: "Les Patoches", emoji: "👨‍🎤", couleur: "vert",
+        id: "patoches", nom: "Les Patoches", emoji: "🐎", couleur: "bleu",
         capitaine: "Quentin",
         membres: ["Quentin","Nicolas","Elisa","Elise","Dimitri"]
       },
       {
-        id: "chèvre", nom: "Louis la chèvre jaune", emoji: "🐐", couleur: "jaune",
+        id: "tortue", nom: "Louis la tortue jaune", emoji: "🧜", couleur: "jaune",
         capitaine: "Antoine",
         membres: ["Antoine","Thomas C","Clara","Emilie","Mathis"]
       }
@@ -404,83 +425,103 @@ var OLYMPIADES = {
       {
         nom: "Le Flip Cup", num: 1,
         desc: "Course à relais aller-retour où chaque changement de témoin nécessite de boire son verre cul-sec et de retourner son verre à 180° en lui donnant une impulsion avec son doigt.",
-        scores: { chèvre: 4, sangria: 3, patoches: 2, ciels: 1 }
+        scores: { tortue: 4, sangria: 3, patoches: 2, ciels: 1 }
       },
       {
         nom: "Parcours du combattant", num: 2,
         desc: "Un parcours en relais chronométré pour chaque équipes. Cette année il est consititué de 15 verres à boire par équipe, d'une traversé d'une piscine sur une structure en bois, d'un ventriglisse et d'un sprint final",
-        scores: { patoches: 4, sangria: 3, chèvre: 2, ciels: 1 }
+        scores: { patoches: 4, sangria: 3, tortue: 2, ciels: 1 }
       },
       {
         nom: "Lancé de balles", num: 3,
         desc: "Chaque équipes qui s'affronte ont un quota de 15 verres par équipe. L'obejctif est de viser les trous d'une structure en bois. Certains (gros) valent un verre tandis que d'autre (plus petit) valent 2 ou 3 verres. Chaque fois qu'une balle rentre dans le trou, l'équipe adverse bois le nombre de verre correspondant. La première équipe à ne plus avoir de verre à perdue",
-        scores: { chèvre: 4, patoches: 3, sangria: 2, ciels: 1 }
+        scores: { tortue: 4, patoches: 3, sangria: 2, ciels: 1 }
       },
       {
         nom: "Les Pastèques", num: 4,
-        desc: "L'objectif est de manger le plus rapidement une certaine quantité de pastèque par équipe.",
-        scores: { patoches: 4, chèvre: 3, ciels: 2, sangria: 1 }
+        desc: "L'objectif est de manger le plus rapidement une certaine quantité de pastèque par équipe",
+        scores: { patoches: 4, tortue: 3, ciels: 2, sangria: 1 }
       },
       {
         nom: "Quizz", num: 5,
         desc: "Épreuve finale : Quizz plus ou moins à culture général et blind test. Celui qui attrape le verre en premier peut répondre",
-        scores: { chèvre: 4, sangria: 3, patoches: 2, ciels: 1 }
+        scores: { tortue: 4, sangria: 3, patoches: 2, ciels: 1 }
       }
     ],
     extras: [
       { equipeId: "patoches", type: "bonus", points: 1, motif: "Bonus vomit : Un beau vomit de Nicolas sur l'épreuve des pastèques" },
       { equipeId: "sangria",  type: "malus", points: -1, motif: "Retard de Cédric" },
-      { equipeId: "chèvre",   type: "malus", points: -2, motif: "Retard de Mathis et d'Emilie" }
+      { equipeId: "tortue",   type: "malus", points: -2, motif: "Retard de Mathis et d'Emilie" }
     ],
     absents: [
       { nom: "Elisa",     equipeId: "patoches", type: "blessure", raison: "Entorse à la cheville donc légèrement handicapé pour le parcours du combattant" },
       { nom: "Thomas G",  equipeId: null,       type: "absent",   raison: "Un beau voyage à Malte au même moment l'attendait" },
       { nom: "Carla",     equipeId: null,       type: "absent",   raison: "Partie voir la famille, c'est toujours important" }
     ],
-    photos: [
-  { url: "https://raw.githubusercontent.com/martin-papais/les-artistes/main/image%20olympiades/2025/DSCF9765%20-%20Copie.JPG", caption: "" },
-  { url: "https://raw.githubusercontent.com/martin-papais/les-artistes/main/image%20olympiades/2025/DSCF9789%20-%20Copie.JPG", caption: "" },
-  { url: "https://raw.githubusercontent.com/martin-papais/les-artistes/main/image%20olympiades/2025/DSCF9796%20-%20Copie.JPG", caption: "" },
-  { url: "https://raw.githubusercontent.com/martin-papais/les-artistes/main/image%20olympiades/2025/DSCF9813%20-%20Copie.JPG", caption: "" },
-  { url: "https://raw.githubusercontent.com/martin-papais/les-artistes/main/image%20olympiades/2025/DSCF9838%20-%20Copie.JPG", caption: "" },
-  { url: "https://raw.githubusercontent.com/martin-papais/les-artistes/main/image%20olympiades/2025/DSCF9936%20-%20Copie.JPG", caption: "" },
-  { url: "https://raw.githubusercontent.com/martin-papais/les-artistes/main/image%20olympiades/2025/DSCF9947%20-%20Copie.JPG", caption: "" },
-  { url: "https://raw.githubusercontent.com/martin-papais/les-artistes/main/image%20olympiades/2025/DSCF9957%20-%20Copie.JPG", caption: "" }
-],
-    galerie: 8
+    // ← Ajoute ici les photos de 2025, ex: { url: "...", caption: "..." }
+    photos: [],
+    galerie: 4
   },
   2026: {
     date: "1 aout 2026",
     lieu: "Chez Thomas Grima",
-    meteo: {desc: "⛅ Ciel voilé dans la matinée et grand soleil dans l'après-midi" },
+    meteo: { emoji: "⛅", temp: "23°C", desc: "Ciel voilé avec de belles éclaircies" },
     resume: "Quatrième édition, organisée cette fois chez Thomas Grima. Quatre nouveaux participants sont venus grossir les rangs cette année : Carla, Barnabé, Clément et Noha, prêts à découvrir dans quoi ils venaient de s'engager. Plusieurs nouveautés sont également à signaler. Tout d'abord, une superbe fontaine à punch, coulant en continu depuis un tonneau, a veillé à ce que personne ne souffre de déshydratation. Mais la véritable révolution de cette édition reste l'arrivée d'un tout nouveau trophée : le bouclier des Olympiades des Artistes. Désormais, chaque année, le nom du vainqueur y sera gravé pour l'éternité (ou du moins jusqu'à la prochaine édition), faisant officiellement entrer ce tournoi dans une nouvelle ère.",
     citations: [
       { text: "\"Je ne comprend pas ... notre équipe avait pourtant les moyens de gagner ... on a pas su concrétiser\"", auteur: "— Thomas C, membre de l'équipe des Bleubites" }
       // ← Ajoute d'autres citations ici si besoin, ex: { text: "...", auteur: "— ..." }
     ],
     bbq: "Au menu cette année, un apéritif à la hauteur des Olympiades : un saucisson de 2,5 kg qui aurait pu servir d'accessoire pour le lancer de poids, de belles brochettes de poulet et de bœuf, ainsi que du magret de canard cuit à la plancha pour les palais les plus exigeants. Le tout accompagné de poivrons grillés pour la touche de légumes et de pain pour les féculents. Sans oublier des saucisses végétariennes spécialement prévues pour Lorette, histoire que personne ne reste sur sa faim. Côté boissons, le punch a coulé à flots pour accompagner le tout, avec en accompagnement quelques shots de Menthe-Pastille, orchestrés avec brio par Mathis.",
-    loto: "Le loto/quine de cette édition a été particulièrement disputé, avec beaucoup plus de diversité parmi les gagnants que l'année dernière — signe que la chance a enfin décidé de tourner. Parmi les nombreux petits lots rigolos mis en jeu, quelques mentions honorables méritent d'être soulignées : le lot BTP (un WD-40 et un mini tractopelle) ainsi que le lot sport (haltère, corde à sauter et balle pour chien) ont tous deux été raflés par Maxime.. Le lot rempli de malice, quant à lui — composé d'une cale-porte peluche, d'un gnome de jardin et d'une peluche anti-stress — est revenu à Barnabé, qui repart avec de quoi décorer son jardin.",
-    superQuine: { gagnant: "Carla", equipeId: "bleubites", lot: "Un Wonderbox en duo de 50€ pour un moment détente/activité/sport" },
+    loto: {
+      intro: "Le loto/quine de cette édition a été particulièrement disputé, avec beaucoup de diversité parmi les gagnants des trois quines classiques — avant la Super Quine et son gros lot, réservé au seul carton plein.",
+      quines: [
+        {
+          titre: "Quine n°1",
+          lignes: [
+            { type: "Ligne",        nom: "Lot du petit rigolo",              contenu: "Pâte à prout, bulles peut-être",                                    gagnant: "Quentin" },
+            { type: "Double ligne", nom: "Lot Petit déjeuner d'1 héros",     contenu: "Tasse Spiderman avec bulle et 4 balles rebondissantes",             gagnant: "Alizée" },
+            { type: "Carton plein", nom: "Lot nouveaux amis",                contenu: "1 gnome, 1 cale-porte et 1 peluche anti-stress",                    gagnant: "Barnabé" }
+          ]
+        },
+        {
+          titre: "Quine n°2",
+          lignes: [
+            { type: "Ligne",        nom: "Lot rempli de malice et de fourberie", contenu: "Tasse Elsa et pâte à prout",                                    gagnant: "Mattéo" },
+            { type: "Double ligne", nom: "Lot les indispensables pour la rentrée", contenu: "1 trousse Pringles, des stylos et une balle rebondissante Peppa Pig", gagnant: "Lucas" },
+            { type: "Carton plein", nom: "Lot sportif",                      contenu: "1 poids de 1 kg, 1 corde à sauter et une balle verte pour chien",   gagnant: "Maxime" }
+          ]
+        },
+        {
+          titre: "Quine n°3",
+          lignes: [
+            { type: "Ligne",        nom: "Lot BTP",                          contenu: "1 mini tractopelle et du WD-40",                                    gagnant: "Maxime" },
+            { type: "Double ligne", nom: "Lot pas fâché avec le bonheur",    contenu: "Un petit Lego, de la pâte à prout, des bulles et une toupie",       gagnant: "Martin" },
+            { type: "Carton plein", nom: "Lot \"Ah là je suis bien\"",       contenu: "Un plaid, une bougie, des bombes de bain et des bulles",           gagnant: "Cédric" }
+          ]
+        }
+      ]
+    },
+    superQuine: { gagnant: "Carla", equipeId: null, lot: "Wonderbox duo 50€" },
     repas: "Comme chaque année, après l'effort, le réconfort. Au menu de cette auberge espagnole tardive : des minis sandwichs triangles, une multitude de toasts, des crêpes, des gâteaux, des cookies — bref, que du bonheur pour reconstituer les stocks d'énergie dépensés sur le terrain. Malheureusement, de superbes salades et tortillas ont, elles, préféré rester bien au frais et ont complètement oublié de sortir du frigo.",
     anecdote: "Une très belle mention honorable revient à la spectaculaire chute d'Anaïs sur le ventriglisse, qui lui a valu un protocole commotion en bonne et due forme, réalisé par nos deux médecins professionnels du jour, Élise et Timothée. Mention honorable également à la stratégie toute en finesse de Mathis, consistant à faire copieusement boire ses adversaires avant les épreuves, dans le seul but de les déstabiliser. Une autre mention spéciale au retard de 3 heures accumulé sur le programme, qui a eu le mérite d'offrir l'épreuve du tir à la corde disputée intégralement dans le noir. Enfin, on retiendra tout de même une performance remarquable : pas moins de 5 vomis au compteur (Grima, Clara, Maxime, Théo, Nicolas), preuve de l'intensité redoutable qu'exigent ces Olympiades. On notera également, après examen approfondi le lendemain, que presque tout le monde est reparti avec son petit trophée personnel : bleu, griffure, douleur ou commotion.",
     teams: [
       {
-        id: "mitralleurs", nom: "Les Mittralleurs", emoji: "🔫", couleur: "jaune",
+        id: "mitralleurs", nom: "Les Mittralleurs", emoji: "🤠", couleur: "jaune",
         capitaine: "Clément",
-        membres: ["Lucas","Clément","Clara","Matteo","Lisa","Thomas C"]
+        membres: ["Lucas","Clément","Clara","Matteo","Lisa"]
       },
       {
-        id: "verts", nom: "Les Verts de Terres", emoji: "🪱", couleur: "vert",
+        id: "verts", nom: "Les Verts de Terres", emoji: "🎭", couleur: "vert",
         capitaine: "Quentin",
         membres: ["Timothée","Quentin","Emilie","Maxime","Elise","Alizée","Théo"]
       },
       {
-        id: "redmorts", nom: "Les Redmorts", emoji: "💀", couleur: "rouge",
+        id: "redmorts", nom: "Les Redmorts", emoji: "🏜️", couleur: "rouge",
         capitaine: "Cédric",
         membres: ["Cédric","Barnabé","Anaïs","Antoine","Thomas G","Chloé"]
       },
       {
-        id: "bleubites", nom: "Les BleuBites", emoji: "🍆", couleur: "bleu",
+        id: "bleubites", nom: "Les BleuBites", emoji: "⛏️", couleur: "bleu",
         capitaine: "Carla",
         membres: ["Mathis","Dimitri","Lorette","Carla","Noha","Nicolas"]
       }
@@ -521,16 +562,7 @@ var OLYMPIADES = {
       { nom: "Elisa",  equipeId: null,       type: "absent",   raison: "Chez la famille de Lucas dans les Alpes, pas disponible cette fois" }
     ],
     // ← Ajoute ici les photos de 2026, ex: { url: "...", caption: "..." }
-        photos: [
-  { url: "https://raw.githubusercontent.com/martin-papais/les-artistes/main/image%20olympiades/2026/S0171033%20-%20Copie.JPG", caption: "" },
-  { url: "https://raw.githubusercontent.com/martin-papais/les-artistes/main/image%20olympiades/2026/S0191040%20-%20Copie.JPG", caption: "" },
-  { url: "https://raw.githubusercontent.com/martin-papais/les-artistes/main/image%20olympiades/2026/S0790193%20-%20Copie.JPG", caption: "" },
-  { url: "https://raw.githubusercontent.com/martin-papais/les-artistes/main/image%20olympiades/2026/S0840201%20-%20Copie.JPG", caption: "" },
-  { url: "https://raw.githubusercontent.com/martin-papais/les-artistes/main/image%20olympiades/2026/S0430112%20-%20Copie.JPG", caption: "" },
-  { url: "https://raw.githubusercontent.com/martin-papais/les-artistes/main/image%20olympiades/2026/S0690170%20-%20Copie.JPG", caption: "" },
-  { url: "https://raw.githubusercontent.com/martin-papais/les-artistes/main/image%20olympiades/2026/troph%C3%A9.jpg", caption: "" },
-  { url: "https://raw.githubusercontent.com/martin-papais/les-artistes/main/image%20olympiades/2026/troph%C3%A92.jpg", caption: "" },
-],
+    photos: [],
     galerie: 8
   }
 };
@@ -567,6 +599,7 @@ function initTabs(){
     var d = OLYMPIADES[y];
     return '<div class="year-tab'+(i===0?' active':'')+'" data-year="'+y+'" onclick="switchYear(\''+y+'\')">'
       + '<div class="yt-num">'+y+'</div>'
+      + '<div class="yt-theme">'+d.meteo.emoji+' '+esc(d.meteo.temp)+'</div>'
       + '</div>';
   }).join('');
 }
@@ -623,7 +656,7 @@ function buildYearPanel(year, isFirst){
   html += '<div class="infobox">'
     + '<div class="infobox-title">Olympiades '+year+'</div>'
     + '<table class="infobox-table">'
-    +   '<tr><th>Météo</th><td>'+esc(d.meteo.desc)+'</td></tr>'
+    +   '<tr><th>Météo</th><td>'+d.meteo.emoji+' '+esc(d.meteo.desc)+' ('+esc(d.meteo.temp)+')</td></tr>'
     +   '<tr><th>Dates</th><td>'+esc(d.date)+'</td></tr>'
     +   '<tr><th>Lieu</th><td>'+esc(d.lieu)+'</td></tr>'
     +   '<tr><th>Équipes</th><td>'+d.teams.length+' équipes · '+totalMembres+' participants</td></tr>'
@@ -640,17 +673,23 @@ function buildYearPanel(year, isFirst){
   // ── Loto / Quine ──
   if (d.loto) {
     html += '<div class="section-label"><span>🎟️ Loto / Quine</span></div>';
-    html += '<div class="text-block">'+esc(d.loto)+'</div>';
+    html += '<div class="text-block">'+esc(d.loto.intro)+'</div>';
+    d.loto.quines.forEach(function(q){
+      html += '<div class="quine-block">';
+      html += '<div class="quine-block-title">'+esc(q.titre)+'</div>';
+      html += '<table class="quine-table"><tr><th>Tirage</th><th>Lot</th><th>Gagnant</th></tr>';
+      q.lignes.forEach(function(l){
+        html += '<tr><td class="qt-type">'+esc(l.type)+'</td><td><b>'+esc(l.nom)+'</b>'+(l.contenu?' — '+esc(l.contenu):'')+'</td><td class="qt-gagnant">'+esc(l.gagnant)+'</td></tr>';
+      });
+      html += '</table></div>';
+    });
     if (d.superQuine) {
       var sq = d.superQuine;
-      var sqTeam = byId[sq.equipeId];
-      html += '<div class="super-winner-card">'
-        + '<span class="super-winner-icon">🏆</span>'
-        + '<div>'
-        +   '<div class="super-winner-name">'+esc(sq.gagnant)+(sqTeam?' · '+sqTeam.emoji+' '+esc(sqTeam.nom):'')+'</div>'
-        +   '<div class="super-winner-prize">Gagnant·e de la Super Quine — '+esc(sq.lot)+'</div>'
-        + '</div>'
-        + '</div>';
+      html += '<div class="quine-super-wrap">'
+        + '<div class="quine-block-title super">🏆 Super Quine</div>'
+        + '<table class="quine-table super"><tr><th>Tirage</th><th>Lot</th><th>Gagnant</th></tr>'
+        +   '<tr><td class="qt-type">Carton plein</td><td><b>'+esc(sq.lot)+'</b></td><td class="qt-gagnant">'+esc(sq.gagnant)+'</td></tr>'
+        + '</table></div>';
     }
   }
   // ── Podium / classement général (calculé automatiquement) ──
@@ -794,7 +833,7 @@ function buildLegacyYearPanel(year, d, isFirst){
   html += '<div class="infobox">'
     + '<div class="infobox-title">Olympiades '+year+'</div>'
     + '<table class="infobox-table">'
-    +   '<tr><th>Météo</th><td>'+esc(d.meteo.desc)+'</td></tr>'
+    +   '<tr><th>Météo</th><td>'+d.meteo.emoji+' '+esc(d.meteo.desc)+'</td></tr>'
     +   '<tr><th>Dates</th><td>'+esc(d.date)+'</td></tr>'
     +   '<tr><th>Lieu</th><td>'+esc(d.lieu)+'</td></tr>'
     +   '<tr><th>Format</th><td>'+esc(d.format)+'</td></tr>'
@@ -862,7 +901,7 @@ function buildHallOfFame(){
       var champLine = (d.vainqueurs && d.vainqueurs.length) ? ('🏆 ' + d.vainqueurs.join(', ')) : 'Vainqueur non renseigné';
       html += '<div class="hof-row">'
         + '<div class="hof-year">'+y+'</div>'
-        + '<div class="hof-theme">'+esc(d.lieu)+'</div>'
+        + '<div class="hof-theme">'+d.meteo.emoji+' '+esc(d.date)+' · '+esc(d.lieu)+'</div>'
         + '<div class="hof-champ">'+champLine+'</div>'
         + '</div>';
     } else {
@@ -870,7 +909,7 @@ function buildHallOfFame(){
       var champion = sorted[0];
       html += '<div class="hof-row">'
         + '<div class="hof-year">'+y+'</div>'
-        + '<div class="hof-theme">'+esc(d.lieu)+'</div>'
+        + '<div class="hof-theme">'+d.meteo.emoji+' '+esc(d.meteo.temp)+' · '+esc(d.lieu)+'</div>'
         + '<div class="hof-champ"><span class="color-dot" style="background:'+colorHex(champion.couleur)+'"></span>🏆 '+champion.emoji+' '+esc(champion.nom)+'</div>'
         + '</div>';
     }
