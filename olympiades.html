@@ -620,7 +620,7 @@ function buildYearPanel(year, isFirst){
   html += '<div class="infobox">'
     + '<div class="infobox-title">Olympiades '+year+'</div>'
     + '<table class="infobox-table">'
-    +   '<tr><th>Météo</th><td>'+d.meteo.emoji+' '+esc(d.meteo.desc)+' ('+esc(d.meteo.temp)+')</td></tr>'
+    +   '<tr><th>Météo</th><td>'+esc(d.meteo.desc)+'</td></tr>'
     +   '<tr><th>Dates</th><td>'+esc(d.date)+'</td></tr>'
     +   '<tr><th>Lieu</th><td>'+esc(d.lieu)+'</td></tr>'
     +   '<tr><th>Équipes</th><td>'+d.teams.length+' équipes · '+totalMembres+' participants</td></tr>'
