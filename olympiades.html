@@ -367,7 +367,7 @@ var OLYMPIADES = {
     meteo: { emoji: "☀️", temp: "29°C", desc: "Grand soleil, journée caniculaire" },
     resume: "Troisième édition officielle des Olympiades, organisée cette année chez Timothée. Une chaleur écrasante s'est fait ressentir tout au long de la journée, mais la présence de la piscine a permis aux participants de se rafraîchir. Cette année marque l'arrivée de deux nouveaux participants dans ce tournois : Clara et Mathis, venus tenter leur chance. Un peu de bricolage a été nécessaire pour préparer les épreuves, avec notamment une superbe structure en bois permettant de traverser la piscine, ainsi que deux autres structures dédiées au lancer de balles. Grande première cette année : les équipes ne se contentent plus d'une simple couleur, elles ont désormais un vrai nom et un cri de guerre bien à elles, et peuvent même se maquiller à l'effigie de leur équipe pour intimider l'adversaire. Cette édition marque également la mise en place d'un loto/quine entre le repas du midi et les épreuves (pour la digestion).",
     citations: [
-      { text: "\"On perd uniquement à cause des bonus/malus ... ce n'est pas juste.\"", auteur: "— Antoine, capitaine de Louis la tortue jaune" }
+      { text: "\"On perd uniquement à cause des bonus/malus ... ce n'est pas juste.\"", auteur: "— Antoine, capitaine de Louis la chèvre jaune" }
       // ← Ajoute d'autres citations ici si besoin, ex: { text: "...", auteur: "— ..." }
     ],
     bbq: "Au menu cette année, un bel apéritif était au rendez-vous, avec un généreux jambon, de belles ventrèches et des chipolatas. Une pointe de légumes s'est aussi invitée à la fête, probablement pour se donner bonne conscience, accompagnée de pain pour ne rien laisser passer. Côté liquide, rien n'a été laissé au hasard : bières, Ricard, sangria et punch se sont relayés tout au long de l'apéro pour accompagner le tout.",
@@ -377,22 +377,22 @@ var OLYMPIADES = {
     anecdote: "On peut premièrement souligner que le hasard fait bien les choses : c'est la seule végane du groupe, Lorette, présente à ces olympiades, qui a remporté le gros lot du loto (jambon). On peut ensuite applaudir la belle performance de Lucas et Mathis sur le passage de la structure en bois lors du parcours du combattant — dignes des plus grands sportifs. L'épreuve des pastèques, comme bien souvent, a viré au chaos total, transformée en une véritable bataille d'épluchures, le tout couronné par un superbe vomi de Nicolas. Côté ambiance, la musique 'Attention aux chaises' s'est imposée comme la maîtresse incontestée de la soirée, rythmant les festivités. On retiendira aussi la venu d'Alizée, qui a pu se libérer pour la soirée",
     teams: [
       {
-        id: "ciels", nom: "Les ciels", emoji: "🍷", couleur: "rouge",
+        id: "ciels", nom: "Les ciels", emoji: "☁️", couleur: "bleu",
         capitaine: "Chloé",
         membres: ["Lucas","Mattéo","Lorette","Chloé","Théo"]
       },
       {
-        id: "sangria", nom: "Sangriaaaaa", emoji: "🏹", couleur: "vert",
+        id: "sangria", nom: "Sangriaaaaa", emoji: "🍷", couleur: "rouge",
         capitaine: "Lisa",
         membres: ["Maxime","Cédric","Lisa","Anaïs","Timothée"]
       },
       {
-        id: "patoches", nom: "Les Patoches", emoji: "🐎", couleur: "bleu",
+        id: "patoches", nom: "Les Patoches", emoji: "👨‍🎤", couleur: "vert",
         capitaine: "Quentin",
         membres: ["Quentin","Nicolas","Elisa","Elise","Dimitri"]
       },
       {
-        id: "tortue", nom: "Louis la tortue jaune", emoji: "🧜", couleur: "jaune",
+        id: "chèvre", nom: "Louis la chèvre jaune", emoji: "🐐", couleur: "jaune",
         capitaine: "Antoine",
         membres: ["Antoine","Thomas C","Clara","Emilie","Mathis"]
       }
@@ -401,33 +401,33 @@ var OLYMPIADES = {
       {
         nom: "Le Flip Cup", num: 1,
         desc: "Course à relais aller-retour où chaque changement de témoin nécessite de boire son verre cul-sec et de retourner son verre à 180° en lui donnant une impulsion avec son doigt.",
-        scores: { tortue: 4, sangria: 3, patoches: 2, ciels: 1 }
+        scores: { chèvre: 4, sangria: 3, patoches: 2, ciels: 1 }
       },
       {
         nom: "Parcours du combattant", num: 2,
         desc: "Un parcours en relais chronométré pour chaque équipes. Cette année il est consititué de 15 verres à boire par équipe, d'une traversé d'une piscine sur une structure en bois, d'un ventriglisse et d'un sprint final",
-        scores: { patoches: 4, sangria: 3, tortue: 2, ciels: 1 }
+        scores: { patoches: 4, sangria: 3, chèvre: 2, ciels: 1 }
       },
       {
         nom: "Lancé de balles", num: 3,
         desc: "Chaque équipes qui s'affronte ont un quota de 15 verres par équipe. L'obejctif est de viser les trous d'une structure en bois. Certains (gros) valent un verre tandis que d'autre (plus petit) valent 2 ou 3 verres. Chaque fois qu'une balle rentre dans le trou, l'équipe adverse bois le nombre de verre correspondant. La première équipe à ne plus avoir de verre à perdue",
-        scores: { tortue: 4, patoches: 3, sangria: 2, ciels: 1 }
+        scores: { chèvre: 4, patoches: 3, sangria: 2, ciels: 1 }
       },
       {
         nom: "Les Pastèques", num: 4,
         desc: "L'objectif est de manger le plus rapidement une certaine quantité de pastèque par équipe.",
-        scores: { patoches: 4, tortue: 3, ciels: 2, sangria: 1 }
+        scores: { patoches: 4, chèvre: 3, ciels: 2, sangria: 1 }
       },
       {
         nom: "Quizz", num: 5,
         desc: "Épreuve finale : Quizz plus ou moins à culture général et blind test. Celui qui attrape le verre en premier peut répondre",
-        scores: { tortue: 4, sangria: 3, patoches: 2, ciels: 1 }
+        scores: { chèvre: 4, sangria: 3, patoches: 2, ciels: 1 }
       }
     ],
     extras: [
       { equipeId: "patoches", type: "bonus", points: 1, motif: "Bonus vomit : Un beau vomit de Nicolas sur l'épreuve des pastèques" },
       { equipeId: "sangria",  type: "malus", points: -1, motif: "Retard de Cédric" },
-      { equipeId: "tortue",   type: "malus", points: -2, motif: "Retard de Mathis et d'Emilie" }
+      { equipeId: "chèvre",   type: "malus", points: -2, motif: "Retard de Mathis et d'Emilie" }
     ],
     absents: [
       { nom: "Elisa",     equipeId: "patoches", type: "blessure", raison: "Entorse à la cheville donc légèrement handicapé pour le parcours du combattant" },
@@ -462,22 +462,22 @@ var OLYMPIADES = {
     anecdote: "Une très belle mention honorable revient à la spectaculaire chute d'Anaïs sur le ventriglisse, qui lui a valu un protocole commotion en bonne et due forme, réalisé par nos deux médecins professionnels du jour, Élise et Timothée. Mention honorable également à la stratégie toute en finesse de Mathis, consistant à faire copieusement boire ses adversaires avant les épreuves, dans le seul but de les déstabiliser. Une autre mention spéciale au retard de 3 heures accumulé sur le programme, qui a eu le mérite d'offrir l'épreuve du tir à la corde disputée intégralement dans le noir. Enfin, on retiendra tout de même une performance remarquable : pas moins de 5 vomis au compteur (Grima, Clara, Maxime, Théo, Nicolas), preuve de l'intensité redoutable qu'exigent ces Olympiades. On notera également, après examen approfondi le lendemain, que presque tout le monde est reparti avec son petit trophée personnel : bleu, griffure, douleur ou commotion.",
     teams: [
       {
-        id: "mitralleurs", nom: "Les Mittralleurs", emoji: "🤠", couleur: "jaune",
+        id: "mitralleurs", nom: "Les Mittralleurs", emoji: "🔫", couleur: "jaune",
         capitaine: "Clément",
         membres: ["Lucas","Clément","Clara","Matteo","Lisa"]
       },
       {
-        id: "verts", nom: "Les Verts de Terres", emoji: "🎭", couleur: "vert",
+        id: "verts", nom: "Les Verts de Terres", emoji: "🪱", couleur: "vert",
         capitaine: "Quentin",
         membres: ["Timothée","Quentin","Emilie","Maxime","Elise","Alizée","Théo"]
       },
       {
-        id: "redmorts", nom: "Les Redmorts", emoji: "🏜️", couleur: "rouge",
+        id: "redmorts", nom: "Les Redmorts", emoji: "💀", couleur: "rouge",
         capitaine: "Cédric",
         membres: ["Cédric","Barnabé","Anaïs","Antoine","Thomas G","Chloé"]
       },
       {
-        id: "bleubites", nom: "Les BleuBites", emoji: "⛏️", couleur: "bleu",
+        id: "bleubites", nom: "Les BleuBites", emoji: "🍆", couleur: "bleu",
         capitaine: "Carla",
         membres: ["Mathis","Dimitri","Lorette","Carla","Noha","Nicolas"]
       }
