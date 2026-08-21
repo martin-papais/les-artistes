@@ -853,6 +853,7 @@ function buildLegacyYearPanel(year, d, isFirst){
   var html = '<div class="year-panel'+(isFirst?' show':'')+'" data-year="'+year+'">';
 
   // Équipe / noms gagnants connus, pour l'encadré
+  var totalMembres = d.teams.reduce(function(sum,t){ return sum + t.membres.filter(Boolean).length; }, 0);
   var winningTeam = (d.teams || []).filter(function(t){ return t.vainqueur; })[0];
   var champLabel = winningTeam ? winningTeam.membres.join(', ')
     : (d.vainqueurs && d.vainqueurs.length) ? d.vainqueurs.join(', ')
