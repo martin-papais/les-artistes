@@ -439,7 +439,7 @@ function renderTable(list) {
       if (isMe) {
         ribHtml = '<span class="cell-val" style="font-size:.78rem;font-family:monospace">' + esc(p._rib) + '</span>';
       } else {
-        ribHtml = '<span class="cell-sensitive" onclick="revealRib(this,\'' + esc(p._rib) + '\')">&#128274; Voir</span>';
+        ribHtml = '<span class="cell-sensitive" data-rib="' + esc(p._rib) + '" onclick="revealRib(this,this.dataset.rib)">&#128274; Voir</span>';
       }
     } else {
       ribHtml = '<span class="cell-empty">&#8212;</span>';
@@ -662,7 +662,7 @@ function toggleMenu() { document.getElementById('mobile-menu').classList.toggle(
 async function handleLogout() { await sb.auth.signOut(); window.location.href = 'login.html'; }
 function esc(s) {
   if (!s) return '';
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 document.addEventListener('click', function(e) {
   var menu = document.getElementById('mobile-menu');

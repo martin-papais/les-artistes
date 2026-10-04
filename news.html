@@ -403,6 +403,7 @@ main{padding-top:64px;position:relative;z-index:1;}
   <div style="font-size:.72rem;color:var(--muted);margin-bottom:8px;width:100%">Clique pour insérer</div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 var SUPABASE_URL  = 'https://ldchxxkmvepvbvhdokot.supabase.co';
@@ -524,9 +525,9 @@ function buildNewsCard(n) {
   var content = n.contenu || '';
   var isLong  = content.length > 600;
   var displayed = isLong
-    ? '<div class="news-content" id="content-'+n.id+'">' + content.substring(0,600) + '...</div>'
+    ? '<div class="news-content" id="content-'+n.id+'">' + cleanHtml(content.substring(0,600)) + '...</div>'
       + '<button onclick="toggleContent(\''+n.id+'\',this)" style="background:none;border:none;color:var(--violet);cursor:pointer;font-size:.83rem;margin-top:4px;font-family:DM Sans,sans-serif;">Lire la suite ↓</button>'
-    : '<div class="news-content">' + content + '</div>';
+    : '<div class="news-content">' + cleanHtml(content) + '</div>';
 
   return '<div class="news-card" id="card-'+n.id+'">'
     + cover
@@ -572,7 +573,7 @@ function toggleContent(newsId, btn) {
   if (!n) return;
   var el = document.getElementById('content-'+newsId);
   if (!el) return;
-  el.innerHTML = n.contenu || '';
+  el.innerHTML = cleanHtml(n.contenu || '');
   btn.style.display = 'none';
 }
 
@@ -801,7 +802,7 @@ async function openEditModal(newsId) {
   editingId = newsId;
   document.getElementById('editor-title').textContent = '✏️ Modifier';
   document.getElementById('f-titre').value = n.titre || '';
-  document.getElementById('editor-content').innerHTML = n.contenu || '';
+  document.getElementById('editor-content').innerHTML = cleanHtml(n.contenu || '');
   document.getElementById('f-tags').value = n.tags || '';
   document.getElementById('btn-publish').textContent = 'Enregistrer ✏️';
   document.getElementById('editor-alert').className = 'malert';
@@ -899,9 +900,16 @@ function toggleMenu() {
 
 async function handleLogout() { await sb.auth.signOut(); window.location.href = 'login.html'; }
 
+// HTML riche d'une news : on garde la mise en forme, on retire scripts et gestionnaires
+// (DOMPurify referme aussi les balises coupées par la troncature à 600 caractères)
+function cleanHtml(h) {
+  if (window.DOMPurify) return DOMPurify.sanitize(h || '');
+  return esc(h);
+}
+
 function esc(s) {
   if (!s) return '';
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
 document.addEventListener('click', function(e) {

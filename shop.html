@@ -676,6 +676,7 @@ async function setDeadline() {
   if (r.error) { alert('Erreur : ' + r.error.message); return; }
   deadline = d;
   startCountdown();
+  renderShopCards();
 }
 
 async function clearDeadline() {
@@ -684,6 +685,12 @@ async function clearDeadline() {
   deadline = null;
   if (cdInterval) clearInterval(cdInterval);
   setCdState('none');
+  renderShopCards();
+}
+
+// Boutons « Commander » à jour après un changement de date limite
+function renderShopCards() {
+  if (allArticles.length) document.getElementById('shop-grid').innerHTML = allArticles.map(function(a) { return buildProductCard(a); }).join('');
 }
 
 function startCountdown() {
@@ -697,7 +704,7 @@ function startCountdown() {
     if (diff <= 0) {
       clearInterval(cdInterval);
       setCdState('expired');
-      if (allArticles.length) document.getElementById('shop-grid').innerHTML = allArticles.map(function(a) { return buildProductCard(a); }).join('');
+      renderShopCards();
       return;
     }
 
@@ -1020,6 +1027,7 @@ async function confirmOrder() {
   var oldIds = (oldRes.data || []).map(function(o) { return o.id; });
 
   // Insère les nouvelles lignes (1 ligne par unité)
+  var newIds = [];
   if (sizes.length) {
     var persoVal = document.getElementById('order-perso-input').value.trim() || null;
     var toInsert = [];
@@ -1029,13 +1037,18 @@ async function confirmOrder() {
         toInsert.push({ article_id: orderProductId, user_id: currentUser.id, taille: sz, personnalisation: persoVal });
       }
     });
-    var insRes = await sb.from('shop_orders').insert(toInsert);
+    var insRes = await sb.from('shop_orders').insert(toInsert).select('id');
     if (insRes.error) return fail('Erreur commande : ' + insRes.error.message + ' (ta commande précédente est conservée)');
+    newIds = (insRes.data || []).map(function(o) { return o.id; });
   }
 
   if (oldIds.length) {
     var delRes = await sb.from('shop_orders').delete().in('id', oldIds);
-    if (delRes.error) return fail('Erreur suppression de l\'ancienne commande : ' + delRes.error.message);
+    if (delRes.error) {
+      // On retire les nouvelles lignes pour ne pas cumuler ancienne + nouvelle commande
+      if (newIds.length) await sb.from('shop_orders').delete().in('id', newIds);
+      return fail('Erreur : ' + delRes.error.message + ' (ta commande précédente est conservée)');
+    }
   }
 
   btn.disabled = false; btn.textContent = 'Confirmer';
@@ -1592,7 +1605,7 @@ async function handleLogout() { await sb.auth.signOut(); window.location.href = 
 
 function esc(s) {
   if (!s) return '';
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
 document.addEventListener('click', function(e) {

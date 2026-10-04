@@ -343,16 +343,22 @@ function ArticleDetail({
           });
         }
       });
+      let newIds: string[] = [];
       if (toInsert.length) {
-        const ins = await sb.from('shop_orders').insert(toInsert);
+        const ins = await sb.from('shop_orders').insert(toInsert).select('id');
         if (ins.error) {
           throw new Error(`${ins.error.message} (ta commande précédente est conservée)`);
         }
+        newIds = (ins.data ?? []).map((o: { id: string }) => o.id);
       }
 
       if (oldIds.length) {
         const del = await sb.from('shop_orders').delete().in('id', oldIds);
-        if (del.error) throw new Error(`Ancienne commande non supprimée : ${del.error.message}`);
+        if (del.error) {
+          // On retire les nouvelles lignes pour ne pas cumuler ancienne + nouvelle commande
+          if (newIds.length) await sb.from('shop_orders').delete().in('id', newIds);
+          throw new Error(`${del.error.message} (ta commande précédente est conservée)`);
+        }
       }
       onSaved();
     } catch (e) {
@@ -542,7 +548,8 @@ function SondageView() {
 
   async function toggleVote(c: SondageCandidat) {
     if (!userId || voting.current) return;
-    if (isClosed) {
+    // Recalculé au clic : l'écran peut rester ouvert après l'échéance
+    if (deadline && Date.now() >= deadline.getTime()) {
       Alert.alert('Sondage fermé', 'La date limite est dépassée.');
       return;
     }
