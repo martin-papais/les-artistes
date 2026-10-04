@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { signOutAndUnregister } from '@/lib/notifications';
+import { signOutAndUnregister, unregisterPushToken } from '@/lib/notifications';
 import { sb, type AnnuaireExtra, type Profile, sessionUser } from '@/lib/supabase';
 import { theme } from '@/lib/theme';
 
@@ -36,6 +36,7 @@ export default function ProfilScreen() {
   const [email, setEmail] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
 
   const loadAll = useCallback(async () => {
     const user = await sessionUser();
@@ -71,6 +72,41 @@ export default function ProfilScreen() {
         },
       },
     ]);
+  }
+
+  // Suppression du compte (exigée par l'App Store) : fichiers Storage d'abord (le SQL ne peut
+  // pas les effacer), puis delete_my_account qui supprime le compte et toutes ses données.
+  async function deleteAccount() {
+    const user = await sessionUser();
+    if (!user) return;
+    setDeleting(true);
+    try {
+      for (const folder of [user.id, `${user.id}/covers`]) {
+        const { data: files } = await sb.storage.from('media').list(folder, { limit: 1000 });
+        const paths = (files ?? []).filter((f) => f.id).map((f) => `${folder}/${f.name}`);
+        if (paths.length) await sb.storage.from('media').remove(paths);
+      }
+      await unregisterPushToken();
+      const { error } = await sb.rpc('delete_my_account');
+      if (error) throw new Error(error.message);
+      await sb.auth.signOut({ scope: 'local' });
+      if (router.canDismiss()) router.dismissAll();
+      router.replace('/(auth)/login');
+    } catch (e) {
+      setDeleting(false);
+      Alert.alert('Erreur', e instanceof Error ? e.message : 'Réessaie.');
+    }
+  }
+
+  function confirmDeleteAccount() {
+    Alert.alert(
+      'Supprimer mon compte',
+      'Ton compte et tout ce que tu as publié (événements, photos, news, votes, commentaires, notes, commandes) seront supprimés définitivement.',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        { text: 'Supprimer définitivement', style: 'destructive', onPress: deleteAccount },
+      ],
+    );
   }
 
   if (loading) {
@@ -144,6 +180,18 @@ export default function ProfilScreen() {
         >
           <Ionicons name="log-out-outline" size={18} color={theme.colors.coral} />
           <Text style={styles.logoutText}>Se déconnecter</Text>
+        </Pressable>
+
+        <Pressable
+          onPress={confirmDeleteAccount}
+          disabled={deleting}
+          style={({ pressed }) => [styles.deleteBtn, (pressed || deleting) && { opacity: 0.6 }]}
+        >
+          {deleting ? (
+            <ActivityIndicator color={theme.colors.danger} />
+          ) : (
+            <Text style={styles.deleteText}>Supprimer mon compte</Text>
+          )}
         </Pressable>
       </ScrollView>
 
@@ -422,6 +470,8 @@ const styles = StyleSheet.create({
     minHeight: 48,
   },
   logoutText: { color: theme.colors.coral, fontFamily: theme.fonts.bodyBold, fontSize: 15 },
+  deleteBtn: { marginTop: 14, paddingVertical: 12, alignItems: 'center' },
+  deleteText: { color: theme.colors.danger, fontFamily: theme.fonts.body, fontSize: 13, textDecorationLine: 'underline' },
 
   modalHeader: {
     flexDirection: 'row',
