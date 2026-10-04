@@ -365,9 +365,16 @@ async function loadProfiles() {
   var extraMap = {};
   (extra.data || []).forEach(function(e) { extraMap[e.user_id] = e; });
 
+  // Une ligne mal formée ne doit pas bloquer tout l'annuaire
+  function parseAddresses(a) {
+    if (!a) return [];
+    if (Array.isArray(a)) return a;
+    try { var v = JSON.parse(a); return Array.isArray(v) ? v : []; } catch (e) { return []; }
+  }
+
   allProfiles = (r.data || []).map(function(p) {
     var ex = extraMap[p.id] || {};
-    p._addresses = ex.addresses ? JSON.parse(ex.addresses) : [];
+    p._addresses = parseAddresses(ex.addresses);
     p._rib = ex.rib || '';
     return p;
   });
@@ -443,7 +450,7 @@ function renderTable(list) {
       : '';
 
     return '<tr class="' + (isMe ? 'my-row' : '') + '">'
-      + '<td><div class="cell-name"><div class="cell-av' + (isMe ? ' me' : '') + '">' + initials + '</div><span class="full-name">' + esc(p.nom || '&#8212;') + (isMe ? '<span class="me-badge">moi</span>' : '') + '</span></div></td>'
+      + '<td><div class="cell-name"><div class="cell-av' + (isMe ? ' me' : '') + '">' + initials + '</div><span class="full-name">' + (p.nom ? esc(p.nom) : '&#8212;') + (isMe ? '<span class="me-badge">moi</span>' : '') + '</span></div></td>'
       + '<td class="cell-val">' + esc(p.prenom || '') + '</td>'
       + '<td class="cell-val">' + (dobFmt ? '&#127874; ' + dobFmt : '<span class="cell-empty">&#8212;</span>') + '</td>'
       + '<td class="cell-val">' + (p.tel ? '<a href="tel:' + esc(p.tel) + '" style="color:var(--teal);text-decoration:none">' + esc(p.tel) + '</a>' : '<span class="cell-empty">&#8212;</span>') + '</td>'
@@ -600,7 +607,7 @@ async function saveProfile() {
   var prenom = document.getElementById('e-prenom').value.trim();
   var nom    = document.getElementById('e-nom').value.trim();
   if (!prenom || !nom) {
-    alertEl.textContent = '&#9888; Pr&#233;nom et nom sont obligatoires.';
+    alertEl.textContent = '⚠ Prénom et nom sont obligatoires.';
     alertEl.className = 'malert error';
     return;
   }
@@ -623,8 +630,7 @@ async function saveProfile() {
     prenom: prenom,
     nom:    nom,
     dob:    document.getElementById('e-dob').value || null,
-    tel:    document.getElementById('e-tel').value.trim() || null,
-    pseudo: prenom + ' ' + nom
+    tel:    document.getElementById('e-tel').value.trim() || null
   }).eq('id', currentUser.id);
 
   // Upsert annuaire_extra
@@ -634,11 +640,11 @@ async function saveProfile() {
     rib:       rib || null
   }, { onConflict: 'user_id' });
 
-  btn.disabled = false; btn.textContent = 'Enregistrer &#10003;';
+  btn.disabled = false; btn.textContent = 'Enregistrer ✓';
 
   if (r1.error || r2.error) {
     var msg = (r1.error || r2.error).message;
-    alertEl.textContent = '&#10060; Erreur : ' + msg;
+    alertEl.textContent = '❌ Erreur : ' + msg;
     alertEl.className = 'malert error';
   } else {
     closeModal('modal-edit');

@@ -577,20 +577,25 @@ function toggleContent(newsId, btn) {
 }
 
 // ── LIKES ────────────────────────────────────────────
+var likeBusy = false;
 async function toggleLike(newsId) {
   var n = allNews.find(function(x){ return x.id===newsId; });
-  if (!n) return;
+  if (!n || likeBusy) return;
+  likeBusy = true;
   n._likes = n._likes || [];
   var idx = n._likes.indexOf(currentUser.id);
 
+  var r;
   if (idx !== -1) {
     // Déjà liké → unlike
-    await sb.from('news_likes').delete().eq('news_id',newsId).eq('user_id',currentUser.id);
-    n._likes.splice(idx,1);
+    r = await sb.from('news_likes').delete().eq('news_id',newsId).eq('user_id',currentUser.id);
+    if (!r.error) n._likes.splice(idx,1);
   } else {
-    await sb.from('news_likes').insert({ news_id:newsId, user_id:currentUser.id });
-    n._likes.push(currentUser.id);
+    r = await sb.from('news_likes').insert({ news_id:newsId, user_id:currentUser.id });
+    if (!r.error) n._likes.push(currentUser.id);
   }
+  likeBusy = false;
+  if (r.error) console.error('like error:', r.error.message);
 
   // Mise à jour UI sans recharger
   var btn = document.getElementById('like-btn-'+newsId);
@@ -657,12 +662,15 @@ async function loadComments(newsId) {
   }).join('');
 }
 
+var commentBusy = false;
 async function sendComment(newsId) {
   var inp = document.getElementById('ci-'+newsId);
   var txt = inp ? inp.value.trim() : '';
-  if (!txt) return;
+  if (!txt || commentBusy) return;
+  commentBusy = true;
   var r = await sb.from('news_comments').insert({ news_id:newsId, user_id:currentUser.id, contenu:txt });
-  if (r.error) { console.error('comment error:', r.error.message); return; }
+  commentBusy = false;
+  if (r.error) { alert('Commentaire non envoyé : '+r.error.message); return; }
   if (inp) inp.value = '';
   loadComments(newsId);
 }

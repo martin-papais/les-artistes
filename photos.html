@@ -606,7 +606,7 @@ function buildItem(m, i) {
   }
   if (m.file_url) {
     var dlName = m.file_name || m.sujet || 'fichier';
-    actionsBar += '<button class="act-btn dl" onclick="forceDownload(\''+esc(m.file_url)+'\',\''+esc(dlName)+'\')">&#11015; T&#233;l&#233;charger</button>';
+    actionsBar += '<button class="act-btn dl" data-url="'+esc(m.file_url)+'" data-name="'+esc(dlName)+'" onclick="forceDownload(this.dataset.url,this.dataset.name)">&#11015; T&#233;l&#233;charger</button>';
   }
   if (isOwner) {
     actionsBar += '<button class="act-btn edit" onclick="openEditModal(\'' + m.id + '\')">&#9998; Modifier</button>';
@@ -761,6 +761,7 @@ async function uploadMedia() {
 
   // Upload parallèle : tous les fichiers en même temps
   var completed = 0;
+  var failed    = 0;
   var uploadPromises = selectedFiles.map(function(file) {
     return (async function() {
       var fileType  = getMediaType(file);
@@ -776,6 +777,7 @@ async function uploadMedia() {
       } else {
         console.warn('Storage upload error:', upRes.error.message);
       }
+      if (!fileUrl) { failed++; return; }
 
       var payload = {
         sujet:       sujet,
@@ -790,7 +792,12 @@ async function uploadMedia() {
         created_by:  currentUser.id
       };
       var dbRes = await sb.from('photos').insert(payload);
-      if (dbRes.error) console.error('DB insert error:', dbRes.error.message);
+      if (dbRes.error) {
+        console.error('DB insert error:', dbRes.error.message);
+        await sb.storage.from('media').remove([path]);
+        failed++;
+        return;
+      }
 
       completed++;
       var pct = Math.round((completed / total) * 100);
@@ -804,13 +811,14 @@ async function uploadMedia() {
   var done = completed;
 
   document.getElementById('progress-bar').style.width = '100%';
-  document.getElementById('progress-text').textContent = done + ' élément(s) publié(s) !';
+  document.getElementById('progress-text').textContent = done + ' élément(s) publié(s) !'
+    + (failed ? ' ' + failed + ' échec(s), réessaie pour ceux-là.' : '');
 
   setTimeout(function() {
     closeModal('modal-upload');
     resetUploadForm();
     loadMedia();
-  }, 800);
+  }, failed ? 3500 : 800);
 }
 
 function getMediaType(file) {

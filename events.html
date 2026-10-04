@@ -481,6 +481,7 @@ async function autoCleanOldEvents() {
       await sb.from('event_comments').delete().eq('event_id',id);
       await sb.from('event_votes').delete().eq('event_id',id);
       await sb.from('event_food_votes').delete().eq('event_id',id);
+      await sb.from('event_courses_votes').delete().eq('event_id',id);
       await sb.from('events').delete().eq('id',id);
     }
   }
@@ -624,7 +625,10 @@ function buildRow(e, isPast) {
   // Countdown ou "il y a X jours"
   var countdownHtml = '';
   if (e.date_event) {
-    var diff = Math.round((new Date(e.date_event+' 00:00:00')-new Date())/(86400000));
+    // Jours entre minuits locaux (pas de NaN Safari, pas d'arrondi selon l'heure)
+    var dp = e.date_event.split('-');
+    var today = new Date(); today.setHours(0,0,0,0);
+    var diff = Math.round((new Date(+dp[0], +dp[1]-1, +dp[2]) - today)/86400000);
     if (!isPast) {
       countdownHtml = diff===0 ? '<span class="row-countdown soon">Aujourd\'hui !</span>'
         : diff===1 ? '<span class="row-countdown soon">Demain !</span>'
@@ -879,13 +883,10 @@ function buildFormFields(cat) {
 
 // Helper : injecte le toggle conditionnel dans les onclick des radio
 function injectToggle(h, fieldId, triggerVal, condId) {
-  // Remplace les onclick des radio-btn pour f-manger / f-courses etc.
+  // Remplace les onclick des radio-btn pour f-manger / f-courses etc. (garde la valeur en 3e argument)
   return h.replace(
-    new RegExp("selR\\(this,'"+fieldId+"'", 'g'),
-    "selR(this,'"+fieldId+"');togCondByVal('"+fieldId+"','"+triggerVal+"','"+condId+"'"
-  ).replace(
-    new RegExp("selR\\(this,'"+fieldId+"'\\)", 'g'),
-    "selR(this,'"+fieldId+"');togCondByVal('"+fieldId+"','"+triggerVal+"','"+condId+"')"
+    new RegExp("selR\\(this,'"+fieldId+"','([^']*)'\\)", 'g'),
+    "selR(this,'"+fieldId+"','$1');togCondByVal('"+fieldId+"','"+triggerVal+"','"+condId+"')"
   );
 }
 
@@ -1254,7 +1255,18 @@ function initPollDelegate() {
 }
 
 // ── VOTES ─────────────────────────────────────────────────────────────────────
-async function castVote(eventId, val) {
+// Un seul vote en cours à la fois : un double appui ne crée pas deux lignes
+var voteBusy = false;
+async function guardVote(fn) {
+  if (voteBusy) return;
+  voteBusy = true;
+  try { await fn(); } finally { voteBusy = false; }
+}
+function castVote(eventId, val)              { return guardVote(function(){ return castVoteRaw(eventId, val); }); }
+function castFoodVote(eventId, val, meal)    { return guardVote(function(){ return castFoodVoteRaw(eventId, val, meal); }); }
+function castCoursesVote(eventId, val)       { return guardVote(function(){ return castCoursesVoteRaw(eventId, val); }); }
+
+async function castVoteRaw(eventId, val) {
   var ex = await sb.from('event_votes').select('id,present').eq('event_id',eventId).eq('user_id',currentUser.id).maybeSingle();
   var v  = ex.data;
   if (v) {
@@ -1269,7 +1281,7 @@ async function castVote(eventId, val) {
   openDetail(eventId);
 }
 
-async function castFoodVote(eventId, val, meal) {
+async function castFoodVoteRaw(eventId, val, meal) {
   meal = meal || 'general';
   try {
     // Cherche uniquement par (event_id, user_id, meal) — chaque repas est indépendant
@@ -1299,7 +1311,7 @@ async function castFoodVote(eventId, val, meal) {
   openDetail(eventId);
 }
 
-async function castCoursesVote(eventId, val) {
+async function castCoursesVoteRaw(eventId, val) {
   var ex = await sb.from('event_courses_votes').select('id,vient').eq('event_id',eventId).eq('user_id',currentUser.id).maybeSingle();
   var v  = ex.data;
   if (v) {
@@ -1312,11 +1324,15 @@ async function castCoursesVote(eventId, val) {
 }
 
 // ── COMMENTAIRES ──────────────────────────────────────────────────────────────
+var commentBusy = false;
 async function sendComment(eventId) {
   var inp = document.getElementById('com-input');
   var txt = inp.value.trim();
-  if (!txt) return;
-  await sb.from('event_comments').insert({event_id:eventId,user_id:currentUser.id,contenu:txt});
+  if (!txt || commentBusy) return;
+  commentBusy = true;
+  var res = await sb.from('event_comments').insert({event_id:eventId,user_id:currentUser.id,contenu:txt});
+  commentBusy = false;
+  if (res.error) { alert('Commentaire non envoyé : '+res.error.message); return; }
   inp.value='';
   openDetail(eventId);
 }
@@ -1369,6 +1385,14 @@ function openEditModal(e) {
     setRadio('f-manger-soir',   e.manger_soir);
     setRadio('f-courses',       e.courses);
     setRadio('f-boisson-needed',e.boisson_needed);
+    setRadio('f-jeux-needed',   e.jeux_needed);
+    set('f-heure-courses', e.heure_courses);
+    set('f-lieu-courses',  e.lieu_courses);
+    // Ré-affiche les blocs conditionnels selon les valeurs chargées
+    document.querySelectorAll('[onclick*="togCondByVal("]').forEach(function(b){
+      var m = b.getAttribute('onclick').match(/togCondByVal\('([^']*)','([^']*)','([^']*)'\)/);
+      if (m) togCondByVal(m[1], m[2], m[3]);
+    });
     // Féria / Sport
     if (e.feria_ville) {
       var knownVilles = ['Condom','Dax','Bayonne','Vic-Fezensac','Mont-de-Marsan','Pampelune','Narbonne'];

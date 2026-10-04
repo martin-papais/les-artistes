@@ -645,6 +645,8 @@ var editingArticle = null;
 })();
 
 // ── COUNTDOWN — ne jamais toucher au innerHTML du countdown-wrap ──────────────
+function ordersClosed() { return !!deadline && deadline.getTime() <= Date.now(); }
+
 function setCdState(state) {
   document.getElementById('cd-state-none').style.display    = (state === 'none')    ? 'block' : 'none';
   document.getElementById('cd-state-running').style.display = (state === 'running') ? 'flex'  : 'none';
@@ -695,6 +697,7 @@ function startCountdown() {
     if (diff <= 0) {
       clearInterval(cdInterval);
       setCdState('expired');
+      if (allArticles.length) document.getElementById('shop-grid').innerHTML = allArticles.map(function(a) { return buildProductCard(a); }).join('');
       return;
     }
 
@@ -841,9 +844,13 @@ function buildProductCard(a) {
     + '</div>'
     + adminBtns
     + '<div class="product-order">'
-    +   '<button class="btn-order' + (hasOrdered ? ' ordered' : '') + '" onclick="openOrderModal(\'' + a.id + '\')">'
-    +     (hasOrdered ? '&#10003; Modifier ma commande' : '&#128722; Commander')
-    +   '</button>'
+    + (ordersClosed()
+      ? '<button class="btn-order' + (hasOrdered ? ' ordered' : '') + '" disabled style="opacity:.5;cursor:not-allowed">'
+        + (hasOrdered ? '&#10003; Commandé · commandes closes' : '&#128274; Commandes closes')
+        + '</button>'
+      : '<button class="btn-order' + (hasOrdered ? ' ordered' : '') + '" onclick="openOrderModal(\'' + a.id + '\')">'
+        + (hasOrdered ? '&#10003; Modifier ma commande' : '&#128722; Commander')
+        + '</button>')
     + '</div>'
     + '</div>';
 }
@@ -893,15 +900,19 @@ function toggleDetail(id) {
 function openOrderModal(articleId) {
   var a = allArticles.find(function(x) { return x.id === articleId; });
   if (!a) return;
+  if (ordersClosed()) { alert('Les commandes sont closes.'); return; }
   orderProductId = articleId;
   pendingOrders  = {};
 
-  // Pré-remplir avec commandes existantes
+  // Pré-remplir avec commandes existantes (tailles + personnalisation)
+  var perso = '';
   allOrders.filter(function(o) {
     return o.article_id === articleId && o.user_id === currentUser.id;
   }).forEach(function(o) {
     pendingOrders[o.taille] = (pendingOrders[o.taille] || 0) + 1;
+    if (o.personnalisation && !perso) perso = o.personnalisation;
   });
+  document.getElementById('order-perso-input').value = perso;
 
   document.getElementById('order-product-name').textContent = a.nom;
   document.getElementById('alert-order').className = 'malert';
@@ -984,23 +995,29 @@ async function confirmOrder() {
   var alertEl = document.getElementById('alert-order');
   alertEl.className = 'malert';
   if (!orderProductId) return;
+  if (ordersClosed()) {
+    alertEl.textContent = 'Les commandes sont closes.';
+    alertEl.className = 'malert error';
+    return;
+  }
 
   var sizes = Object.keys(pendingOrders);
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span>Enregistrement...';
 
-  // Supprime toutes les commandes précédentes de l'user pour cet article
-  var delRes = await sb.from('shop_orders')
-    .delete()
-    .eq('article_id', orderProductId)
-    .eq('user_id', currentUser.id);
-
-  if (delRes.error) {
-    alertEl.textContent = 'Erreur suppression : ' + delRes.error.message;
+  function fail(msg) {
+    alertEl.textContent = msg;
     alertEl.className = 'malert error';
     btn.disabled = false; btn.textContent = 'Confirmer';
-    return;
   }
+
+  // Lignes actuelles de l'user pour cet article (supprimées seulement après l'insertion des nouvelles)
+  var oldRes = await sb.from('shop_orders')
+    .select('id')
+    .eq('article_id', orderProductId)
+    .eq('user_id', currentUser.id);
+  if (oldRes.error) return fail('Erreur : ' + oldRes.error.message);
+  var oldIds = (oldRes.data || []).map(function(o) { return o.id; });
 
   // Insère les nouvelles lignes (1 ligne par unité)
   if (sizes.length) {
@@ -1013,12 +1030,12 @@ async function confirmOrder() {
       }
     });
     var insRes = await sb.from('shop_orders').insert(toInsert);
-    if (insRes.error) {
-      alertEl.textContent = 'Erreur commande : ' + insRes.error.message;
-      alertEl.className = 'malert error';
-      btn.disabled = false; btn.textContent = 'Confirmer';
-      return;
-    }
+    if (insRes.error) return fail('Erreur commande : ' + insRes.error.message + ' (ta commande précédente est conservée)');
+  }
+
+  if (oldIds.length) {
+    var delRes = await sb.from('shop_orders').delete().in('id', oldIds);
+    if (delRes.error) return fail('Erreur suppression de l\'ancienne commande : ' + delRes.error.message);
   }
 
   btn.disabled = false; btn.textContent = 'Confirmer';
@@ -1390,22 +1407,35 @@ function buildCandidatCard(c, myVotesByCat) {
 
 
 // ── SONDAGE : voter ────────────────────────────────────────────────────────────
+var sVoteBusy = false;
 async function castSVote(candidatId, categorie) {
-  var existing = allSVotes.find(function(v) { return v.user_id === currentUser.id && v.candidat_id === candidatId; });
-  if (existing) {
-    // Retire le vote
-    await sb.from('sondage_votes').delete().eq('id', existing.id);
-  } else {
-    // Vérifie quota
-    var catUsed = allSVotes.filter(function(v) { return v.user_id === currentUser.id && v.categorie === categorie; }).length;
-    if (catUsed >= getVotesMax(categorie)) return;
-    await sb.from('sondage_votes').insert({ candidat_id: candidatId, user_id: currentUser.id, categorie: categorie });
+  if (sVoteBusy) return;
+  if (sondageDeadline && sondageDeadline.getTime() <= Date.now()) { alert('Le sondage est terminé.'); return; }
+  sVoteBusy = true;
+  try {
+    // Repart des votes à jour pour que le quota soit juste
+    var cur = await sb.from('sondage_votes').select('*').eq('user_id', currentUser.id);
+    var mine = cur.data || [];
+    var existing = mine.find(function(v) { return v.candidat_id === candidatId; });
+    var res;
+    if (existing) {
+      // Retire le vote
+      res = await sb.from('sondage_votes').delete().eq('id', existing.id);
+    } else {
+      // Vérifie quota
+      var catUsed = mine.filter(function(v) { return v.categorie === categorie; }).length;
+      if (catUsed >= getVotesMax(categorie)) { alert('Tu as déjà utilisé tous tes votes dans cette catégorie.'); return; }
+      res = await sb.from('sondage_votes').insert({ candidat_id: candidatId, user_id: currentUser.id, categorie: categorie });
+    }
+    if (res.error) alert('Vote non enregistré : ' + res.error.message);
+    // Reload votes seulement
+    var vr = await sb.from('sondage_votes').select('*');
+    allSVotes = vr.data || [];
+    renderCandidates();
+    renderLeaderboard();
+  } finally {
+    sVoteBusy = false;
   }
-  // Reload votes seulement
-  var vr = await sb.from('sondage_votes').select('*');
-  allSVotes = vr.data || [];
-  renderCandidates();
-  renderLeaderboard();
 }
 
 // ── SONDAGE : leaderboard ─────────────────────────────────────────────────────
