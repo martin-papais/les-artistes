@@ -12,13 +12,13 @@ import {
   Platform,
   Pressable,
   RefreshControl,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { localDateString, sb, type PhotoRow } from '@/lib/supabase';
 import { theme } from '@/lib/theme';
@@ -237,12 +237,12 @@ export default function PhotosScreen() {
         animationType="fade"
         onRequestClose={() => setOpenId(null)}
       >
-        {opened && (
+        {!!opened && (
           <View style={styles.viewer}>
             <Pressable onPress={() => setOpenId(null)} style={styles.viewerClose} hitSlop={20}>
               <Ionicons name="close" size={32} color="#fff" />
             </Pressable>
-            {isOwner && (
+            {!!isOwner && (
               <Pressable onPress={() => setEditing(opened)} style={styles.viewerEdit} hitSlop={20}>
                 <Ionicons name="create-outline" size={28} color="#fff" />
               </Pressable>
@@ -254,8 +254,8 @@ export default function PhotosScreen() {
             />
             {(opened.sujet || opened.description) && (
               <View style={styles.viewerCaption}>
-                {opened.sujet && <Text style={styles.viewerCaptionText}>{opened.sujet}</Text>}
-                {opened.description && (
+                {!!opened.sujet && <Text style={styles.viewerCaptionText}>{opened.sujet}</Text>}
+                {!!opened.description && (
                   <Text style={[styles.viewerCaptionText, { opacity: 0.75, marginTop: 4 }]}>
                     {opened.description}
                   </Text>
@@ -271,7 +271,7 @@ export default function PhotosScreen() {
         presentationStyle="pageSheet"
         onRequestClose={() => setEditing(null)}
       >
-        {editing && (
+        {!!editing && (
           <PhotoEdit
             photo={editing}
             onClose={() => setEditing(null)}

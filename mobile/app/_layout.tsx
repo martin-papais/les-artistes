@@ -20,10 +20,6 @@ import { registerPushToken, takeNotificationRoute } from '@/lib/notifications';
 import { sb } from '@/lib/supabase';
 import { theme } from '@/lib/theme';
 
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
-
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
@@ -43,11 +39,7 @@ export default function RootLayout() {
 
   // Auth state + push token registration
   useEffect(() => {
-    sb.auth.getSession().then(({ data }) => {
-      if (data.session?.user) {
-        registerPushToken(data.session.user.id);
-      }
-    });
+    // INITIAL_SESSION (premier événement ci-dessous) couvre la session restaurée au lancement
     const { data: sub } = sb.auth.onAuthStateChange(async (event, session) => {
       if (!initialized.current) {
         initialized.current = true;
@@ -57,6 +49,8 @@ export default function RootLayout() {
       if (event === 'SIGNED_OUT' || !session) {
         // Le token push est retiré avant signOut (signOutAndUnregister), plus ici :
         // à ce stade la session est déjà effacée et la RLS refuserait le delete.
+        // On vide la pile : sinon « retour » depuis le login ramène aux onglets du compte précédent.
+        if (router.canDismiss()) router.dismissAll();
         router.replace('/(auth)/login');
       } else if (event === 'SIGNED_IN') {
         if (session.user) registerPushToken(session.user.id);

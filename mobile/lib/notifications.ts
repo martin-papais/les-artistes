@@ -28,21 +28,28 @@ export async function registerPushToken(userId: string): Promise<string | null> 
 
   // Channel Android : à créer AVANT la demande de permission, sinon Android 13+
   // peut répondre « refusé » sans jamais afficher la fenêtre système.
-  if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync('default', {
-      name: 'Notifications',
-      importance: Notifications.AndroidImportance.HIGH,
-      vibrationPattern: [0, 250, 250, 250],
-      lightColor: '#FF6B6B',
-    });
-  }
+  let final: string;
+  try {
+    if (Platform.OS === 'android') {
+      await Notifications.setNotificationChannelAsync('default', {
+        name: 'Notifications',
+        importance: Notifications.AndroidImportance.HIGH,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#FF6B6B',
+      });
+    }
 
-  // Permission
-  const { status: existing } = await Notifications.getPermissionsAsync();
-  let final = existing;
-  if (existing !== 'granted') {
-    const { status } = await Notifications.requestPermissionsAsync();
-    final = status;
+    // Permission
+    const { status: existing } = await Notifications.getPermissionsAsync();
+    final = existing;
+    if (existing !== 'granted') {
+      const { status } = await Notifications.requestPermissionsAsync();
+      final = status;
+    }
+  } catch (e) {
+    // Ex. « another permission request in progress » : on réessaiera au prochain lancement
+    console.warn('[push] permission request failed:', e);
+    return null;
   }
   if (final !== 'granted') {
     return null;

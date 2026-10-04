@@ -9,13 +9,13 @@ import {
   Platform,
   Pressable,
   RefreshControl,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
   sb,
@@ -220,7 +220,7 @@ export default function EventsScreen() {
           </View>
         )}
 
-        {featured && (
+        {!!featured && (
           <View style={styles.section}>
             <SectionHeader label="À la une" />
             <FeaturedEventCard
@@ -407,7 +407,7 @@ function FeaturedEventCard({
           <Text style={styles.featuredMonth}>{MONTHS_SHORT[date.getMonth()].toUpperCase()}</Text>
         </View>
         <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center', flexShrink: 1 }}>
-          {myVote && (
+          {!!myVote && (
             <View
               style={[
                 styles.myVotePill,
@@ -424,7 +424,7 @@ function FeaturedEventCard({
               </Text>
             </View>
           )}
-          {event.categorie && (
+          {!!event.categorie && (
             <View style={styles.catPill}>
               <Text style={styles.catPillText}>{event.categorie}</Text>
             </View>
@@ -434,14 +434,14 @@ function FeaturedEventCard({
       <Text style={styles.featuredTitle}>{title}</Text>
       {(event.lieu || event.heure) && (
         <View style={styles.featuredMetaRow}>
-          {event.heure && (
+          {!!event.heure && (
             <>
               <Ionicons name="time-outline" size={14} color={theme.colors.muted} />
               <Text style={styles.featuredMetaText}>{event.heure}</Text>
             </>
           )}
           {event.heure && event.lieu && <Text style={styles.featuredMetaText}> · </Text>}
-          {event.lieu && (
+          {!!event.lieu && (
             <>
               <Ionicons name="location-outline" size={14} color={theme.colors.muted} />
               <Text style={styles.featuredMetaText}>{event.lieu}</Text>
@@ -449,7 +449,7 @@ function FeaturedEventCard({
           )}
         </View>
       )}
-      {event.note && (
+      {!!event.note && (
         <Text style={styles.featuredDesc} numberOfLines={2}>
           {event.note}
         </Text>
@@ -509,7 +509,7 @@ function EventCardView({
         <Text style={[styles.cardTitle, muted && { color: theme.colors.muted }]} numberOfLines={1}>
           {title}
         </Text>
-        {event.lieu && (
+        {!!event.lieu && (
           <View style={styles.metaRow}>
             <Ionicons name="location-outline" size={12} color={theme.colors.muted} />
             <Text style={styles.metaText} numberOfLines={1}>
@@ -660,7 +660,7 @@ function EventDetail({
         <Pressable onPress={onClose} hitSlop={10} style={styles.detailHeaderBtn}>
           <Ionicons name="close" size={26} color={theme.colors.text} />
         </Pressable>
-        {isOwner && (
+        {!!isOwner && (
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <Pressable onPress={onEdit} hitSlop={10} style={styles.detailHeaderBtn}>
               <Ionicons name="create-outline" size={22} color={theme.colors.text} />
@@ -677,7 +677,7 @@ function EventDetail({
         keyboardVerticalOffset={20}
       >
         <ScrollView contentContainerStyle={{ padding: theme.s(5) }}>
-          {event.categorie && (
+          {!!event.categorie && (
             <View style={[styles.catPill, { alignSelf: 'flex-start' }]}>
               <Text style={styles.catPillText}>{event.categorie}</Text>
             </View>
@@ -695,19 +695,19 @@ function EventDetail({
               {event.heure ? ` · ${event.heure}` : ''}
             </Text>
           </View>
-          {event.lieu && (
+          {!!event.lieu && (
             <View style={styles.detailMetaRow}>
               <Ionicons name="location-outline" size={14} color={theme.colors.muted} />
               <Text style={styles.detailMetaText}>{event.lieu}</Text>
             </View>
           )}
-          {event.chez_qui && (
+          {!!event.chez_qui && (
             <View style={styles.detailMetaRow}>
               <Ionicons name="home-outline" size={14} color={theme.colors.muted} />
               <Text style={styles.detailMetaText}>chez {event.chez_qui}</Text>
             </View>
           )}
-          {event.note && <Text style={styles.detailDescription}>{event.note}</Text>}
+          {!!event.note && <Text style={styles.detailDescription}>{event.note}</Text>}
 
           <Text style={styles.detailSection}>Tu seras là ?</Text>
           <View style={styles.voteRow}>
@@ -726,7 +726,7 @@ function EventDetail({
               onPress={() => setVote('non')}
             />
           </View>
-          {myVote && (
+          {!!myVote && (
             <Pressable onPress={() => setVote(null)} style={styles.cancelVote} hitSlop={6}>
               <Ionicons name="refresh-outline" size={14} color={theme.colors.muted} />
               <Text style={styles.cancelVoteText}>Retirer mon vote</Text>

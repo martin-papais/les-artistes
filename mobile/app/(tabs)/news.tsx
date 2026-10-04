@@ -10,13 +10,13 @@ import {
   Platform,
   Pressable,
   RefreshControl,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
   sb,
@@ -302,7 +302,7 @@ function NewsCardView({
         onPress={onPress}
         style={({ pressed }) => [styles.cardTapZone, pressed && { opacity: 0.92 }]}
       >
-        {card.cover_url && (
+        {!!card.cover_url && (
           <Image source={{ uri: card.cover_url }} style={styles.cover} contentFit="cover" />
         )}
         <View style={{ padding: theme.s(3) }}>
@@ -430,7 +430,7 @@ function NewsDetail({
         keyboardVerticalOffset={20}
       >
         <ScrollView contentContainerStyle={{ padding: theme.s(5) }}>
-          {news.cover_url && (
+          {!!news.cover_url && (
             <Image source={{ uri: news.cover_url }} style={styles.detailCover} contentFit="cover" />
           )}
           <Text style={styles.detailTitle}>{news.titre}</Text>

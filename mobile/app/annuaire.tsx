@@ -9,13 +9,13 @@ import {
   Platform,
   Pressable,
   RefreshControl,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { sb, type AnnuaireExtra, type Profile } from '@/lib/supabase';
 import { theme } from '@/lib/theme';
@@ -123,7 +123,7 @@ export default function AnnuaireScreen() {
         presentationStyle="pageSheet"
         onRequestClose={() => setEditing(null)}
       >
-        {editing && (
+        {!!editing && (
           <EditProfileModal
             card={editing}
             onClose={() => setEditing(null)}
@@ -149,17 +149,17 @@ function ContactCard({ card, isMine }: { card: Card; isMine: boolean }) {
         </View>
         <View style={{ flex: 1, marginLeft: 12 }}>
           <Text style={styles.cardName}>
-            {name} {isMine && <Text style={styles.youTag}>· toi</Text>}
+            {name} {!!isMine && <Text style={styles.youTag}>· toi</Text>}
           </Text>
-          {card.dob && <Text style={styles.cardSub}>{formatDob(card.dob)}</Text>}
+          {!!card.dob && <Text style={styles.cardSub}>{formatDob(card.dob)}</Text>}
         </View>
       </View>
-      {card.email && <InfoRow icon="mail-outline" label={card.email} />}
-      {card.tel && <InfoRow icon="call-outline" label={card.tel} />}
+      {!!card.email && <InfoRow icon="mail-outline" label={card.email} />}
+      {!!card.tel && <InfoRow icon="call-outline" label={card.tel} />}
       {card.addresses.map((a, i) => (
         <InfoRow key={i} icon="location-outline" label={a} />
       ))}
-      {card.rib && <InfoRow icon="card-outline" label={card.rib} />}
+      {!!card.rib && <InfoRow icon="card-outline" label={card.rib} />}
     </View>
   );
 }
@@ -221,7 +221,6 @@ function EditProfileModal({
         .update({
           prenom: prenom.trim(),
           nom: nom.trim(),
-          pseudo: `${prenom.trim()} ${nom.trim()}`,
           dob: dob || null,
           tel: tel.trim() || null,
         })

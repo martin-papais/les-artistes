@@ -11,13 +11,13 @@ import {
   Platform,
   Pressable,
   RefreshControl,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
   sb,
@@ -183,7 +183,7 @@ function ArticlesView() {
         contentContainerStyle={{ padding: theme.s(4), paddingBottom: theme.s(10) }}
         ListHeaderComponent={
           <View>
-            {deadline && (
+            {!!deadline && (
               <View style={[styles.deadline, isClosed && styles.deadlineClosed]}>
                 <Ionicons
                   name={isClosed ? 'lock-closed' : 'time-outline'}
@@ -262,7 +262,7 @@ function ArticleCardView({ article, onPress }: { article: ArticleCard; onPress: 
         </View>
       )}
       <View style={{ padding: theme.s(3) }}>
-        {article.badge && (
+        {!!article.badge && (
           <View style={styles.articleBadge}>
             <Text style={styles.articleBadgeText}>{article.badge}</Text>
           </View>
@@ -323,12 +323,14 @@ function ArticleDetail({
     }
     setSaving(true);
     try {
-      const del = await sb
+      // Lignes actuelles : supprimées seulement une fois les nouvelles enregistrées (comme le web)
+      const old = await sb
         .from('shop_orders')
-        .delete()
+        .select('id')
         .eq('article_id', article.id)
         .eq('user_id', currentUserId);
-      if (del.error) throw del.error;
+      if (old.error) throw new Error(old.error.message);
+      const oldIds = (old.data ?? []).map((o: { id: string }) => o.id);
 
       const toInsert: Omit<ShopOrder, 'id'>[] = [];
       Object.entries(qtyByTaille).forEach(([taille, qty]) => {
@@ -343,7 +345,14 @@ function ArticleDetail({
       });
       if (toInsert.length) {
         const ins = await sb.from('shop_orders').insert(toInsert);
-        if (ins.error) throw ins.error;
+        if (ins.error) {
+          throw new Error(`${ins.error.message} (ta commande précédente est conservée)`);
+        }
+      }
+
+      if (oldIds.length) {
+        const del = await sb.from('shop_orders').delete().in('id', oldIds);
+        if (del.error) throw new Error(`Ancienne commande non supprimée : ${del.error.message}`);
       }
       onSaved();
     } catch (e) {
@@ -386,7 +395,7 @@ function ArticleDetail({
           )}
           <Text style={styles.detailTitle}>{article.nom}</Text>
           {article.prix !== null && <Text style={styles.detailPrice}>{article.prix.toFixed(2)} €</Text>}
-          {article.description && <Text style={styles.detailDesc}>{article.description}</Text>}
+          {!!article.description && <Text style={styles.detailDesc}>{article.description}</Text>}
 
           <Text style={styles.section}>Choisis tes tailles</Text>
           {tailles.map((t) => (
@@ -582,7 +591,7 @@ function SondageView() {
       <Text style={styles.bigSub}>
         Vote pour les futurs articles
       </Text>
-      {deadline && (
+      {!!deadline && (
         <View style={[styles.deadline, isClosed && styles.deadlineClosed]}>
           <Ionicons
             name={isClosed ? 'lock-closed' : 'time-outline'}
@@ -634,7 +643,7 @@ function SondageView() {
                 )}
                 <View style={{ flex: 1, marginLeft: 12 }}>
                   <Text style={styles.candidatName} numberOfLines={1}>{c.nom}</Text>
-                  {c.description && (
+                  {!!c.description && (
                     <Text style={styles.candidatDesc} numberOfLines={2}>
                       {c.description}
                     </Text>

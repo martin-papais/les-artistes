@@ -7,12 +7,12 @@ import {
   Modal,
   Pressable,
   RefreshControl,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
   sb,
@@ -176,7 +176,7 @@ export default function JeuxScreen() {
         presentationStyle="pageSheet"
         onRequestClose={() => setOpenAlc(null)}
       >
-        {openAlc && (
+        {!!openAlc && (
           <AlcoolDetail jeu={openAlc} onClose={() => setOpenAlc(null)} authorName={authorName(profiles[openAlc.created_by])} />
         )}
       </Modal>
@@ -186,7 +186,7 @@ export default function JeuxScreen() {
         presentationStyle="pageSheet"
         onRequestClose={() => setOpenSocId(null)}
       >
-        {openSoc && (
+        {!!openSoc && (
           <SocieteDetail
             card={openSoc}
             onClose={() => setOpenSocId(null)}
@@ -236,8 +236,8 @@ function AlcoolCardView({ jeu, onPress }: { jeu: JeuAlcool; onPress: () => void 
       <Text style={styles.cardTitle}>{jeu.nom}</Text>
       <Text style={styles.cardExcerpt} numberOfLines={2}>{jeu.regles}</Text>
       <View style={styles.cardMetaRow}>
-        {jeu.joueurs && <MetaChip icon="people-outline" text={jeu.joueurs} />}
-        {jeu.niveau && <MetaChip icon="flame-outline" text={jeu.niveau} />}
+        {!!jeu.joueurs && <MetaChip icon="people-outline" text={jeu.joueurs} />}
+        {!!jeu.niveau && <MetaChip icon="flame-outline" text={jeu.niveau} />}
       </View>
     </Pressable>
   );
@@ -271,9 +271,9 @@ function AlcoolDetail({
         <Text style={styles.detailMeta}>Ajouté par {authorName}</Text>
         <Text style={styles.detailSection}>Règles</Text>
         <Text style={styles.detailContent}>{jeu.regles}</Text>
-        {jeu.joueurs && <DetailRow label="Joueurs" value={jeu.joueurs} />}
-        {jeu.niveau && <DetailRow label="Niveau" value={jeu.niveau} />}
-        {jeu.materiel && <DetailRow label="Matériel" value={jeu.materiel} />}
+        {!!jeu.joueurs && <DetailRow label="Joueurs" value={jeu.joueurs} />}
+        {!!jeu.niveau && <DetailRow label="Niveau" value={jeu.niveau} />}
+        {!!jeu.materiel && <DetailRow label="Matériel" value={jeu.materiel} />}
       </ScrollView>
     </SafeAreaView>
   );
@@ -291,9 +291,9 @@ function SocieteCardView({ card, onPress }: { card: SocieteCard; onPress: () => 
         </Text>
       </View>
       <View style={styles.cardMetaRow}>
-        {card.joueurs_max && <MetaChip icon="people-outline" text={`max ${card.joueurs_max}`} />}
-        {card.duree && <MetaChip icon="time-outline" text={card.duree} />}
-        {card.detenteur && <MetaChip icon="person-outline" text={card.detenteur} />}
+        {!!card.joueurs_max && <MetaChip icon="people-outline" text={`max ${card.joueurs_max}`} />}
+        {!!card.duree && <MetaChip icon="time-outline" text={card.duree} />}
+        {!!card.detenteur && <MetaChip icon="person-outline" text={card.detenteur} />}
       </View>
     </Pressable>
   );
@@ -338,11 +338,11 @@ function SocieteDetail({
 
         <Text style={styles.detailSection}>Règles</Text>
         <Text style={styles.detailContent}>{card.regles}</Text>
-        {card.joueurs_max && <DetailRow label="Joueurs max" value={card.joueurs_max} />}
-        {card.duree && <DetailRow label="Durée" value={card.duree} />}
-        {card.detenteur && <DetailRow label="Détenteur" value={card.detenteur} />}
-        {card.a_acheter && <DetailRow label="À acheter" value={card.a_acheter} />}
-        {card.avis && (
+        {!!card.joueurs_max && <DetailRow label="Joueurs max" value={card.joueurs_max} />}
+        {!!card.duree && <DetailRow label="Durée" value={card.duree} />}
+        {!!card.detenteur && <DetailRow label="Détenteur" value={card.detenteur} />}
+        {card.a_acheter === 'oui' && <DetailRow label="À acheter" value="oui" />}
+        {!!card.avis && (
           <>
             <Text style={styles.detailSection}>Avis</Text>
             <Text style={styles.detailContent}>{card.avis}</Text>

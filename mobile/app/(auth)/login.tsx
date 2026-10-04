@@ -1,4 +1,3 @@
-import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   ActivityIndicator,
@@ -19,7 +18,6 @@ import { theme } from '@/lib/theme';
 type Panel = 'login' | 'signup';
 
 export default function LoginScreen() {
-  const router = useRouter();
   const [panel, setPanel] = useState<Panel>('login');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,17 +51,16 @@ export default function LoginScreen() {
     try {
       let emailToUse = identifiant.trim();
       if (!emailToUse.includes('@')) {
-        const lookup = await sb
-          .from('profiles')
-          .select('email')
-          .ilike('pseudo', emailToUse)
-          .single();
-        if (lookup.error || !lookup.data?.email) {
+        // profiles n'est plus lisible sans connexion : la RPC renvoie l'email d'un pseudo exact
+        const { data: found, error: lookupError } = await sb.rpc('email_for_pseudo', {
+          p_pseudo: emailToUse,
+        });
+        if (lookupError || typeof found !== 'string' || !found) {
           setError('Pseudo introuvable. Essaie ton email.');
           setLoading(false);
           return;
         }
-        emailToUse = lookup.data.email;
+        emailToUse = found;
       }
       const { error: authError } = await sb.auth.signInWithPassword({
         email: emailToUse,
@@ -75,9 +72,8 @@ export default function LoginScreen() {
         } else {
           setError('Identifiant ou mot de passe incorrect.');
         }
-      } else {
-        router.replace('/(tabs)/events');
       }
+      // La navigation vers les onglets est faite par _layout.tsx (événement SIGNED_IN)
     } catch {
       setError('Erreur réseau. Réessaie.');
     } finally {
@@ -110,15 +106,15 @@ export default function LoginScreen() {
         return;
       }
     }
-    if (groupePassword.trim().toLowerCase() !== 'tortue') {
-      setError('Mot de passe du groupe incorrect. Demande-le à un membre.');
+    if (!groupePassword.trim()) {
+      setError('Mot de passe du groupe requis. Demande-le à un membre.');
       return;
     }
     setError(null);
     setLoading(true);
     try {
       const pseudo = `${prenom.trim()} ${nom.trim()}`;
-      const { error: signupError } = await sb.auth.signUp({
+      const { data: signupData, error: signupError } = await sb.auth.signUp({
         email: email.trim(),
         password: signupPassword,
         options: {
@@ -128,15 +124,22 @@ export default function LoginScreen() {
             nom: nom.trim(),
             tel: tel.trim(),
             dob: dobIso,
+            // Vérifié côté serveur (trigger Supabase) : un mauvais code fait échouer l'inscription
+            group_code: groupePassword.trim(),
           },
         },
       });
       if (signupError) {
-        setError(
-          signupError.message.toLowerCase().includes('already')
-            ? 'Cet email est déjà utilisé.'
-            : signupError.message,
-        );
+        const msg = signupError.message;
+        if (msg.includes('group_code') || msg.includes('Database error saving new user')) {
+          setError('Mot de passe du groupe incorrect. Demande-le à un membre.');
+        } else {
+          setError(
+            msg.toLowerCase().includes('already') ? 'Cet email est déjà utilisé.' : msg,
+          );
+        }
+      } else if (signupData.session) {
+        // Compte confirmé d'office : _layout.tsx bascule sur les onglets (SIGNED_IN)
       } else {
         Alert.alert(
           'Compte créé',
@@ -234,7 +237,7 @@ export default function LoginScreen() {
             </Pressable>
           </View>
 
-          {error && (
+          {!!error && (
             <View style={styles.alert}>
               <Text style={styles.alertText}>{error}</Text>
             </View>

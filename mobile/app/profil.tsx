@@ -8,13 +8,13 @@ import {
   Modal,
   Platform,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { signOutAndUnregister } from '@/lib/notifications';
 import { sb, type AnnuaireExtra, type Profile } from '@/lib/supabase';
@@ -67,6 +67,7 @@ export default function ProfilScreen() {
         style: 'destructive',
         onPress: async () => {
           await signOutAndUnregister();
+          if (router.canDismiss()) router.dismissAll();
           router.replace('/(auth)/login');
         },
       },
@@ -94,7 +95,7 @@ export default function ProfilScreen() {
           </View>
           <View style={{ marginLeft: 16, flex: 1 }}>
             <Text style={styles.name}>{displayName}</Text>
-            {email && <Text style={styles.email}>{email}</Text>}
+            {!!email && <Text style={styles.email}>{email}</Text>}
           </View>
         </View>
 
@@ -135,7 +136,7 @@ export default function ProfilScreen() {
               />
             ))
           )}
-          {extra?.rib && <Row icon="card-outline" label="RIB / IBAN" value={extra.rib} last />}
+          {!!extra?.rib && <Row icon="card-outline" label="RIB / IBAN" value={extra.rib} last />}
         </View>
 
         <Pressable
@@ -153,7 +154,7 @@ export default function ProfilScreen() {
         presentationStyle="pageSheet"
         onRequestClose={() => setEditing(false)}
       >
-        {profile && (
+        {!!profile && (
           <EditProfileModal
             profile={profile}
             extra={extra}
@@ -236,7 +237,6 @@ function EditProfileModal({
         .update({
           prenom: prenom.trim(),
           nom: nom.trim(),
-          pseudo: `${prenom.trim()} ${nom.trim()}`,
           dob: dob || null,
           tel: tel.trim() || null,
         })

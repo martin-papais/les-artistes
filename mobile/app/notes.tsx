@@ -8,12 +8,12 @@ import {
   Platform,
   Pressable,
   RefreshControl,
-  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
   sb,
@@ -273,7 +273,7 @@ function NoteCardView({
         </View>
       </View>
 
-      {isMine && (
+      {!!isMine && (
         <Pressable onPress={onDelete} style={styles.deleteBtn} hitSlop={6}>
           <Ionicons name="trash-outline" size={14} color={theme.colors.muted} />
           <Text style={styles.deleteText}>Supprimer</Text>
