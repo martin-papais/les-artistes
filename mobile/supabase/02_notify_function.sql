@@ -67,3 +67,8 @@ exception when others then
   raise notice 'notify_push failed: %', sqlerrm;
 end;
 $$;
+
+-- Sans ça, PostgREST expose notify_push en RPC : n'importe qui avec la clé anon
+-- (publique) pourrait envoyer des push à tout le groupe. Les triggers et le cron
+-- tournent en tant que propriétaire et ne sont pas concernés.
+revoke execute on function public.notify_push from public, anon, authenticated;

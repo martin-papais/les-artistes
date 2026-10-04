@@ -13,14 +13,31 @@
 // Variables d'env requises (à configurer dans Supabase > Edge Functions > Secrets) :
 //   SUPABASE_URL
 //   SUPABASE_SERVICE_ROLE_KEY
-//   PUSH_INTERNAL_SECRET (un secret partagé avec les triggers DB)
+//   PUSH_INTERNAL_SECRET (optionnel : à défaut, lu dans public._app_config, la même ligne
+//                         que celle utilisée par notify_push ; utile quand le compte n'a
+//                         pas le droit de gérer les secrets des Edge Functions)
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const PUSH_INTERNAL_SECRET = Deno.env.get('PUSH_INTERNAL_SECRET') ?? '';
+const ENV_PUSH_SECRET = Deno.env.get('PUSH_INTERNAL_SECRET') ?? '';
+
+// Secret partagé : variable d'env si présente, sinon _app_config (mis en cache par instance)
+let cachedSecret: string | null = null;
+async function pushSecret(): Promise<string> {
+  if (ENV_PUSH_SECRET) return ENV_PUSH_SECRET;
+  if (cachedSecret) return cachedSecret;
+  const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  const { data } = await admin
+    .from('_app_config')
+    .select('push_internal_secret')
+    .eq('id', 1)
+    .maybeSingle();
+  cachedSecret = data?.push_internal_secret ?? '';
+  return cachedSecret;
+}
 
 type PushPayload = {
   title: string;
@@ -51,7 +68,8 @@ Deno.serve(async (req) => {
   }
   // Auth interne
   const auth = req.headers.get('authorization') ?? '';
-  if (!PUSH_INTERNAL_SECRET || auth !== `Bearer ${PUSH_INTERNAL_SECRET}`) {
+  const secret = await pushSecret();
+  if (!secret || auth !== `Bearer ${secret}`) {
     return new Response('Unauthorized', { status: 401 });
   }
 

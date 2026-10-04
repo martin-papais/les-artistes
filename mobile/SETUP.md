@@ -137,6 +137,8 @@ Ajoute 3 secrets :
 
 > ⚠️ Note : `SUPABASE_URL` et `SUPABASE_SERVICE_ROLE_KEY` sont peut-être déjà présents par défaut. Si oui, ne touche pas. Ajoute juste `PUSH_INTERNAL_SECRET`.
 
+> ✅ **Fait le 04/10/2026, sans cette étape** : le compte utilisé n'avait pas le droit de gérer les secrets. `send-push` lit alors le secret dans `public._app_config` (même ligne que `notify_push`), et ce secret a été généré dans la base avec `encode(extensions.gen_random_bytes(32), 'hex')` : il n'est jamais sorti de Supabase. `PUSH_INTERNAL_SECRET` reste optionnel. Backend installé ce jour-là : extensions, 01 à 04, fonction déployée sans vérification JWT, test `notify_push` → `200 {"sent":0}`.
+
 ### 3.5 — Créer la table `push_tokens`
 
 **SQL Editor > New query** → copie-colle le contenu de `mobile/supabase/01_push_tokens.sql` → **Run**.

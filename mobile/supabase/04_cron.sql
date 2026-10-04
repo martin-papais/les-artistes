@@ -218,3 +218,8 @@ select cron.schedule(
 
 -- Pour lister les crons actifs :   select * from cron.job;
 -- Pour supprimer un cron :          select cron.unschedule('daily-birthday-reminders');
+
+-- Pas d'appel RPC public : seuls le cron (postgres) et le propriétaire les exécutent.
+revoke execute on function public.daily_birthday_reminders from public, anon, authenticated;
+revoke execute on function public.daily_event_vote_reminders from public, anon, authenticated;
+revoke execute on function public.daily_shop_deadline_reminders from public, anon, authenticated;
