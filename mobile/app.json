@@ -23,7 +23,8 @@
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "android.permission.RECORD_AUDIO"
-      ]
+      ],
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "output": "static",
@@ -62,9 +63,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "8b044a38-f903-43a7-a024-4c972c780a1a"
+        "projectId": "21db90e4-78dc-4226-8959-dec8927b0b0d"
       }
     },
-    "owner": "chaoumet1"
+    "owner": "chaoumet"
   }
 }
