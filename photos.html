@@ -765,7 +765,8 @@ async function uploadMedia() {
   // l'onglet sur téléphone (~50 Mo de mémoire par photo pendant la réduction)
   var completed = 0;
   var failed    = 0;
-  for (var fi = 0; fi < selectedFiles.length; fi++) {
+  var files = selectedFiles.slice(); // la sélection peut changer pendant l'envoi
+  for (var fi = 0; fi < files.length; fi++) {
     await (async function(file) {
       var fileType  = getMediaType(file);
       // Photo réduite à 1920 px avant envoi : moins de stockage et de bande passante Supabase
@@ -812,7 +813,7 @@ async function uploadMedia() {
       document.getElementById('progress-bar').style.width = pct + '%';
       document.getElementById('progress-text').textContent =
         completed + ' / ' + total + ' fichier(s) envoyé(s)...';
-    })(selectedFiles[fi]);
+    })(files[fi]);
   }
   var done = completed;
 

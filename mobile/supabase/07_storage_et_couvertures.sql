@@ -1,9 +1,9 @@
 -- 04/10/2026 — après la migration des couvertures des news vers Storage.
--- 1. Le jeton de la fonction migrate-covers est retiré : elle répond 401 à tout appel.
+-- 1. La colonne du jeton temporaire de migrate-covers est supprimée : la fonction répond 401.
 -- 2. Lister les fichiers du bucket `media` est réservé aux membres connectés.
 --    Les fichiers restent servis par leur URL publique (bucket public), comme avant.
 
-update public._app_config set migration_token = null where id = 1;
+alter table public._app_config drop column if exists migration_token;
 
 alter policy "Public read"       on storage.objects to authenticated;
 alter policy "Public read media" on storage.objects to authenticated;

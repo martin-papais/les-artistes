@@ -853,61 +853,77 @@ function closeEditor() {
 }
 
 // ── PUBLIER / MODIFIER ────────────────────────────────
+// Chemin Storage d'une couverture envoyée par le site (null pour une URL externe ou un ancien base64)
+function coverStoragePath(url) {
+  var marker = '/storage/v1/object/public/media/';
+  if (!url || url.indexOf(marker) === -1) return null;
+  var path = decodeURIComponent(url.split(marker)[1].split('?')[0]);
+  return path.indexOf('/covers/') !== -1 ? path : null;
+}
+
 async function publishNews() {
   var btn     = document.getElementById('btn-publish');
   var alertEl = document.getElementById('editor-alert');
   alertEl.className = 'malert';
 
-  var titre   = document.getElementById('f-titre').value.trim();
-  var contenu = document.getElementById('editor-content').innerHTML.trim();
-  var tags    = document.getElementById('f-tags').value.trim();
+  // Tout est figé ici : l'éditeur peut être fermé, rouvert ou modifié pendant les envois
+  var targetId = editingId;
+  var file     = coverFile;
+  var titre    = document.getElementById('f-titre').value.trim();
+  var contenu  = document.getElementById('editor-content').innerHTML.trim();
+  var tags     = document.getElementById('f-tags').value.trim();
   var coverUrl = document.getElementById('f-cover-url').value.trim() || null;
+  var btnLabel = targetId ? 'Enregistrer ✏️' : 'Publier 🚀';
 
   if (!titre)   { alertEl.textContent='⚠️ Le titre est obligatoire.'; alertEl.className='malert error'; return; }
   if (!contenu || contenu === '<br>') { alertEl.textContent='⚠️ Le contenu est vide.'; alertEl.className='malert error'; return; }
 
   btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>' + (editingId ? 'Sauvegarde...' : 'Publication...');
+  btn.innerHTML = '<span class="spinner"></span>' + (targetId ? 'Sauvegarde...' : 'Publication...');
 
   // Image choisie : réduite puis envoyée dans le bucket media (seule son URL va dans la table).
   // Déjà envoyée lors d'un essai précédent qui a échoué → on réutilise le fichier.
-  if (coverFile && coverUploaded && coverUploaded.file === coverFile) {
+  if (file && coverUploaded && coverUploaded.file === file) {
     coverUrl = coverUploaded.url;
-  } else if (coverFile) {
-    var small = await downscaleImage(coverFile, 1600, 0.85);
-    var body  = small || coverFile;
-    var ext   = small ? 'jpg' : (coverFile.name.split('.').pop() || 'jpg');
+  } else if (file) {
+    var small = await downscaleImage(file, 1600, 0.85);
+    var body  = small || file;
+    var ext   = small ? 'jpg' : (file.name.split('.').pop() || 'jpg');
     var path  = currentUser.id + '/covers/' + Date.now() + '.' + ext;
-    var up    = await sb.storage.from('media').upload(path, body, { upsert: false, contentType: small ? 'image/jpeg' : (coverFile.type || undefined) });
+    var up    = await sb.storage.from('media').upload(path, body, { upsert: false, contentType: small ? 'image/jpeg' : (file.type || undefined) });
     if (up.error) {
       btn.disabled = false;
-      btn.textContent = editingId ? 'Enregistrer ✏️' : 'Publier 🚀';
+      btn.textContent = btnLabel;
       alertEl.textContent = '❌ Image non envoyée : ' + up.error.message;
       alertEl.className = 'malert error';
       return;
     }
     coverUrl = sb.storage.from('media').getPublicUrl(path).data.publicUrl;
-    coverUploaded = { file: coverFile, path: path, url: coverUrl };
+    coverUploaded = { file: file, path: path, url: coverUrl };
   }
 
   var payload = { titre:titre, contenu:contenu, tags:tags||null, cover_url:coverUrl };
+  var previous = targetId ? allNews.find(function(x){ return x.id === targetId; }) : null;
 
   var r;
-  if (editingId) {
-    r = await sb.from('news').update(payload).eq('id', editingId);
+  if (targetId) {
+    r = await sb.from('news').update(payload).eq('id', targetId);
   } else {
     payload.created_by = currentUser.id;
     r = await sb.from('news').insert(payload);
   }
 
   btn.disabled = false;
-  btn.textContent = editingId ? 'Enregistrer ✏️' : 'Publier 🚀';
+  btn.textContent = btnLabel;
 
   if (r.error) {
     alertEl.textContent = '❌ Erreur : ' + r.error.message;
     alertEl.className = 'malert error';
   } else {
     coverUploaded = null;
+    // Ancienne couverture remplacée ou retirée : on libère sa place dans Storage
+    var oldPath = previous ? coverStoragePath(previous.cover_url) : null;
+    if (oldPath && previous.cover_url !== coverUrl) await sb.storage.from('media').remove([oldPath]);
     closeEditor();
     loadNews();
   }
@@ -916,9 +932,12 @@ async function publishNews() {
 // ── SUPPRIMER ─────────────────────────────────────────
 async function deleteNews(newsId) {
   if (!confirm('Supprimer cette actualité définitivement ?')) return;
+  var n = allNews.find(function(x){ return x.id === newsId; });
   await sb.from('news_likes').delete().eq('news_id', newsId);
   await sb.from('news_comments').delete().eq('news_id', newsId);
-  await sb.from('news').delete().eq('id', newsId);
+  var r = await sb.from('news').delete().eq('id', newsId);
+  var coverPath = n ? coverStoragePath(n.cover_url) : null;
+  if (!r.error && coverPath) await sb.storage.from('media').remove([coverPath]);
   loadNews();
 }
 
