@@ -9,8 +9,12 @@
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "fr.lesartistes.app"
+      "supportsTablet": false,
+      "bundleIdentifier": "fr.lesartistes.app",
+      "icon": "./assets/images/ios-icon.png",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "fr.lesartistes.app",
