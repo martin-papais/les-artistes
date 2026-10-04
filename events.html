@@ -1104,7 +1104,7 @@ async function openDetail(id) {
   }
 
   // Anniversaire/Soirée/Jeux : mange ensemble si non obligé de manger avant
-  if (['Anniversaire','Soirée','Soirée jeux de société'].includes(e.categorie) && e.manger === 'non') {
+  if ((['Anniversaire','Soirée'].includes(e.categorie) && e.manger === 'non') || (e.categorie === 'Soirée jeux de société' && e.manger === 'oui')) {
     html += buildFoodPoll('🍽️ Qui mange ensemble ?', id, foodVotes, 'ensemble', 'castFoodVote');
   }
 

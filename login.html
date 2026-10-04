@@ -469,15 +469,15 @@ document.getElementById('btn-login').addEventListener('click', async function() 
   try {
     var emailToUse = identifiant;
 
-    // Si ce n'est pas un email, on cherche le pseudo dans profiles
+    // Si ce n'est pas un email, on demande l'email du pseudo (fonction SQL : profiles n'est pas lisible sans connexion)
     if (!identifiant.includes('@')) {
-      var res = await sb.from('profiles').select('email').ilike('pseudo', identifiant).single();
+      var res = await sb.rpc('email_for_pseudo', { p_pseudo: identifiant });
       if (res.error || !res.data) {
         showAlert('alert-login', '❌ Pseudo introuvable. Vérifie ton prénom et nom (ou utilise ton email).');
         setLoading('btn-login', false, 'Se connecter 🚀');
         return;
       }
-      emailToUse = res.data.email;
+      emailToUse = res.data;
     }
 
     var auth = await sb.auth.signInWithPassword({ email: emailToUse, password: password });
@@ -512,8 +512,9 @@ document.getElementById('btn-signup').addEventListener('click', async function()
   if (pw !== pw2)    { showAlert('alert-signup', '❌ Les mots de passe ne correspondent pas.'); return; }
   if (pw.length < 8) { showAlert('alert-signup', '❌ Le mot de passe doit faire au moins 8 caractères.'); return; }
 
+  // Le mot de passe du groupe est vérifié côté serveur (trigger handle_new_user)
   var groupe = document.getElementById('signup-groupe').value.trim();
-  if (groupe.toLowerCase() !== 'tortue') { showAlert('alert-signup', '❌ Mot de passe du groupe incorrect. Demande-le à un membre !'); return; }
+  if (!groupe) { showAlert('alert-signup', '⚠️ Saisis le mot de passe du groupe.'); return; }
 
   if (!cgu)          { showAlert('alert-signup', "⚠️ Accepte les conditions d'utilisation."); return; }
 
@@ -524,11 +525,18 @@ document.getElementById('btn-signup').addEventListener('click', async function()
       email: email,
       password: pw,
       options: {
-        data: { pseudo: pseudo, prenom: prenom, nom: nom, tel: tel, dob: dob }
+        data: { pseudo: pseudo, prenom: prenom, nom: nom, tel: tel, dob: dob, group_code: groupe }
       }
     });
     if (res.error) {
-      showAlert('alert-signup', res.error.message.toLowerCase().includes('already') ? '❌ Cet email est déjà utilisé.' : '❌ ' + res.error.message);
+      var msg = res.error.message.toLowerCase();
+      if (msg.includes('already')) showAlert('alert-signup', '❌ Cet email est déjà utilisé.');
+      else if (msg.includes('database error') || msg.includes('group_code')) showAlert('alert-signup', '❌ Mot de passe du groupe incorrect. Demande-le à un membre !');
+      else showAlert('alert-signup', '❌ ' + res.error.message);
+    } else if (res.data && res.data.session) {
+      // Pas de confirmation d'email sur ce projet : la session est ouverte tout de suite
+      showAlert('alert-signup', '🎉 Compte créé ! Redirection...', 'success');
+      setTimeout(function() { window.location.href = 'events.html'; }, 1200);
     } else {
       showAlert('alert-signup', '🎉 Compte créé ! Vérifie tes emails pour confirmer ta boîte mail, puis reviens te connecter.', 'success');
       setTimeout(function() { showPanel('login'); }, 3500);
@@ -544,7 +552,13 @@ document.getElementById('btn-forgot').addEventListener('click', async function()
 
   setLoading('btn-forgot', true);
   try {
-    await sb.auth.resetPasswordForEmail(email, { redirectTo: 'https://les--artistes.fr/reset-password.html' });
+    var r = await sb.auth.resetPasswordForEmail(email, { redirectTo: 'https://les--artistes.fr/reset-password.html' });
+    if (r.error) {
+      showAlert('alert-forgot', '❌ ' + r.error.message);
+      setLoading('btn-forgot', false, 'Envoyer le lien 🔑');
+      return;
+    }
+    setLoading('btn-forgot', false, 'Envoyer le lien 🔑');
     document.getElementById('forgot-inner').style.display = 'none';
     document.getElementById('forgot-success').classList.add('show');
   } catch(e) {
@@ -562,8 +576,12 @@ document.addEventListener('keydown', function(e) {
   if (btn) btn.click();
 });
 
+// ── Lien de récupération arrivé ici (URL de repli Supabase) → page dédiée ──
+if (/type=recovery/.test(window.location.hash)) window.location.replace('reset-password.html' + window.location.hash);
+
 // ── Session existante → redirect ────────────────────────
 sb.auth.getSession().then(function(result) {
+  if (/type=recovery/.test(window.location.hash)) return;
   if (result.data && result.data.session) window.location.href = 'events.html';
 });
 </script>
