@@ -1,0 +1,70 @@
+{
+  "expo": {
+    "name": "Les Artistes",
+    "slug": "les-artistes",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "lesartistes",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "fr.lesartistes.app"
+    },
+    "android": {
+      "package": "fr.lesartistes.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#1A1025",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 180,
+          "resizeMode": "contain",
+          "backgroundColor": "#1A1025"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Les Artistes accède à tes photos pour publier des souvenirs avec le groupe.",
+          "cameraPermission": "Les Artistes accède à la caméra pour prendre des photos à publier."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#FF6B6B"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "8b044a38-f903-43a7-a024-4c972c780a1a"
+      }
+    },
+    "owner": "chaoumet1"
+  }
+}
