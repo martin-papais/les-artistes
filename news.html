@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://ldchxxkmvepvbvhdokot.supabase.co" crossorigin>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <title>Les Artistes — Actualités</title>
 <link rel="icon" type="image/png" href="logo-artistes.png">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -260,7 +262,7 @@ main{padding-top:64px;position:relative;z-index:1;}
 <!-- NAVBAR -->
 <nav>
 <a href="events.html" class="nav-logo">
-  <img src="logo-artistes.png" alt="" style="height:42px;width:auto;vertical-align:middle;margin-right:8px;"> Les Artistes
+  <img src="logo-artistes.png" alt="" width="39" height="42" style="height:42px;width:auto;vertical-align:middle;margin-right:8px;"> Les Artistes
 </a>
   <div class="nav-links">
     <a href="events.html"   class="nav-link"> Événements</a>
@@ -403,8 +405,8 @@ main{padding-top:64px;position:relative;z-index:1;}
   <div style="font-size:.72rem;color:var(--muted);margin-bottom:8px;width:100%">Clique pour insérer</div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.4.16/dist/purify.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2"></script>
 <script>
 var SUPABASE_URL  = 'https://ldchxxkmvepvbvhdokot.supabase.co';
 var SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkY2h4eGttdmVwdmJ2aGRva290Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0NDQwNTMsImV4cCI6MjA4OTAyMDA1M30.HJw5-GsHCildEQ28HAB30_YKdiZOdeRJIml5wgLvHos';
@@ -415,13 +417,16 @@ var currentProfile = null;
 var allNews        = [];
 var sortAsc        = false;
 var editingId      = null;
-var coverDataUrl   = null;
+var coverFile      = null; // image choisie, envoyée dans Storage à la publication
+var coverUploaded  = null; // { file, path, url } : envoi réussi mais publication ratée → pas de doublon au nouvel essai
+var coverPreviewUrl = null;
 
 // ── INIT ────────────────────────────────────────────
 (async function init() {
   var s = await sb.auth.getSession();
   if (!s.data.session) { window.location.href = 'login.html'; return; }
   currentUser = s.data.session.user;
+  loadNews(); // en parallèle du profil de la nav
 
   var p = await sb.from('profiles').select('*').eq('id', currentUser.id).maybeSingle();
   var meta = currentUser.user_metadata || {};
@@ -433,7 +438,6 @@ var coverDataUrl   = null;
     document.getElementById('nav-name').textContent   = meta.prenom || meta.pseudo || currentUser.email || 'Moi';
     document.getElementById('nav-avatar').textContent = ((meta.prenom||meta.pseudo||currentUser.email||'?')[0]).toUpperCase();
   }
-  loadNews();
 })();
 
 // ── LOAD NEWS ────────────────────────────────────────
@@ -445,32 +449,29 @@ async function loadNews() {
   if (r.error) { feed.innerHTML = '<div class="empty-state"><div class="ei">😕</div><p>Erreur de chargement</p></div>'; return; }
   var items = r.data || [];
 
-  // Profils auteurs
+  // Profils auteurs, likes et nombre de commentaires, en parallèle
   if (items.length) {
     var ids = [];
     items.forEach(function(n){ if(n.created_by && ids.indexOf(n.created_by)===-1) ids.push(n.created_by); });
-    var pRes = await sb.from('profiles').select('id,prenom,nom,pseudo').in('id', ids);
+    var nIds = items.map(function(n){ return n.id; });
+    var res = await Promise.all([
+      sb.from('profiles').select('id,prenom,nom,pseudo').in('id', ids),
+      sb.from('news_likes').select('news_id,user_id').in('news_id', nIds),
+      sb.from('news_comments').select('news_id').in('news_id', nIds)
+    ]);
+    var pRes = res[0], lRes = res[1], cRes = res[2];
+
     var pm = {};
     (pRes.data||[]).forEach(function(p){ pm[p.id]=p; });
     items = items.map(function(n){ n.profiles = pm[n.created_by]||null; return n; });
-  }
 
-  // Likes
-  if (items.length) {
-    var nIds = items.map(function(n){ return n.id; });
-    var lRes = await sb.from('news_likes').select('news_id,user_id').in('news_id', nIds);
     var lMap = {};
     (lRes.data||[]).forEach(function(l){
       if (!lMap[l.news_id]) lMap[l.news_id] = [];
       lMap[l.news_id].push(l.user_id);
     });
     items = items.map(function(n){ n._likes = lMap[n.id]||[]; return n; });
-  }
 
-  // Commentaires count
-  if (items.length) {
-    var nIds2 = items.map(function(n){ return n.id; });
-    var cRes = await sb.from('news_comments').select('news_id').in('news_id', nIds2);
     var cMap = {};
     (cRes.data||[]).forEach(function(c){
       cMap[c.news_id] = (cMap[c.news_id]||0) + 1;
@@ -749,23 +750,53 @@ document.addEventListener('click', function(e) {
 });
 
 // Cover image
+// Réduit une image avant envoi (côté le plus long ≤ maxSide, JPEG), orientation EXIF respectée.
+// Renvoie un Blob plus léger que l'original, ou null (vidéo, GIF, format illisible, aucun gain).
+function downscaleImage(file, maxSide, quality) {
+  if (!file || !/^image\/(jpeg|png|webp|heic|heif)$/i.test(file.type)) return Promise.resolve(null);
+  function loadViaImg() {
+    return new Promise(function(resolve, reject) {
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload  = function() { URL.revokeObjectURL(url); resolve(img); };
+      img.onerror = function() { URL.revokeObjectURL(url); reject(new Error('image illisible')); };
+      img.src = url;
+    });
+  }
+  var source = window.createImageBitmap
+    ? createImageBitmap(file, { imageOrientation: 'from-image' }).catch(loadViaImg)
+    : loadViaImg();
+  return source.then(function(src) {
+    var scale  = Math.min(1, maxSide / Math.max(src.width, src.height));
+    var canvas = document.createElement('canvas');
+    canvas.width  = Math.round(src.width * scale);
+    canvas.height = Math.round(src.height * scale);
+    var ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#fff';                       // fond blanc pour les PNG transparents
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(src, 0, 0, canvas.width, canvas.height);
+    if (src.close) src.close();
+    return new Promise(function(resolve) {
+      canvas.toBlob(function(blob) { resolve(blob && blob.size < file.size ? blob : null); }, 'image/jpeg', quality);
+    });
+  }).catch(function() { return null; });
+}
+
 function handleCoverFile(input) {
   if (!input.files || !input.files[0]) return;
-  var reader = new FileReader();
-  reader.onload = function(ev) {
-    coverDataUrl = ev.target.result;
-    document.getElementById('f-cover-url').value = '';
-    var preview = document.getElementById('cover-preview');
-    preview.src = coverDataUrl;
-    preview.classList.add('show');
-    document.getElementById('btn-remove-cover').style.display = 'inline-flex';
-  };
-  reader.readAsDataURL(input.files[0]);
+  coverFile = input.files[0];
+  document.getElementById('f-cover-url').value = '';
+  var preview = document.getElementById('cover-preview');
+  if (coverPreviewUrl) URL.revokeObjectURL(coverPreviewUrl);
+  coverPreviewUrl = URL.createObjectURL(coverFile);
+  preview.src = coverPreviewUrl;
+  preview.classList.add('show');
+  document.getElementById('btn-remove-cover').style.display = 'inline-flex';
 }
 
 function handleCoverUrl(url) {
   if (!url) { removeCover(); return; }
-  coverDataUrl = null;
+  coverFile = null;
   var preview = document.getElementById('cover-preview');
   preview.src = url;
   preview.classList.add('show');
@@ -773,7 +804,7 @@ function handleCoverUrl(url) {
 }
 
 function removeCover() {
-  coverDataUrl = null;
+  coverFile = null;
   document.getElementById('f-cover-url').value = '';
   document.getElementById('cover-file').value  = '';
   var preview = document.getElementById('cover-preview');
@@ -831,13 +862,33 @@ async function publishNews() {
   var contenu = document.getElementById('editor-content').innerHTML.trim();
   var tags    = document.getElementById('f-tags').value.trim();
   var coverUrl = document.getElementById('f-cover-url').value.trim() || null;
-  if (coverDataUrl) coverUrl = coverDataUrl;
 
   if (!titre)   { alertEl.textContent='⚠️ Le titre est obligatoire.'; alertEl.className='malert error'; return; }
   if (!contenu || contenu === '<br>') { alertEl.textContent='⚠️ Le contenu est vide.'; alertEl.className='malert error'; return; }
 
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span>' + (editingId ? 'Sauvegarde...' : 'Publication...');
+
+  // Image choisie : réduite puis envoyée dans le bucket media (seule son URL va dans la table).
+  // Déjà envoyée lors d'un essai précédent qui a échoué → on réutilise le fichier.
+  if (coverFile && coverUploaded && coverUploaded.file === coverFile) {
+    coverUrl = coverUploaded.url;
+  } else if (coverFile) {
+    var small = await downscaleImage(coverFile, 1600, 0.85);
+    var body  = small || coverFile;
+    var ext   = small ? 'jpg' : (coverFile.name.split('.').pop() || 'jpg');
+    var path  = currentUser.id + '/covers/' + Date.now() + '.' + ext;
+    var up    = await sb.storage.from('media').upload(path, body, { upsert: false, contentType: small ? 'image/jpeg' : (coverFile.type || undefined) });
+    if (up.error) {
+      btn.disabled = false;
+      btn.textContent = editingId ? 'Enregistrer ✏️' : 'Publier 🚀';
+      alertEl.textContent = '❌ Image non envoyée : ' + up.error.message;
+      alertEl.className = 'malert error';
+      return;
+    }
+    coverUrl = sb.storage.from('media').getPublicUrl(path).data.publicUrl;
+    coverUploaded = { file: coverFile, path: path, url: coverUrl };
+  }
 
   var payload = { titre:titre, contenu:contenu, tags:tags||null, cover_url:coverUrl };
 
@@ -856,6 +907,7 @@ async function publishNews() {
     alertEl.textContent = '❌ Erreur : ' + r.error.message;
     alertEl.className = 'malert error';
   } else {
+    coverUploaded = null;
     closeEditor();
     loadNews();
   }

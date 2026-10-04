@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useEffect, useState } from 'react';
 import {
@@ -20,12 +21,39 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { localDateString, sb, type PhotoRow } from '@/lib/supabase';
+import { localDateString, sb, type PhotoRow, sessionUser } from '@/lib/supabase';
 import { theme } from '@/lib/theme';
 
 const COLS = 3;
 const GUTTER = 2;
 const TILE = (Dimensions.get('window').width - GUTTER * (COLS + 1)) / COLS;
+
+const MAX_SIDE = 1920;
+
+/**
+ * Réduit la photo (côté le plus long ≤ 1920 px, JPEG 85 %) avant envoi, comme le site :
+ * moins de stockage et de bande passante sur le plan gratuit Supabase.
+ * En cas d'échec, renvoie l'original.
+ */
+async function prepareImage(asset: ImagePicker.ImagePickerAsset) {
+  const original = {
+    uri: asset.uri,
+    mimeType: asset.mimeType || 'image/jpeg',
+    fileName: asset.fileName ?? null,
+  };
+  try {
+    const ctx = ImageManipulator.manipulate(asset.uri);
+    if (Math.max(asset.width, asset.height) > MAX_SIDE) {
+      ctx.resize(asset.width >= asset.height ? { width: MAX_SIDE } : { height: MAX_SIDE });
+    }
+    const rendered = await ctx.renderAsync();
+    const out = await rendered.saveAsync({ compress: 0.85, format: SaveFormat.JPEG });
+    const base = (asset.fileName || 'photo').replace(/\.[^.]+$/, '');
+    return { uri: out.uri, mimeType: 'image/jpeg', fileName: `${base}.jpg` };
+  } catch {
+    return original;
+  }
+}
 
 export default function PhotosScreen() {
   const [photos, setPhotos] = useState<PhotoRow[]>([]);
@@ -37,8 +65,8 @@ export default function PhotosScreen() {
   const [userId, setUserId] = useState<string | null>(null);
 
   const loadPhotos = useCallback(async () => {
-    const { data: u } = await sb.auth.getUser();
-    setUserId(u.user?.id ?? null);
+    const user = await sessionUser();
+    setUserId(user?.id ?? null);
     const { data } = await sb
       .from('photos')
       .select('*')
@@ -85,7 +113,7 @@ export default function PhotosScreen() {
     }
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ['images'],
-      quality: 0.85,
+      quality: 1, // compression unique ensuite, dans prepareImage
       allowsEditing: false,
     });
     if (result.canceled || !result.assets[0]) return;
@@ -103,7 +131,7 @@ export default function PhotosScreen() {
     }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      quality: 0.85,
+      quality: 1, // compression unique ensuite, dans prepareImage
       allowsMultipleSelection: false,
     });
     if (result.canceled || !result.assets[0]) return;
@@ -134,14 +162,15 @@ export default function PhotosScreen() {
   ) {
     setUploading(true);
     try {
-      const { data: u } = await sb.auth.getUser();
-      if (!u.user) throw new Error('Pas connecté');
+      const user = await sessionUser();
+      if (!user) throw new Error('Pas connecté');
 
-      const ext = asset.uri.split('.').pop()?.toLowerCase() || 'jpg';
-      const path = `${u.user.id}/${Date.now()}.${ext}`;
-      const contentType = asset.mimeType || (ext === 'png' ? 'image/png' : 'image/jpeg');
+      const img = await prepareImage(asset);
+      const ext = img.uri.split('.').pop()?.toLowerCase() || 'jpg';
+      const path = `${user.id}/${Date.now()}.${ext}`;
+      const contentType = img.mimeType;
 
-      const arrayBuffer = await fetch(asset.uri).then((r) => r.arrayBuffer());
+      const arrayBuffer = await fetch(img.uri).then((r) => r.arrayBuffer());
       const up = await sb.storage.from('media').upload(path, arrayBuffer, {
         contentType,
         upsert: false,
@@ -149,7 +178,7 @@ export default function PhotosScreen() {
       if (up.error) throw up.error;
 
       const publicUrl = sb.storage.from('media').getPublicUrl(path).data.publicUrl;
-      const fileName = asset.fileName || path.split('/').pop() || `photo.${ext}`;
+      const fileName = img.fileName || path.split('/').pop() || `photo.${ext}`;
       const today = localDateString();
       // Même payload que l'upload web (photos.html) ; sujet obligatoire côté web
       const ins = await sb.from('photos').insert({
@@ -159,10 +188,10 @@ export default function PhotosScreen() {
         description: null,
         file_name: fileName,
         file_url: publicUrl,
-        file_size: asset.fileSize ?? arrayBuffer.byteLength,
+        file_size: arrayBuffer.byteLength,
         mime_type: contentType,
         type: 'photo',
-        created_by: u.user.id,
+        created_by: user.id,
       });
       if (ins.error) {
         await sb.storage.from('media').remove([path]);

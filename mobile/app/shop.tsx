@@ -25,8 +25,7 @@ import {
   type ShopConfig,
   type ShopOrder,
   type SondageCandidat,
-  type SondageVote,
-} from '@/lib/supabase';
+  type SondageVote, sessionUser } from '@/lib/supabase';
 import { theme } from '@/lib/theme';
 
 const WEB_BASE = 'https://les--artistes.fr';
@@ -125,13 +124,13 @@ function ArticlesView() {
   }, []);
 
   const loadAll = useCallback(async () => {
-    const { data: u } = await sb.auth.getUser();
-    setUserId(u.user?.id ?? null);
+    const user = await sessionUser();
+    setUserId(user?.id ?? null);
 
     const [artRes, ordRes, cfgRes] = await Promise.all([
       sb.from('shop_articles').select('*').order('created_at', { ascending: true }),
-      u.user
-        ? sb.from('shop_orders').select('*').eq('user_id', u.user.id)
+      user
+        ? sb.from('shop_orders').select('*').eq('user_id', user.id)
         : Promise.resolve({ data: [] as ShopOrder[] }),
       sb.from('shop_config').select('*').eq('key', 'deadline').maybeSingle(),
     ]);
@@ -489,8 +488,8 @@ function SondageView() {
   const [userId, setUserId] = useState<string | null>(null);
 
   const loadAll = useCallback(async () => {
-    const { data: u } = await sb.auth.getUser();
-    setUserId(u.user?.id ?? null);
+    const user = await sessionUser();
+    setUserId(user?.id ?? null);
 
     const [candRes, voteRes, cfgRes] = await Promise.all([
       sb.from('sondage_candidats').select('*').order('categorie').order('nom'),

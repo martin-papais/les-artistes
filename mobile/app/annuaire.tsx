@@ -17,7 +17,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { sb, type AnnuaireExtra, type Profile } from '@/lib/supabase';
+import { sb, type AnnuaireExtra, type Profile, sessionUser } from '@/lib/supabase';
 import { theme } from '@/lib/theme';
 
 type Card = Profile & {
@@ -42,8 +42,8 @@ export default function AnnuaireScreen() {
   const [editing, setEditing] = useState<Card | null>(null);
 
   const loadAll = useCallback(async () => {
-    const { data: u } = await sb.auth.getUser();
-    setUserId(u.user?.id ?? null);
+    const user = await sessionUser();
+    setUserId(user?.id ?? null);
 
     const [profRes, extraRes] = await Promise.all([
       sb.from('profiles').select('*').order('nom', { ascending: true }),

@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://ldchxxkmvepvbvhdokot.supabase.co" crossorigin>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <title>Les Artistes — Photos</title>
 <link rel="icon" type="image/png" href="logo-artistes.png">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -297,7 +299,7 @@ textarea.minput{resize:vertical;min-height:70px;}
 <!-- NAVBAR -->
 <nav>
 <a href="events.html" class="nav-logo">
-  <img src="logo-artistes.png" alt="" style="height:42px;width:auto;vertical-align:middle;margin-right:8px;"> Les Artistes
+  <img src="logo-artistes.png" alt="" width="39" height="42" style="height:42px;width:auto;vertical-align:middle;margin-right:8px;"> Les Artistes
 </a>
   <div class="nav-links">
     <a href="events.html"   class="nav-link"> Événements</a>
@@ -463,7 +465,7 @@ textarea.minput{resize:vertical;min-height:70px;}
   <div class="lb-counter" id="lb-counter"></div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2"></script>
 <script>
 var SUPABASE_URL  = 'https://ldchxxkmvepvbvhdokot.supabase.co';
 var SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkY2h4eGttdmVwdmJ2aGRva290Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0NDQwNTMsImV4cCI6MjA4OTAyMDA1M30.HJw5-GsHCildEQ28HAB30_YKdiZOdeRJIml5wgLvHos';
@@ -485,6 +487,13 @@ var lbItems        = []; // items affichables en lightbox
   if (!s.data.session) { window.location.href = 'login.html'; return; }
   currentUser = s.data.session.user;
 
+  // Date par défaut = aujourd'hui
+  var today = new Date().toISOString().split('T')[0];
+  document.getElementById('f-date-media').value = today;
+
+  loadMedia(); // en parallèle du profil de la nav
+  setupDropzone();
+
   var p = await sb.from('profiles').select('*').eq('id', currentUser.id).maybeSingle();
   var meta = currentUser.user_metadata || {};
   if (p.data) {
@@ -495,13 +504,6 @@ var lbItems        = []; // items affichables en lightbox
     document.getElementById('nav-name').textContent   = meta.prenom || meta.pseudo || currentUser.email || 'Moi';
     document.getElementById('nav-avatar').textContent = ((meta.prenom||meta.pseudo||currentUser.email||'?')[0]).toUpperCase();
   }
-
-  // Date par défaut = aujourd'hui
-  var today = new Date().toISOString().split('T')[0];
-  document.getElementById('f-date-media').value = today;
-
-  loadMedia();
-  setupDropzone();
 })();
 
 // ── LOAD MEDIA ────────────────────────────────────────
@@ -562,7 +564,7 @@ function buildItem(m, i) {
   if (m.type === 'photo' && m.file_url) {
     // Photo : img normale avec crossOrigin pour eviter les erreurs CORS
     mediaHtml = '<div class="item-media">'
-      + '<img class="item-img" src="'+esc(m.file_url)+'" alt="'+esc(m.sujet)+'" loading="lazy">'
+      + '<img class="item-img" src="'+esc(m.file_url)+'" alt="'+esc(m.sujet)+'" loading="lazy" decoding="async">'
       + '<span class="type-badge badge-photo">Photo</span>'
       + '<div class="item-overlay"></div>'
       + '</div>';
@@ -759,16 +761,22 @@ async function uploadMedia() {
   var total = selectedFiles.length;
   var done  = 0;
 
-  // Upload parallèle : tous les fichiers en même temps
+  // Un fichier à la fois : décoder 20 photos de 12 Mpx en même temps peut faire planter
+  // l'onglet sur téléphone (~50 Mo de mémoire par photo pendant la réduction)
   var completed = 0;
   var failed    = 0;
-  var uploadPromises = selectedFiles.map(function(file) {
-    return (async function() {
+  for (var fi = 0; fi < selectedFiles.length; fi++) {
+    await (async function(file) {
       var fileType  = getMediaType(file);
-      var ext       = file.name.split('.').pop();
+      // Photo réduite à 1920 px avant envoi : moins de stockage et de bande passante Supabase
+      var small     = fileType === 'video' ? null : await downscaleImage(file, 1920, 0.85);
+      var body      = small || file;
+      var fileName  = small ? file.name.replace(/\.[^.]+$/, '') + '.jpg' : file.name;
+      var mimeType  = small ? 'image/jpeg' : file.type;
+      var ext       = fileName.split('.').pop();
       var safeName  = Date.now() + '_' + Math.random().toString(36).substr(2,8) + '.' + ext;
       var path      = currentUser.id + '/' + safeName;
-      var upRes     = await sb.storage.from('media').upload(path, file, { upsert: false });
+      var upRes     = await sb.storage.from('media').upload(path, body, { upsert: false, contentType: mimeType || undefined });
 
       var fileUrl = null;
       if (!upRes.error) {
@@ -784,10 +792,10 @@ async function uploadMedia() {
         date_media:  dateMed,
         pris_par:    prisPar || null,
         description: desc || null,
-        file_name:   file.name,
+        file_name:   fileName,
         file_url:    fileUrl,
-        file_size:   file.size,
-        mime_type:   file.type,
+        file_size:   body.size,
+        mime_type:   mimeType,
         type:        fileType,
         created_by:  currentUser.id
       };
@@ -804,10 +812,8 @@ async function uploadMedia() {
       document.getElementById('progress-bar').style.width = pct + '%';
       document.getElementById('progress-text').textContent =
         completed + ' / ' + total + ' fichier(s) envoyé(s)...';
-    })();
-  });
-
-  await Promise.all(uploadPromises);
+    })(selectedFiles[fi]);
+  }
   var done = completed;
 
   document.getElementById('progress-bar').style.width = '100%';
@@ -819,6 +825,38 @@ async function uploadMedia() {
     resetUploadForm();
     loadMedia();
   }, failed ? 3500 : 800);
+}
+
+// Réduit une image avant envoi (côté le plus long ≤ maxSide, JPEG), orientation EXIF respectée.
+// Renvoie un Blob plus léger que l'original, ou null (vidéo, GIF, format illisible, aucun gain).
+function downscaleImage(file, maxSide, quality) {
+  if (!file || !/^image\/(jpeg|png|webp|heic|heif)$/i.test(file.type)) return Promise.resolve(null);
+  function loadViaImg() {
+    return new Promise(function(resolve, reject) {
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload  = function() { URL.revokeObjectURL(url); resolve(img); };
+      img.onerror = function() { URL.revokeObjectURL(url); reject(new Error('image illisible')); };
+      img.src = url;
+    });
+  }
+  var source = window.createImageBitmap
+    ? createImageBitmap(file, { imageOrientation: 'from-image' }).catch(loadViaImg)
+    : loadViaImg();
+  return source.then(function(src) {
+    var scale  = Math.min(1, maxSide / Math.max(src.width, src.height));
+    var canvas = document.createElement('canvas');
+    canvas.width  = Math.round(src.width * scale);
+    canvas.height = Math.round(src.height * scale);
+    var ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#fff';                       // fond blanc pour les PNG transparents
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(src, 0, 0, canvas.width, canvas.height);
+    if (src.close) src.close();
+    return new Promise(function(resolve) {
+      canvas.toBlob(function(blob) { resolve(blob && blob.size < file.size ? blob : null); }, 'image/jpeg', quality);
+    });
+  }).catch(function() { return null; });
 }
 
 function getMediaType(file) {

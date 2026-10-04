@@ -23,8 +23,7 @@ import {
   type NewsComment,
   type NewsLike,
   type NewsRow,
-  type ProfileMini,
-} from '@/lib/supabase';
+  type ProfileMini, sessionUser } from '@/lib/supabase';
 import { theme } from '@/lib/theme';
 
 const PAGE_SIZE = 20;
@@ -124,8 +123,8 @@ export default function NewsScreen() {
   );
 
   const loadInitial = useCallback(async () => {
-    const { data: u } = await sb.auth.getUser();
-    const uid = u.user?.id ?? null;
+    const user = await sessionUser();
+    const uid = user?.id ?? null;
     setUserId(uid);
     const { items, hasMore } = await fetchPage(0, uid);
     setItems(items);

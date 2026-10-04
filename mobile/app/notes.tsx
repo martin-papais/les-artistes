@@ -19,8 +19,7 @@ import {
   sb,
   type Note,
   type NoteReaction,
-  type ProfileMini,
-} from '@/lib/supabase';
+  type ProfileMini, sessionUser } from '@/lib/supabase';
 import { theme } from '@/lib/theme';
 
 const EMOJIS = ['👍', '❤️', '😂', '🔥', '👀', '💯', '✅', '😮'] as const;
@@ -40,8 +39,8 @@ export default function NotesScreen() {
   const [userId, setUserId] = useState<string | null>(null);
 
   const loadAll = useCallback(async () => {
-    const { data: u } = await sb.auth.getUser();
-    setUserId(u.user?.id ?? null);
+    const user = await sessionUser();
+    setUserId(user?.id ?? null);
 
     const { data: rows } = await sb
       .from('notes')

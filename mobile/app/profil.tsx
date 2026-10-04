@@ -17,7 +17,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { signOutAndUnregister } from '@/lib/notifications';
-import { sb, type AnnuaireExtra, type Profile } from '@/lib/supabase';
+import { sb, type AnnuaireExtra, type Profile, sessionUser } from '@/lib/supabase';
 import { theme } from '@/lib/theme';
 
 function parseAddresses(raw: string | null | undefined): string[] {
@@ -38,8 +38,7 @@ export default function ProfilScreen() {
   const [loading, setLoading] = useState(true);
 
   const loadAll = useCallback(async () => {
-    const { data: u } = await sb.auth.getUser();
-    const user = u.user;
+    const user = await sessionUser();
     if (!user) {
       setLoading(false);
       router.replace('/(auth)/login');

@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://ldchxxkmvepvbvhdokot.supabase.co" crossorigin>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <title>Les Artistes — Notes & Idées</title>
 <link rel="icon" type="image/png" href="logo-artistes.png">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -160,7 +162,7 @@ main{padding-top:64px;position:relative;z-index:1;}
 <div class="bg"></div>
 
 <nav>
-  <a href="events.html" class="nav-logo"><img src="logo-artistes.png" alt="" style="height:42px;width:auto;vertical-align:middle;margin-right:8px;"> Les Artistes</a>
+  <a href="events.html" class="nav-logo"><img src="logo-artistes.png" alt="" width="39" height="42" style="height:42px;width:auto;vertical-align:middle;margin-right:8px;"> Les Artistes</a>
   <div class="nav-links">
     <a href="events.html"   class="nav-link"> Événements</a>
     <a href="news.html"     class="nav-link"> Actualités</a>
@@ -233,7 +235,7 @@ main{padding-top:64px;position:relative;z-index:1;}
 
 <div class="toast" id="toast"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2"></script>
 <script>
 var SUPABASE_URL  = 'https://ldchxxkmvepvbvhdokot.supabase.co';
 var SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkY2h4eGttdmVwdmJ2aGRva290Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0NDQwNTMsImV4cCI6MjA4OTAyMDA1M30.HJw5-GsHCildEQ28HAB30_YKdiZOdeRJIml5wgLvHos';
@@ -253,17 +255,17 @@ var activeFilter = 'all';
   if (!s.data.session) { window.location.href = 'login.html'; return; }
   currentUser = s.data.session.user;
 
+  // Sélectionner "Autre" par défaut
+  document.querySelector('.cat-pill[data-cat="autre"]').classList.add('sel-autre');
+
+  loadNotes(); // en parallèle du profil de la nav
+
   var p = await sb.from('profiles').select('prenom,pseudo').eq('id', currentUser.id).maybeSingle();
   var meta = currentUser.user_metadata || {};
   var prenom = (p.data && p.data.prenom) || meta.prenom || meta.pseudo || currentUser.email || '?';
   document.getElementById('nav-name').textContent    = prenom;
   document.getElementById('nav-avatar').textContent  = prenom[0].toUpperCase();
   document.getElementById('compose-av').textContent  = prenom[0].toUpperCase();
-
-  // Sélectionner "Autre" par défaut
-  document.querySelector('.cat-pill[data-cat="autre"]').classList.add('sel-autre');
-
-  loadNotes();
 })();
 
 // ── LOAD ──────────────────────────────────────────────────────────────────────
@@ -271,7 +273,12 @@ async function loadNotes() {
   document.getElementById('notes-list').innerHTML =
     '<div class="loading-wrap"><div class="loading-spinner"></div></div>';
 
-  var nr = await sb.from('notes').select('*').order('created_at', { ascending: false });
+  // Notes et réactions en parallèle
+  var res = await Promise.all([
+    sb.from('notes').select('*').order('created_at', { ascending: false }),
+    sb.from('note_reactions').select('*')
+  ]);
+  var nr = res[0], rr = res[1];
   allNotes = nr.data || [];
 
   // Profils
@@ -284,8 +291,6 @@ async function loadNotes() {
     allNotes.forEach(function(n){ n.profile = pm[n.user_id]||null; });
   }
 
-  // Réactions
-  var rr = await sb.from('note_reactions').select('*');
   allReacts = rr.data || [];
 
   renderNotes();

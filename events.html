@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://ldchxxkmvepvbvhdokot.supabase.co" crossorigin>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <title>Les Artistes — Événements</title>
 <link rel="icon" type="image/png" href="logo-artistes.png">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -274,7 +276,7 @@ textarea.minput{resize:vertical;min-height:70px;}
 <div class="bg"></div>
 
 <nav>
-  <a href="events.html" class="nav-logo"><img src="logo-artistes.png" alt="" style="height:42px;width:auto;vertical-align:middle;margin-right:8px;"> Les Artistes</a>
+  <a href="events.html" class="nav-logo"><img src="logo-artistes.png" alt="" width="39" height="42" style="height:42px;width:auto;vertical-align:middle;margin-right:8px;"> Les Artistes</a>
   <div class="nav-links">
     <a href="events.html"   class="nav-link active"><span> Événements</span></a>
     <a href="news.html"     class="nav-link"> Actualités</a>
@@ -426,7 +428,7 @@ textarea.minput{resize:vertical;min-height:70px;}
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2"></script>
 <script>
 var SUPABASE_URL  = 'https://ldchxxkmvepvbvhdokot.supabase.co';
 var SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkY2h4eGttdmVwdmJ2aGRva290Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0NDQwNTMsImV4cCI6MjA4OTAyMDA1M30.HJw5-GsHCildEQ28HAB30_YKdiZOdeRJIml5wgLvHos';
@@ -443,15 +445,15 @@ var editingId   = null;
   if (!s.data.session) { window.location.href = 'login.html'; return; }
   currentUser = s.data.session.user;
 
+  // Les événements se chargent pendant qu'on récupère le profil de la nav
+  startClock();
+  loadEvents();
+
   var p = await sb.from('profiles').select('*').eq('id', currentUser.id).maybeSingle();
   var meta = currentUser.user_metadata || {};
   var prenom = (p.data && (p.data.prenom || p.data.pseudo)) || meta.prenom || meta.pseudo || currentUser.email || '?';
   document.getElementById('nav-name').textContent   = prenom;
   document.getElementById('nav-avatar').textContent = prenom[0].toUpperCase();
-
-  startClock();
-  loadEvents();
-  autoCleanOldEvents();
 })();
 
 // ── HORLOGE ───────────────────────────────────────────────────────────────────
@@ -468,25 +470,6 @@ function startClock() {
 }
 function pad(n){ return n<10?'0'+n:''+n; }
 
-// ── AUTO-CLEAN > 1 an ──────────────────────────────────────────────────────────
-async function autoCleanOldEvents() {
-  var cutoff = new Date();
-  cutoff.setFullYear(cutoff.getFullYear()-1);
-  var cutoffStr = cutoff.toISOString().split('T')[0];
-  // Supprime les events dont la date_event < il y a 1 an
-  var old = await sb.from('events').select('id').lt('date_event', cutoffStr);
-  if (old.data && old.data.length) {
-    for (var i=0; i<old.data.length; i++) {
-      var id = old.data[i].id;
-      await sb.from('event_comments').delete().eq('event_id',id);
-      await sb.from('event_votes').delete().eq('event_id',id);
-      await sb.from('event_food_votes').delete().eq('event_id',id);
-      await sb.from('event_courses_votes').delete().eq('event_id',id);
-      await sb.from('events').delete().eq('id',id);
-    }
-  }
-}
-
 // ── LOAD ──────────────────────────────────────────────────────────────────────
 async function loadEvents() {
   document.getElementById('active-list').innerHTML = '<div class="loading-wrap"><div class="loading-spinner"></div></div>';
@@ -496,20 +479,20 @@ async function loadEvents() {
   if (r.error) { document.getElementById('active-list').innerHTML = '<div class="empty-state"><p>Erreur : '+r.error.message+'</p></div>'; return; }
   var events = r.data || [];
 
-  // Profils
+  // Profils des créateurs + votes présence, en parallèle
   if (events.length) {
     var uids = [];
     events.forEach(function(e){ if(e.created_by && uids.indexOf(e.created_by)===-1) uids.push(e.created_by); });
-    var pr = await sb.from('profiles').select('id,prenom,nom,pseudo').in('id', uids);
+    var ids = events.map(function(e){ return e.id; });
+    var res = await Promise.all([
+      sb.from('profiles').select('id,prenom,nom,pseudo').in('id', uids),
+      sb.from('event_votes').select('event_id,user_id,present').in('event_id', ids)
+    ]);
+    var pr = res[0], vr = res[1];
     var pm = {};
     (pr.data||[]).forEach(function(p){ pm[p.id]=p; });
     events = events.map(function(e){ e.profiles=pm[e.created_by]||null; return e; });
-  }
 
-  // Votes présence
-  if (events.length) {
-    var ids = events.map(function(e){ return e.id; });
-    var vr = await sb.from('event_votes').select('event_id,user_id,present').in('event_id', ids);
     var vm = {};
     (vr.data||[]).forEach(function(v){ if(!vm[v.event_id]) vm[v.event_id]=[]; vm[v.event_id].push(v); });
     events = events.map(function(e){ e._votes=vm[e.id]||[]; return e; });
@@ -989,56 +972,36 @@ async function openDetail(id) {
   document.getElementById('detail-title').textContent = 'Chargement...';
   document.getElementById('detail-body').innerHTML = '<div class="loading-wrap"><div class="loading-spinner" style="margin:0 auto"></div></div>';
 
-  var r, e;
+  // Événement, votes et commentaires en parallèle (tous ne dépendent que de l'id)
+  var res, r, e;
   try {
-    r = await sb.from('events').select('*').eq('id',id).maybeSingle();
+    res = await Promise.all([
+      sb.from('events').select('*').eq('id',id).maybeSingle(),
+      sb.from('event_votes').select('*').eq('event_id',id),
+      sb.from('event_food_votes').select('*').eq('event_id',id),
+      sb.from('event_courses_votes').select('*').eq('event_id',id),
+      sb.from('event_comments').select('*').eq('event_id',id).order('created_at',{ascending:true})
+    ]);
   } catch(err) {
     document.getElementById('detail-body').innerHTML = '<div class="empty-state"><p>Erreur de chargement</p></div>';
     return;
   }
+  r = res[0];
   if (!r || r.error || !r.data) {
     document.getElementById('detail-body').innerHTML = '<div class="empty-state"><p>'+(r&&r.error?r.error.message:'Événement introuvable')+'</p></div>';
     return;
   }
   e = r.data;
+  var allVotes     = (res[1] && res[1].data) || [];   // présence
+  var foodVotes    = (res[2] && res[2].data) || [];   // nourriture (midi/soir/ensemble)
+  var coursesVotes = (res[3] && res[3].data) || [];   // courses (barbecue)
+  var comments     = (res[4] && res[4].data) || [];
 
-  // Profil auteur
-  if (e.created_by) {
-    var pr = await sb.from('profiles').select('id,prenom,nom,pseudo').eq('id',e.created_by).maybeSingle();
-    e.profiles = pr.data||null;
-  }
-
-  // Votes présence
-  var allVotes = [];
-  try {
-    var vr = await sb.from('event_votes').select('*').eq('event_id',id);
-    allVotes = vr.data || [];
-  } catch(e) { allVotes = []; }
-  await enrichWithProfiles(allVotes);
-
-  // Votes nourriture (midi/soir/ensemble)
-  var foodVotes = [];
-  try {
-    var fr = await sb.from('event_food_votes').select('*').eq('event_id',id);
-    foodVotes = fr.data || [];
-  } catch(e) { foodVotes = []; }
-  await enrichWithProfiles(foodVotes);
-
-  // Votes courses (barbecue)
-  var coursesVotes = [];
-  try {
-    var courRes = await sb.from('event_courses_votes').select('*').eq('event_id',id);
-    coursesVotes = (courRes && courRes.data) || [];
-  } catch(e) { coursesVotes = []; }
-  await enrichWithProfiles(coursesVotes);
-
-  // Commentaires
-  var comments = [];
-  try {
-    var cr = await sb.from('event_comments').select('*').eq('event_id',id).order('created_at',{ascending:true});
-    comments = cr.data || [];
-  } catch(e) { comments = []; }
-  await enrichWithProfiles(comments, 'user_id');
+  // Un seul appel profils pour l'auteur, les votants et les commentateurs
+  var everyone = allVotes.concat(foodVotes, coursesVotes, comments);
+  if (e.created_by) everyone.push({ user_id: e.created_by });
+  await enrichWithProfiles(everyone);
+  if (e.created_by) e.profiles = everyone[everyone.length-1].profiles;
 
   var isOwner = e.created_by === currentUser.id;
   document.getElementById('btn-edit').style.display   = isOwner ? 'flex' : 'none';

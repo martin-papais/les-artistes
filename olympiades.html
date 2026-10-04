@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://ldchxxkmvepvbvhdokot.supabase.co" crossorigin>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <title>Les Artistes — Olympiades</title>
 <link rel="icon" type="image/png" href="logo-artistes.png">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -229,7 +231,7 @@ main{padding-top:64px;position:relative;z-index:1;}
 <body>
 <div class="bg"></div>
 <nav>
-  <a href="events.html" class="nav-logo"><img src="logo-artistes.png" alt="" style="height:42px;width:auto;vertical-align:middle;margin-right:8px;"> Les Artistes</a>
+  <a href="events.html" class="nav-logo"><img src="logo-artistes.png" alt="" width="39" height="42" style="height:42px;width:auto;vertical-align:middle;margin-right:8px;"> Les Artistes</a>
   <div class="nav-links">
     <a href="events.html"     class="nav-link"> Événements</a>
     <a href="olympiades.html" class="nav-link active"><span> Olympiades</span></a>
@@ -963,7 +965,7 @@ var sb = null;
   var SUPABASE_URL  = 'https://ldchxxkmvepvbvhdokot.supabase.co';
   var SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkY2h4eGttdmVwdmJ2aGRva290Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0NDQwNTMsImV4cCI6MjA4OTAyMDA1M30.HJw5-GsHCildEQ28HAB30_YKdiZOdeRJIml5wgLvHos';
   var script = document.createElement('script');
-  script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+  script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2';
   script.onload = async function(){
     sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
     var s = await sb.auth.getSession();

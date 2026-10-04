@@ -19,8 +19,7 @@ import {
   type JeuAlcool,
   type JeuSociete,
   type JeuSocieteVote,
-  type ProfileMini,
-} from '@/lib/supabase';
+  type ProfileMini, sessionUser } from '@/lib/supabase';
 import { theme } from '@/lib/theme';
 
 type Tab = 'alcool' | 'societe';
@@ -45,8 +44,8 @@ export default function JeuxScreen() {
   const rating = useRef(false);
 
   const loadAll = useCallback(async () => {
-    const { data: u } = await sb.auth.getUser();
-    setUserId(u.user?.id ?? null);
+    const user = await sessionUser();
+    setUserId(user?.id ?? null);
 
     const [alcRes, socRes] = await Promise.all([
       sb.from('jeux_alcool').select('*').order('created_at', { ascending: false }),
@@ -83,7 +82,7 @@ export default function JeuxScreen() {
     setSociete(
       ((socRes.data ?? []) as JeuSociete[]).map((j) => {
         const votes = votesByJeu[j.id] ?? [];
-        const mine = u.user ? votes.find((v) => v.user_id === u.user!.id) : undefined;
+        const mine = user ? votes.find((v) => v.user_id === user!.id) : undefined;
         const avg = votes.length ? votes.reduce((s, v) => s + v.note, 0) / votes.length : 0;
         return { ...j, votes, myVote: mine ?? null, avg };
       }),

@@ -82,6 +82,16 @@ export type PhotoRow = {
   created_at: string;
 };
 
+/**
+ * Utilisateur de la session enregistrée sur le téléphone, sans appel réseau
+ * (getUser() interroge le serveur à chaque écran). Suffit pour l'affichage :
+ * c'est la RLS côté serveur qui protège les données.
+ */
+export async function sessionUser() {
+  const { data } = await sb.auth.getSession();
+  return data.session?.user ?? null;
+}
+
 /** Date locale AAAA-MM-JJ (toISOString() donnerait la veille entre 0 h et 2 h à Paris). */
 export function localDateString(d: Date = new Date()): string {
   const pad = (n: number) => String(n).padStart(2, '0');

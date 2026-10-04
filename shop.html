@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://ldchxxkmvepvbvhdokot.supabase.co" crossorigin>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <title>Les Artistes — Boutique</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -354,7 +356,7 @@ textarea.minput{resize:vertical;min-height:70px;}
 <div class="bg"></div>
 
 <nav>
-  <a href="events.html" class="nav-logo"><img src="logo-artistes.png" alt="" style="height:42px;width:auto;vertical-align:middle;margin-right:8px;"> Les Artistes</a>
+  <a href="events.html" class="nav-logo"><img src="logo-artistes.png" alt="" width="39" height="42" style="height:42px;width:auto;vertical-align:middle;margin-right:8px;"> Les Artistes</a>
   <div class="nav-links">
     <a href="events.html"   class="nav-link"> Événements</a>
     <a href="news.html"     class="nav-link"> Actualités</a>
@@ -605,7 +607,7 @@ textarea.minput{resize:vertical;min-height:70px;}
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2"></script>
 <script>
 var SUPABASE_URL  = 'https://ldchxxkmvepvbvhdokot.supabase.co';
 var SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkY2h4eGttdmVwdmJ2aGRva290Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0NDQwNTMsImV4cCI6MjA4OTAyMDA1M30.HJw5-GsHCildEQ28HAB30_YKdiZOdeRJIml5wgLvHos';
@@ -629,6 +631,9 @@ var editingArticle = null;
   currentUser = s.data.session.user;
   isAdmin = (currentUser.email === ADMIN_EMAIL);
 
+  // Date limite, articles et commandes se chargent pendant qu'on récupère le profil de la nav
+  var shopReady = loadShop(loadDeadline());
+
   var p = await sb.from('profiles').select('prenom,pseudo').eq('id', currentUser.id).maybeSingle();
   var meta = currentUser.user_metadata || {};
   var prenom = (p.data && p.data.prenom) || meta.prenom || currentUser.email || '?';
@@ -640,8 +645,7 @@ var editingArticle = null;
     document.getElementById('shop-grid').parentElement.classList.add('is-admin');
   }
 
-  await loadDeadline();
-  await loadShop();
+  await shopReady;
 })();
 
 // ── COUNTDOWN — ne jamais toucher au innerHTML du countdown-wrap ──────────────
@@ -731,18 +735,21 @@ function startCountdown() {
 function pad(n) { return n < 10 ? '0' + n : '' + n; }
 
 // ── LOAD SHOP ─────────────────────────────────────────────────────────────────
-async function loadShop() {
+// waitBeforeRender : promesse optionnelle (ex. date limite) attendue avant d'afficher les cartes
+async function loadShop(waitBeforeRender) {
   var grid = document.getElementById('shop-grid');
   grid.innerHTML = '<div class="loading-wrap"><div class="loading-spinner"></div></div>';
 
-  var artRes = await sb.from('shop_articles').select('*').order('created_at', { ascending: true });
+  var res = await Promise.all([
+    sb.from('shop_articles').select('*').order('created_at', { ascending: true }),
+    sb.from('shop_orders').select('*')
+  ]);
+  var artRes = res[0], ordRes = res[1];
   if (artRes.error) {
     grid.innerHTML = '<div class="empty-state"><div class="ei">&#128546;</div><p>Erreur</p></div>';
     return;
   }
   allArticles = artRes.data || [];
-
-  var ordRes = await sb.from('shop_orders').select('*');
   allOrders = ordRes.data || [];
 
   // Enrichit les commandes avec les profils
@@ -756,6 +763,8 @@ async function loadShop() {
     (pRes.data || []).forEach(function(p) { pm[p.id] = p; });
     allOrders = allOrders.map(function(o) { o.profile = pm[o.user_id] || null; return o; });
   }
+
+  if (waitBeforeRender) await waitBeforeRender;
 
   if (!allArticles.length) {
     grid.innerHTML = '<div class="empty-state"><div class="ei">&#128722;</div><p>' +

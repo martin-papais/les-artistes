@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://ldchxxkmvepvbvhdokot.supabase.co" crossorigin>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <title>Les Artistes — Annuaire</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -200,7 +202,7 @@ td{padding:12px 14px;vertical-align:middle;}
 
 <nav>
 <a href="events.html" class="nav-logo">
-  <img src="logo-artistes.png" alt="" style="height:42px;width:auto;vertical-align:middle;margin-right:8px;"> Les Artistes
+  <img src="logo-artistes.png" alt="" width="39" height="42" style="height:42px;width:auto;vertical-align:middle;margin-right:8px;"> Les Artistes
 </a>
   <div class="nav-links">
     <a href="events.html"   class="nav-link"> Événements</a>
@@ -330,7 +332,7 @@ td{padding:12px 14px;vertical-align:middle;}
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2"></script>
 <script>
 var SUPABASE_URL  = 'https://ldchxxkmvepvbvhdokot.supabase.co';
 var SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkY2h4eGttdmVwdmJ2aGRva290Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0NDQwNTMsImV4cCI6MjA4OTAyMDA1M30.HJw5-GsHCildEQ28HAB30_YKdiZOdeRJIml5wgLvHos';
@@ -353,7 +355,12 @@ var addrCount   = 0;
 
 // ── LOAD ──────────────────────────────────────────────────────────────────────
 async function loadProfiles() {
-  var r = await sb.from('profiles').select('*').order('nom', { ascending: true });
+  // Profils et infos complémentaires (adresses, RIB) en parallèle
+  var res = await Promise.all([
+    sb.from('profiles').select('*').order('nom', { ascending: true }),
+    sb.from('annuaire_extra').select('*')
+  ]);
+  var r = res[0], extra = res[1];
   if (r.error) {
     document.getElementById('annuaire-tbody').innerHTML =
       '<tr><td colspan="8"><div class="empty-state"><div class="ei">&#128546;</div><p>Erreur de chargement</p></div></td></tr>';
@@ -361,7 +368,6 @@ async function loadProfiles() {
   }
 
   // Enrichit avec les infos depuis annuaire_extra (adresses, RIB)
-  var extra = await sb.from('annuaire_extra').select('*');
   var extraMap = {};
   (extra.data || []).forEach(function(e) { extraMap[e.user_id] = e; });
 
