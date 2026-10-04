@@ -378,6 +378,10 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 // ── Config ──────────────────────────────────────────────
+// Lien « mot de passe oublié » : l'email renvoie ici, on passe le relais à la page dédiée
+// avant que supabase-js ne consomme les jetons de l'URL.
+if (/type=recovery/.test(window.location.hash)) window.location.replace('reset-password.html' + window.location.hash);
+
 var SUPABASE_URL  = 'https://ldchxxkmvepvbvhdokot.supabase.co';
 var SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkY2h4eGttdmVwdmJ2aGRva290Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0NDQwNTMsImV4cCI6MjA4OTAyMDA1M30.HJw5-GsHCildEQ28HAB30_YKdiZOdeRJIml5wgLvHos';
 var sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
@@ -552,7 +556,7 @@ document.getElementById('btn-forgot').addEventListener('click', async function()
 
   setLoading('btn-forgot', true);
   try {
-    var r = await sb.auth.resetPasswordForEmail(email, { redirectTo: 'https://les--artistes.fr/reset-password.html' });
+    var r = await sb.auth.resetPasswordForEmail(email, { redirectTo: 'https://les--artistes.fr/login.html' });
     if (r.error) {
       showAlert('alert-forgot', '❌ ' + r.error.message);
       setLoading('btn-forgot', false, 'Envoyer le lien 🔑');
@@ -575,9 +579,6 @@ document.addEventListener('keydown', function(e) {
   var btn = active.querySelector('.btn-main:not([disabled])');
   if (btn) btn.click();
 });
-
-// ── Lien de récupération arrivé ici (URL de repli Supabase) → page dédiée ──
-if (/type=recovery/.test(window.location.hash)) window.location.replace('reset-password.html' + window.location.hash);
 
 // ── Session existante → redirect ────────────────────────
 sb.auth.getSession().then(function(result) {

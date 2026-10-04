@@ -163,7 +163,7 @@ export default function LoginScreen() {
     try {
       // resetPasswordForEmail renvoie l'erreur au lieu de la lever
       const { error: resetError } = await sb.auth.resetPasswordForEmail(mail, {
-        redirectTo: 'https://les--artistes.fr/reset-password.html',
+        redirectTo: 'https://les--artistes.fr/login.html',
       });
       if (resetError) Alert.alert('Erreur', resetError.message);
       else Alert.alert('Lien envoyé', 'Vérifie ta boîte mail (et les spams).');
