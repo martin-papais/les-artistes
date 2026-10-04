@@ -69,6 +69,12 @@
         "projectId": "21db90e4-78dc-4226-8959-dec8927b0b0d"
       }
     },
-    "owner": "chaoumet"
+    "owner": "chaoumet",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/21db90e4-78dc-4226-8959-dec8927b0b0d"
+    }
   }
 }
