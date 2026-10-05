@@ -4,9 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  KeyboardAvoidingView,
   Modal,
-  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -24,7 +22,9 @@ import {
   type EventVote,
   type ProfileMini, sessionUser } from '@/lib/supabase';
 import { getBlocked, ModerationButton } from '@/lib/moderation';
+import { KeyboardAware } from '@/lib/keyboard';
 import { theme } from '@/lib/theme';
+import { useRefreshOnFocus } from '@/lib/useRefresh';
 
 type EventCard = EventRow & {
   author?: ProfileMini | null;
@@ -99,6 +99,9 @@ export default function EventsScreen() {
   const [userId, setUserId] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const [compose, setCompose] = useState<Compose>(null);
+  // iOS refuse d'ouvrir une fiche pendant qu'une autre se ferme : le formulaire
+  // d'édition attend la fin de la fermeture du détail (onDismiss)
+  const pendingEdit = useRef<Compose>(null);
 
   const loadAll = useCallback(async () => {
     const user = await sessionUser();
@@ -108,6 +111,12 @@ export default function EventsScreen() {
       sb.from('events').select('*').order('date_event', { ascending: true }),
       sb.from('profiles').select('id,prenom,nom,pseudo,dob'),
     ]);
+    if (eventsRes.error) {
+      // Sans ça, une erreur réseau ressemble à « aucun événement »
+      setLoading(false);
+      Alert.alert('Chargement impossible', 'Vérifie ta connexion puis tire vers le bas pour réessayer.');
+      return;
+    }
     const rows = (eventsRes.data ?? []) as EventRow[];
 
     const ids = rows.map((r) => r.id);
@@ -161,14 +170,15 @@ export default function EventsScreen() {
     setLoading(false);
   }, []);
 
-  useEffect(() => {
-    loadAll();
-  }, [loadAll]);
+  useRefreshOnFocus(loadAll);
 
   async function onRefresh() {
     setRefreshing(true);
-    await loadAll();
-    setRefreshing(false);
+    try {
+      await loadAll();
+    } finally {
+      setRefreshing(false);
+    }
   }
 
   const upcoming = useMemo(() => events.filter((e) => !e.isPast), [events]);
@@ -293,6 +303,12 @@ export default function EventsScreen() {
         animationType="slide"
         presentationStyle="pageSheet"
         onRequestClose={() => setOpenId(null)}
+        onDismiss={() => {
+          if (pendingEdit.current) {
+            setCompose(pendingEdit.current);
+            pendingEdit.current = null;
+          }
+        }}
       >
         {openEvent && userId && (
           <EventDetail
@@ -302,8 +318,8 @@ export default function EventsScreen() {
             onClose={() => setOpenId(null)}
             onVoteChange={loadAll}
             onEdit={() => {
+              pendingEdit.current = openEvent;
               setOpenId(null);
-              setCompose(openEvent);
             }}
             onDeleted={() => {
               setOpenId(null);
@@ -618,10 +634,12 @@ function EventDetail({
       contenu: t,
     });
     setPosting(false);
-    if (!error) {
-      setText('');
-      loadComments();
+    if (error) {
+      Alert.alert('Erreur', error.message);
+      return;
     }
+    setText('');
+    loadComments();
   }
 
   function deleteEvent() {
@@ -640,7 +658,11 @@ function EventDetail({
             try {
               await sb.from('event_courses_votes').delete().eq('event_id', event.id);
             } catch {}
-            await sb.from('events').delete().eq('id', event.id);
+            const { error } = await sb.from('events').delete().eq('id', event.id);
+            if (error) {
+              Alert.alert('Suppression impossible', error.message);
+              return;
+            }
             onDeleted();
           },
         },
@@ -674,11 +696,7 @@ function EventDetail({
           </View>
         )}
       </View>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={20}
-      >
+      <KeyboardAware>
         <ScrollView contentContainerStyle={{ padding: theme.s(5) }}>
           {!!event.categorie && (
             <View style={[styles.catPill, { alignSelf: 'flex-start' }]}>
@@ -805,7 +823,7 @@ function EventDetail({
             )}
           </Pressable>
         </View>
-      </KeyboardAvoidingView>
+      </KeyboardAware>
     </SafeAreaView>
   );
 }
@@ -882,10 +900,7 @@ function EventForm({
         <Text style={styles.modalTitle}>{isEdit ? 'Modifier' : 'Nouvel événement'}</Text>
         <View style={{ width: 32 }} />
       </View>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
+      <KeyboardAware>
         <ScrollView
           contentContainerStyle={{ padding: theme.s(5) }}
           keyboardShouldPersistTaps="handled"
@@ -983,7 +998,7 @@ function EventForm({
             )}
           </Pressable>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAware>
     </SafeAreaView>
   );
 }

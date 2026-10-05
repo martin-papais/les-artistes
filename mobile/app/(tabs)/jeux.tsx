@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -21,6 +21,7 @@ import {
   type JeuSocieteVote,
   type ProfileMini, sessionUser } from '@/lib/supabase';
 import { theme } from '@/lib/theme';
+import { useRefreshOnFocus } from '@/lib/useRefresh';
 
 type Tab = 'alcool' | 'societe';
 type SocieteCard = JeuSociete & {
@@ -90,14 +91,15 @@ export default function JeuxScreen() {
     setLoading(false);
   }, []);
 
-  useEffect(() => {
-    loadAll();
-  }, [loadAll]);
+  useRefreshOnFocus(loadAll);
 
   async function onRefresh() {
     setRefreshing(true);
-    await loadAll();
-    setRefreshing(false);
+    try {
+      await loadAll();
+    } finally {
+      setRefreshing(false);
+    }
   }
 
   async function rateSociete(card: SocieteCard, note: number) {

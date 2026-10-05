@@ -4,9 +4,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
-  KeyboardAvoidingView,
   Modal,
-  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -17,7 +15,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { sb, type AnnuaireExtra, type Profile, sessionUser } from '@/lib/supabase';
+import { parseDobInput, sb, type AnnuaireExtra, type Profile, sessionUser } from '@/lib/supabase';
+import { KeyboardAware } from '@/lib/keyboard';
 import { theme } from '@/lib/theme';
 
 type Card = Profile & {
@@ -49,6 +48,12 @@ export default function AnnuaireScreen() {
       sb.from('profiles').select('*').order('nom', { ascending: true }),
       sb.from('annuaire_extra').select('*'),
     ]);
+    if (profRes.error) {
+      // Sans ça, une erreur réseau ressemble à un annuaire vide
+      setLoading(false);
+      Alert.alert('Chargement impossible', 'Vérifie ta connexion puis tire vers le bas pour réessayer.');
+      return;
+    }
 
     const extraMap: Record<string, AnnuaireExtra> = {};
     (extraRes.data ?? []).forEach((e) => {
@@ -74,25 +79,29 @@ export default function AnnuaireScreen() {
 
   async function onRefresh() {
     setRefreshing(true);
-    await loadAll();
-    setRefreshing(false);
+    try {
+      await loadAll();
+    } finally {
+      setRefreshing(false);
+    }
   }
 
   function editMine() {
     const me = cards.find((c) => c.id === userId);
     if (me) setEditing(me);
+    else Alert.alert('Profil introuvable', 'Tire vers le bas pour rafraîchir, puis réessaie.');
   }
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.center}>
+      <View style={styles.center}>
         <ActivityIndicator color={theme.colors.teal} />
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.flex}>
+    <SafeAreaView style={styles.flex} edges={['left', 'right', 'bottom']}>
       <FlatList
         data={cards}
         keyExtractor={(c) => c.id}
@@ -176,7 +185,8 @@ function InfoRow({ icon, label }: { icon: React.ComponentProps<typeof Ionicons>[
 }
 
 function formatDob(dob: string) {
-  const d = new Date(dob);
+  // Minuit local : new Date('AAAA-MM-JJ') est lu en UTC et peut afficher la veille
+  const d = new Date(`${dob}T00:00:00`);
   if (Number.isNaN(d.getTime())) return dob;
   return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
 }
@@ -213,6 +223,11 @@ function EditProfileModal({
       Alert.alert('Champs requis', 'Prénom et nom obligatoires.');
       return;
     }
+    const dobIso = parseDobInput(dob);
+    if (dobIso === false) {
+      Alert.alert('Date invalide', 'Format attendu : JJ/MM/AAAA ou AAAA-MM-JJ.');
+      return;
+    }
     setSaving(true);
     try {
       const cleanAddrs = addresses.map((a) => a.trim()).filter(Boolean);
@@ -221,7 +236,7 @@ function EditProfileModal({
         .update({
           prenom: prenom.trim(),
           nom: nom.trim(),
-          dob: dob || null,
+          dob: dobIso,
           tel: tel.trim() || null,
         })
         .eq('id', card.id);
@@ -251,19 +266,15 @@ function EditProfileModal({
         <Text style={styles.modalTitle}>Mon profil</Text>
         <View style={{ width: 28 }} />
       </View>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={20}
-      >
+      <KeyboardAware>
         <ScrollView contentContainerStyle={{ padding: theme.s(5) }} keyboardShouldPersistTaps="handled">
           <FormField label="Prénom" value={prenom} onChangeText={setPrenom} />
           <FormField label="Nom" value={nom} onChangeText={setNom} />
           <FormField
-            label="Date de naissance (AAAA-MM-JJ)"
+            label="Date de naissance (JJ/MM/AAAA)"
             value={dob}
             onChangeText={setDob}
-            placeholder="1995-03-21"
+            placeholder="21/03/1995"
             autoCapitalize="none"
           />
           <FormField
@@ -306,7 +317,7 @@ function EditProfileModal({
             )}
           </Pressable>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAware>
     </SafeAreaView>
   );
 }

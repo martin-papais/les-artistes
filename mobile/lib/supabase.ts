@@ -92,6 +92,19 @@ export async function sessionUser() {
   return data.session?.user ?? null;
 }
 
+/**
+ * Date de naissance saisie à la main → AAAA-MM-JJ. Accepte aussi JJ/MM/AAAA.
+ * Renvoie null si vide, false si invalide.
+ */
+export function parseDobInput(raw: string): string | null | false {
+  const t = raw.trim();
+  if (!t) return null;
+  const fr = t.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/);
+  const iso = fr ? `${fr[3]}-${fr[2].padStart(2, '0')}-${fr[1].padStart(2, '0')}` : t;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso) || Number.isNaN(new Date(`${iso}T00:00:00`).getTime())) return false;
+  return iso;
+}
+
 /** Date locale AAAA-MM-JJ (toISOString() donnerait la veille entre 0 h et 2 h à Paris). */
 export function localDateString(d: Date = new Date()): string {
   const pad = (n: number) => String(n).padStart(2, '0');

@@ -26,7 +26,7 @@ export default function PlusScreen() {
         {ITEMS.map((it) => (
           <Pressable
             key={it.label}
-            onPress={() => router.push(it.route)}
+            onPress={() => router.navigate(it.route)}
             style={({ pressed }) => [styles.row, pressed && { opacity: 0.7 }]}
           >
             <View style={styles.iconBox}>

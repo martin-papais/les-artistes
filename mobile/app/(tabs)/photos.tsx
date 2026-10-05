@@ -2,13 +2,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Dimensions,
   FlatList,
-  KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
@@ -19,15 +18,18 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { localDateString, sb, type PhotoRow, sessionUser } from '@/lib/supabase';
 import { getBlocked, ModerationButton } from '@/lib/moderation';
+import { KeyboardAware } from '@/lib/keyboard';
 import { theme } from '@/lib/theme';
+import { useRefreshOnFocus } from '@/lib/useRefresh';
 
 const COLS = 3;
 const GUTTER = 2;
-const TILE = (Dimensions.get('window').width - GUTTER * (COLS + 1)) / COLS;
+// padding GUTTER de chaque côté + marge GUTTER/2 autour de chaque vignette
+const TILE = (Dimensions.get('window').width - GUTTER * 2 - GUTTER * COLS) / COLS;
 
 const MAX_SIDE = 1920;
 
@@ -64,14 +66,23 @@ export default function PhotosScreen() {
   const [editing, setEditing] = useState<PhotoRow | null>(null);
   const [uploading, setUploading] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const insets = useSafeAreaInsets();
+  // iOS refuse d'ouvrir la fiche d'édition tant que la visionneuse est affichée :
+  // on ferme d'abord, puis on ouvre l'édition dans onDismiss
+  const pendingEdit = useRef<PhotoRow | null>(null);
 
   const loadPhotos = useCallback(async () => {
     const user = await sessionUser();
     setUserId(user?.id ?? null);
-    const [{ data }, blocked] = await Promise.all([
+    const [{ data, error }, blocked] = await Promise.all([
       sb.from('photos').select('*').order('date_media', { ascending: false }),
       getBlocked(),
     ]);
+    if (error) {
+      setLoading(false);
+      Alert.alert('Chargement impossible', 'Vérifie ta connexion puis tire vers le bas pour réessayer.');
+      return;
+    }
     // Pas de lecteur vidéo dans l'appli : on n'affiche que les photos (vidéos et fichiers restent sur le site)
     const rows = ((data as PhotoRow[] | null) ?? []).filter(
       (p) => p.type === 'photo' && !!p.file_url && !blocked.has(p.created_by),
@@ -80,14 +91,15 @@ export default function PhotosScreen() {
     setLoading(false);
   }, []);
 
-  useEffect(() => {
-    loadPhotos();
-  }, [loadPhotos]);
+  useRefreshOnFocus(loadPhotos);
 
   async function onRefresh() {
     setRefreshing(true);
-    await loadPhotos();
-    setRefreshing(false);
+    try {
+      await loadPhotos();
+    } finally {
+      setRefreshing(false);
+    }
   }
 
   function chooseSource() {
@@ -266,18 +278,35 @@ export default function PhotosScreen() {
         transparent
         animationType="fade"
         onRequestClose={() => setOpenId(null)}
+        onDismiss={() => {
+          if (pendingEdit.current) {
+            setEditing(pendingEdit.current);
+            pendingEdit.current = null;
+          }
+        }}
       >
         {!!opened && (
           <View style={styles.viewer}>
-            <Pressable onPress={() => setOpenId(null)} style={styles.viewerClose} hitSlop={20}>
+            <Pressable
+              onPress={() => setOpenId(null)}
+              style={[styles.viewerClose, { top: insets.top + 8 }]}
+              hitSlop={20}
+            >
               <Ionicons name="close" size={32} color="#fff" />
             </Pressable>
             {!!isOwner && (
-              <Pressable onPress={() => setEditing(opened)} style={styles.viewerEdit} hitSlop={20}>
+              <Pressable
+                onPress={() => {
+                  pendingEdit.current = opened;
+                  setOpenId(null);
+                }}
+                style={[styles.viewerEdit, { top: insets.top + 8 }]}
+                hitSlop={20}
+              >
                 <Ionicons name="create-outline" size={28} color="#fff" />
               </Pressable>
             )}
-            <View style={styles.viewerEdit}>
+            <View style={[styles.viewerEdit, { top: insets.top + 8 }]}>
               <ModerationButton
                 kind="photo"
                 itemId={opened.id}
@@ -298,7 +327,7 @@ export default function PhotosScreen() {
               contentFit="contain"
             />
             {(opened.sujet || opened.description) && (
-              <View style={styles.viewerCaption}>
+              <View style={[styles.viewerCaption, { paddingBottom: insets.bottom + 16 }]}>
                 {!!opened.sujet && <Text style={styles.viewerCaptionText}>{opened.sujet}</Text>}
                 {!!opened.description && (
                   <Text style={[styles.viewerCaptionText, { opacity: 0.75, marginTop: 4 }]}>
@@ -413,10 +442,7 @@ function PhotoEdit({
           <Ionicons name="trash-outline" size={24} color={theme.colors.danger} />
         </Pressable>
       </View>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
+      <KeyboardAware>
         <ScrollView contentContainerStyle={{ padding: theme.s(5) }}>
           <Image source={{ uri: photo.file_url ?? undefined }} style={styles.editPreview} contentFit="cover" />
           <Text style={styles.editLabel}>Sujet</Text>
@@ -460,7 +486,7 @@ function PhotoEdit({
             )}
           </Pressable>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAware>
     </SafeAreaView>
   );
 }

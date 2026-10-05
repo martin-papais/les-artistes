@@ -76,7 +76,11 @@ export default function RootLayout() {
     const sub = Notifications.addNotificationResponseReceivedListener((response) => {
       if (!navReady.current) return; // lancement à froid : géré par index.tsx
       const route = takeNotificationRoute(response);
-      if (route) router.push(route as Href);
+      if (!route) return;
+      // Déconnecté : on reste sur le login au lieu d'empiler un écran vide par-dessus
+      sb.auth.getSession().then(({ data }) => {
+        if (data.session) router.push(route as Href);
+      });
     });
     return () => sub.remove();
   }, [router]);
@@ -98,6 +102,16 @@ export default function RootLayout() {
           headerShadowVisible: false,
           headerBackTitle: '',
           headerBackButtonDisplayMode: 'minimal',
+          // La flèche native ne répondait pas sur Boutique et Annuaire (le geste de retour, si)
+          headerLeft: () => (
+            <Pressable
+              onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)/plus'))}
+              hitSlop={12}
+              accessibilityLabel="Retour"
+            >
+              <Ionicons name="chevron-back" size={28} color={theme.colors.coral} />
+            </Pressable>
+          ),
         }}
       >
         <Stack.Screen name="index" options={{ headerShown: false }} />
@@ -106,22 +120,7 @@ export default function RootLayout() {
         <Stack.Screen name="profil" options={{ title: 'Profil' }} />
         <Stack.Screen name="notes" options={{ title: 'Notes' }} />
         <Stack.Screen name="annuaire" options={{ title: 'Annuaire' }} />
-        <Stack.Screen
-          name="shop"
-          options={{
-            title: 'Boutique',
-            // La flèche native ne répondait pas sur cet écran (le geste de retour, si)
-            headerLeft: () => (
-              <Pressable
-                onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)/plus'))}
-                hitSlop={12}
-                accessibilityLabel="Retour"
-              >
-                <Ionicons name="chevron-back" size={28} color={theme.colors.coral} />
-              </Pressable>
-            ),
-          }}
-        />
+        <Stack.Screen name="shop" options={{ title: 'Boutique' }} />
       </Stack>
       <StatusBar style="light" />
     </ThemeProvider>

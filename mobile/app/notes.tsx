@@ -4,8 +4,6 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -13,7 +11,6 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
   sb,
@@ -21,6 +18,7 @@ import {
   type NoteReaction,
   type ProfileMini, sessionUser } from '@/lib/supabase';
 import { getBlocked, ModerationButton } from '@/lib/moderation';
+import { KeyboardAware } from '@/lib/keyboard';
 import { theme } from '@/lib/theme';
 
 const EMOJIS = ['👍', '❤️', '😂', '🔥', '👀', '💯', '✅', '😮'] as const;
@@ -43,10 +41,15 @@ export default function NotesScreen() {
     const user = await sessionUser();
     setUserId(user?.id ?? null);
 
-    const [{ data: all }, blocked] = await Promise.all([
+    const [{ data: all, error: loadError }, blocked] = await Promise.all([
       sb.from('notes').select('*').order('created_at', { ascending: false }),
       getBlocked(),
     ]);
+    if (loadError) {
+      setLoading(false);
+      Alert.alert('Chargement impossible', 'Vérifie ta connexion puis tire vers le bas pour réessayer.');
+      return;
+    }
     const rows = all ? all.filter((n) => !blocked.has(n.user_id)) : null;
     if (!rows) {
       setNotes([]);
@@ -92,8 +95,11 @@ export default function NotesScreen() {
 
   async function onRefresh() {
     setRefreshing(true);
-    await loadAll();
-    setRefreshing(false);
+    try {
+      await loadAll();
+    } finally {
+      setRefreshing(false);
+    }
   }
 
   async function publish() {
@@ -106,10 +112,12 @@ export default function NotesScreen() {
       categorie: 'autre', // valeur par défaut du web (notes.html)
     });
     setPosting(false);
-    if (!error) {
-      setText('');
-      loadAll();
+    if (error) {
+      Alert.alert('Erreur', error.message);
+      return;
     }
+    setText('');
+    loadAll();
   }
 
   async function toggleReact(note: NoteCard, emoji: string) {
@@ -140,7 +148,8 @@ export default function NotesScreen() {
         style: 'destructive',
         onPress: async () => {
           await sb.from('note_reactions').delete().eq('note_id', note.id);
-          await sb.from('notes').delete().eq('id', note.id);
+          const { error } = await sb.from('notes').delete().eq('id', note.id);
+          if (error) Alert.alert('Suppression impossible', error.message);
           loadAll();
         },
       },
@@ -149,20 +158,17 @@ export default function NotesScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.center}>
+      <View style={styles.center}>
         <ActivityIndicator color={theme.colors.teal} />
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={80}
-    >
+    <KeyboardAware>
       <FlatList
         data={notes}
+        keyboardShouldPersistTaps="handled"
         keyExtractor={(n) => n.id}
         contentContainerStyle={{ padding: theme.s(4), paddingBottom: theme.s(40) }}
         ListHeaderComponent={
@@ -214,7 +220,7 @@ export default function NotesScreen() {
           />
         }
       />
-    </KeyboardAvoidingView>
+    </KeyboardAware>
   );
 }
 

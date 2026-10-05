@@ -4,10 +4,9 @@ import * as Haptics from 'expo-haptics';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
-  KeyboardAvoidingView,
   Modal,
-  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -25,7 +24,9 @@ import {
   type NewsRow,
   type ProfileMini, sessionUser } from '@/lib/supabase';
 import { getBlocked, ModerationButton } from '@/lib/moderation';
+import { KeyboardAware } from '@/lib/keyboard';
 import { theme } from '@/lib/theme';
+import { useRefreshOnFocus } from '@/lib/useRefresh';
 
 const PAGE_SIZE = 20;
 
@@ -66,6 +67,8 @@ export default function NewsScreen() {
   const [userId, setUserId] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const liking = useRef(new Set<string>());
+  // Lignes déjà lues côté serveur, news masquées comprises (items.length les ignore)
+  const offset = useRef(0);
 
   const fetchPage = useCallback(
     async (offset: number, currentUserId: string | null) => {
@@ -79,13 +82,13 @@ export default function NewsScreen() {
         getBlocked(),
       ]);
       if (!page || page.length === 0) {
-        return { items: [] as NewsLite[], hasMore: false };
+        return { items: [] as NewsLite[], hasMore: false, consumed: 0 };
       }
       const pageFull = page.length === PAGE_SIZE;
       // Les news des membres bloqués sont masquées
       const rows = page.filter((r: { created_by: string }) => !blocked.has(r.created_by));
       if (rows.length === 0) {
-        return { items: [] as NewsLite[], hasMore: pageFull };
+        return { items: [] as NewsLite[], hasMore: pageFull, consumed: page.length };
       }
 
       const ids = rows.map((r: { id: string }) => r.id);
@@ -127,7 +130,7 @@ export default function NewsScreen() {
           commentCount: commentCountByNews[(r as NewsRow).id] ?? 0,
         };
       });
-      return { items: cards, hasMore: pageFull };
+      return { items: cards, hasMore: pageFull, consumed: page.length };
     },
     [],
   );
@@ -136,31 +139,38 @@ export default function NewsScreen() {
     const user = await sessionUser();
     const uid = user?.id ?? null;
     setUserId(uid);
-    const { items, hasMore } = await fetchPage(0, uid);
+    const { items, hasMore, consumed } = await fetchPage(0, uid);
+    offset.current = consumed;
     setItems(items);
     setHasMore(hasMore);
     setLoading(false);
   }, [fetchPage]);
 
-  useEffect(() => {
-    loadInitial();
-  }, [loadInitial]);
+  useRefreshOnFocus(loadInitial);
 
   async function onRefresh() {
     setRefreshing(true);
-    const { items, hasMore } = await fetchPage(0, userId);
-    setItems(items);
-    setHasMore(hasMore);
-    setRefreshing(false);
+    try {
+      const { items, hasMore, consumed } = await fetchPage(0, userId);
+      offset.current = consumed;
+      setItems(items);
+      setHasMore(hasMore);
+    } finally {
+      setRefreshing(false);
+    }
   }
 
   async function onEndReached() {
     if (loadingMore || !hasMore || loading) return;
     setLoadingMore(true);
-    const { items: next, hasMore: more } = await fetchPage(items.length, userId);
-    setItems((prev) => [...prev, ...next]);
-    setHasMore(more);
-    setLoadingMore(false);
+    try {
+      const { items: next, hasMore: more, consumed } = await fetchPage(offset.current, userId);
+      offset.current += consumed;
+      setItems((prev) => [...prev, ...next.filter((n) => !prev.some((p) => p.id === n.id))]);
+      setHasMore(more);
+    } finally {
+      setLoadingMore(false);
+    }
   }
 
   function refreshLikeCounts(newsId: string) {
@@ -187,7 +197,10 @@ export default function NewsScreen() {
     const { error } = wasLiked
       ? await sb.from('news_likes').delete().eq('news_id', card.id).eq('user_id', userId)
       : await sb.from('news_likes').insert({ news_id: card.id, user_id: userId });
-    if (error) refreshLikeCounts(card.id); // rollback
+    if (error) {
+      refreshLikeCounts(card.id); // rollback
+      Alert.alert('Erreur', error.message);
+    }
     liking.current.delete(card.id);
   }
 
@@ -437,6 +450,7 @@ function NewsDetail({
       .select('*')
       .single();
     setPosting(false);
+    if (error) Alert.alert('Erreur', error.message);
     if (!error && data) {
       setText('');
       setComments((prev) => [...prev, data as NewsComment]);
@@ -455,11 +469,7 @@ function NewsDetail({
           <Ionicons name="close" size={26} color={theme.colors.text} />
         </Pressable>
       </View>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={20}
-      >
+      <KeyboardAware>
         <ScrollView contentContainerStyle={{ padding: theme.s(5) }}>
           {!!news.cover_url && (
             <Image source={{ uri: news.cover_url }} style={styles.detailCover} contentFit="cover" />
@@ -540,7 +550,7 @@ function NewsDetail({
             )}
           </Pressable>
         </View>
-      </KeyboardAvoidingView>
+      </KeyboardAware>
     </SafeAreaView>
   );
 }

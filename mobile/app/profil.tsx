@@ -4,9 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  KeyboardAvoidingView,
   Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -17,7 +15,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { signOutAndUnregister, unregisterPushToken } from '@/lib/notifications';
-import { sb, type AnnuaireExtra, type Profile, sessionUser } from '@/lib/supabase';
+import { parseDobInput, sb, type AnnuaireExtra, type Profile, sessionUser } from '@/lib/supabase';
+import { KeyboardAware } from '@/lib/keyboard';
 import { theme } from '@/lib/theme';
 
 function parseAddresses(raw: string | null | undefined): string[] {
@@ -66,9 +65,8 @@ export default function ProfilScreen() {
         text: 'Déconnexion',
         style: 'destructive',
         onPress: async () => {
+          // La navigation vers le login est faite par app/_layout.tsx (événement SIGNED_OUT)
           await signOutAndUnregister();
-          if (router.canDismiss()) router.dismissAll();
-          router.replace('/(auth)/login');
         },
       },
     ]);
@@ -89,9 +87,8 @@ export default function ProfilScreen() {
       await unregisterPushToken();
       const { error } = await sb.rpc('delete_my_account');
       if (error) throw new Error(error.message);
+      // La navigation vers le login est faite par app/_layout.tsx (événement SIGNED_OUT)
       await sb.auth.signOut({ scope: 'local' });
-      if (router.canDismiss()) router.dismissAll();
-      router.replace('/(auth)/login');
     } catch (e) {
       setDeleting(false);
       Alert.alert('Erreur', e instanceof Error ? e.message : 'Réessaie.');
@@ -111,18 +108,18 @@ export default function ProfilScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.flex, styles.center]}>
+      <View style={[styles.flex, styles.center]}>
         <ActivityIndicator color={theme.colors.teal} />
-      </SafeAreaView>
+      </View>
     );
   }
 
-  const displayName = profile?.pseudo ?? profile?.prenom ?? email ?? '?';
+  const displayName = profile?.pseudo || profile?.prenom || email || '?';
   const initial = displayName[0]?.toUpperCase() ?? '?';
   const addresses = parseAddresses(extra?.addresses);
 
   return (
-    <SafeAreaView style={styles.flex}>
+    <SafeAreaView style={styles.flex} edges={['left', 'right', 'bottom']}>
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.avatarRow}>
           <View style={styles.avatar}>
@@ -135,7 +132,11 @@ export default function ProfilScreen() {
         </View>
 
         <Pressable
-          onPress={() => setEditing(true)}
+          onPress={() =>
+            profile
+              ? setEditing(true)
+              : Alert.alert('Profil introuvable', 'Reviens sur cette page dans un instant pour réessayer.')
+          }
           style={({ pressed }) => [styles.editBtn, pressed && { opacity: 0.85 }]}
         >
           <Ionicons name="create-outline" size={18} color={theme.colors.coral} />
@@ -276,6 +277,11 @@ function EditProfileModal({
       Alert.alert('Champs requis', 'Prénom et nom obligatoires.');
       return;
     }
+    const dobIso = parseDobInput(dob);
+    if (dobIso === false) {
+      Alert.alert('Date invalide', 'Format attendu : JJ/MM/AAAA ou AAAA-MM-JJ.');
+      return;
+    }
     setSaving(true);
     try {
       const cleanAddrs = addresses.map((a) => a.trim()).filter(Boolean);
@@ -284,7 +290,7 @@ function EditProfileModal({
         .update({
           prenom: prenom.trim(),
           nom: nom.trim(),
-          dob: dob || null,
+          dob: dobIso,
           tel: tel.trim() || null,
         })
         .eq('id', profile.id);
@@ -314,19 +320,15 @@ function EditProfileModal({
         <Text style={styles.modalTitle}>Modifier mon profil</Text>
         <View style={{ width: 36 }} />
       </View>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={20}
-      >
+      <KeyboardAware>
         <ScrollView contentContainerStyle={{ padding: theme.s(5) }} keyboardShouldPersistTaps="handled">
           <FormField label="Prénom" value={prenom} onChangeText={setPrenom} />
           <FormField label="Nom" value={nom} onChangeText={setNom} />
           <FormField
-            label="Date de naissance (AAAA-MM-JJ)"
+            label="Date de naissance (JJ/MM/AAAA)"
             value={dob}
             onChangeText={setDob}
-            placeholder="1995-03-21"
+            placeholder="21/03/1995"
             autoCapitalize="none"
           />
           <FormField
@@ -378,7 +380,7 @@ function EditProfileModal({
             )}
           </Pressable>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAware>
     </SafeAreaView>
   );
 }

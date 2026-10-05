@@ -6,9 +6,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
-  KeyboardAvoidingView,
   Modal,
-  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -26,6 +24,7 @@ import {
   type ShopOrder,
   type SondageCandidat,
   type SondageVote, sessionUser } from '@/lib/supabase';
+import { KeyboardAware } from '@/lib/keyboard';
 import { theme } from '@/lib/theme';
 
 const WEB_BASE = 'https://les--artistes.fr';
@@ -134,6 +133,12 @@ function ArticlesView() {
         : Promise.resolve({ data: [] as ShopOrder[] }),
       sb.from('shop_config').select('*').eq('key', 'deadline').maybeSingle(),
     ]);
+    if (artRes.error) {
+      // Sans ça, une erreur réseau ressemble à une boutique vide
+      setLoading(false);
+      Alert.alert('Chargement impossible', 'Vérifie ta connexion puis tire vers le bas pour réessayer.');
+      return;
+    }
 
     const ordersByArt: Record<string, ShopOrder[]> = {};
     (ordRes.data ?? []).forEach((o) => {
@@ -159,8 +164,11 @@ function ArticlesView() {
 
   async function onRefresh() {
     setRefreshing(true);
-    await loadAll();
-    setRefreshing(false);
+    try {
+      await loadAll();
+    } finally {
+      setRefreshing(false);
+    }
   }
 
   const isClosed = deadline ? now >= deadline.getTime() : false;
@@ -208,6 +216,8 @@ function ArticlesView() {
           <ArticleCardView
             article={item}
             onPress={() => {
+              // Sans utilisateur, la fiche s'ouvrirait vide et sans bouton de fermeture
+              if (!userId) return;
               Haptics.selectionAsync().catch(() => {});
               setOpenId(item.id);
             }}
@@ -381,11 +391,11 @@ function ArticleDetail({
         </Text>
         <View style={{ width: 36 }} />
       </View>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <ScrollView contentContainerStyle={{ padding: theme.s(5), paddingBottom: theme.s(10) }}>
+      <KeyboardAware>
+        <ScrollView
+          contentContainerStyle={{ padding: theme.s(5), paddingBottom: theme.s(10) }}
+          keyboardShouldPersistTaps="handled"
+        >
           {allImages.length > 0 && (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: theme.s(4) }}>
               {allImages.map((u, i) => (
@@ -467,7 +477,7 @@ function ArticleDetail({
             Confirmer écrase tes commandes précédentes pour cet article.
           </Text>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAware>
     </SafeAreaView>
   );
 }
@@ -520,8 +530,11 @@ function SondageView() {
 
   async function onRefresh() {
     setRefreshing(true);
-    await loadAll();
-    setRefreshing(false);
+    try {
+      await loadAll();
+    } finally {
+      setRefreshing(false);
+    }
   }
 
   const grouped = useMemo(() => {
