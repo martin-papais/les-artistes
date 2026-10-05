@@ -47,7 +47,7 @@ type Tab = 'articles' | 'sondage';
 export default function ShopScreen() {
   const [tab, setTab] = useState<Tab>('articles');
   return (
-    <SafeAreaView style={styles.flex}>
+    <SafeAreaView style={styles.flex} edges={['left', 'right', 'bottom']}>
       <View style={styles.subTabs}>
         <SubTab
           label="Articles"

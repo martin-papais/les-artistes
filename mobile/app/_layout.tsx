@@ -7,6 +7,7 @@ import {
   PlayfairDisplay_700Bold,
   PlayfairDisplay_900Black,
 } from '@expo-google-fonts/playfair-display';
+import { Ionicons } from '@expo/vector-icons';
 import { DarkTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import * as Notifications from 'expo-notifications';
@@ -14,6 +15,7 @@ import { Stack, useRouter, type Href } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef } from 'react';
+import { Pressable } from 'react-native';
 import 'react-native-reanimated';
 
 import { resetBlocked } from '@/lib/moderation';
@@ -104,7 +106,22 @@ export default function RootLayout() {
         <Stack.Screen name="profil" options={{ title: 'Profil' }} />
         <Stack.Screen name="notes" options={{ title: 'Notes' }} />
         <Stack.Screen name="annuaire" options={{ title: 'Annuaire' }} />
-        <Stack.Screen name="shop" options={{ title: 'Boutique' }} />
+        <Stack.Screen
+          name="shop"
+          options={{
+            title: 'Boutique',
+            // La flèche native ne répondait pas sur cet écran (le geste de retour, si)
+            headerLeft: () => (
+              <Pressable
+                onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)/plus'))}
+                hitSlop={12}
+                accessibilityLabel="Retour"
+              >
+                <Ionicons name="chevron-back" size={28} color={theme.colors.coral} />
+              </Pressable>
+            ),
+          }}
+        />
       </Stack>
       <StatusBar style="light" />
     </ThemeProvider>
