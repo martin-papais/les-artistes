@@ -1,8 +1,10 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -35,6 +37,7 @@ export default function LoginScreen() {
   const [signupPassword, setSignupPassword] = useState('');
   const [signupPassword2, setSignupPassword2] = useState('');
   const [groupePassword, setGroupePassword] = useState('');
+  const [acceptTerms, setAcceptTerms] = useState(false);
 
   function switchPanel(p: Panel) {
     setError(null);
@@ -108,6 +111,10 @@ export default function LoginScreen() {
     }
     if (!groupePassword.trim()) {
       setError('Mot de passe du groupe requis. Demande-le à un membre.');
+      return;
+    }
+    if (!acceptTerms) {
+      setError('Accepte les conditions d’utilisation pour rejoindre le groupe.');
       return;
     }
     setError(null);
@@ -329,6 +336,30 @@ export default function LoginScreen() {
                 secureTextEntry
                 autoCapitalize="none"
               />
+              <View style={styles.termsRow}>
+                <Pressable
+                  onPress={() => setAcceptTerms((v) => !v)}
+                  hitSlop={8}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: acceptTerms }}
+                >
+                  <Ionicons
+                    name={acceptTerms ? 'checkbox' : 'square-outline'}
+                    size={22}
+                    color={acceptTerms ? theme.colors.teal : theme.colors.muted}
+                  />
+                </Pressable>
+                <Text style={styles.termsText}>
+                  J&apos;accepte les{' '}
+                  <Text
+                    style={styles.link}
+                    onPress={() => Linking.openURL('https://les--artistes.fr/confidentialite.html#conditions')}
+                  >
+                    conditions d&apos;utilisation
+                  </Text>
+                  {' '}: aucun contenu offensant ou abusif n&apos;est toléré.
+                </Text>
+              </View>
               <PrimaryButton
                 label="Rejoindre le groupe"
                 onPress={handleSignup}
@@ -461,6 +492,8 @@ const styles = StyleSheet.create({
   row2: { flexDirection: 'row' },
   forgotRow: { alignSelf: 'flex-end', marginTop: -theme.s(1), marginBottom: theme.s(4) },
   link: { color: theme.colors.teal, fontSize: 13, fontWeight: '500' },
+  termsRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: theme.s(4) },
+  termsText: { flex: 1, color: theme.colors.muted, fontSize: 13, lineHeight: 19 },
   btn: {
     backgroundColor: theme.colors.coral,
     borderRadius: theme.radius.md,

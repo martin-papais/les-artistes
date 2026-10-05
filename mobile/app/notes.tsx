@@ -20,6 +20,7 @@ import {
   type Note,
   type NoteReaction,
   type ProfileMini, sessionUser } from '@/lib/supabase';
+import { getBlocked, ModerationButton } from '@/lib/moderation';
 import { theme } from '@/lib/theme';
 
 const EMOJIS = ['👍', '❤️', '😂', '🔥', '👀', '💯', '✅', '😮'] as const;
@@ -42,10 +43,11 @@ export default function NotesScreen() {
     const user = await sessionUser();
     setUserId(user?.id ?? null);
 
-    const { data: rows } = await sb
-      .from('notes')
-      .select('*')
-      .order('created_at', { ascending: false });
+    const [{ data: all }, blocked] = await Promise.all([
+      sb.from('notes').select('*').order('created_at', { ascending: false }),
+      getBlocked(),
+    ]);
+    const rows = all ? all.filter((n) => !blocked.has(n.user_id)) : null;
     if (!rows) {
       setNotes([]);
       setLoading(false);
@@ -201,6 +203,7 @@ export default function NotesScreen() {
             currentUserId={userId}
             onReact={(e) => toggleReact(item, e)}
             onDelete={() => deleteNote(item)}
+            onBlocked={loadAll}
           />
         )}
         refreshControl={
@@ -220,9 +223,11 @@ function NoteCardView({
   currentUserId,
   onReact,
   onDelete,
+  onBlocked,
 }: {
   note: NoteCard;
   currentUserId: string | null;
+  onBlocked: () => void;
   onReact: (emoji: string) => void;
   onDelete: () => void;
 }) {
@@ -247,6 +252,15 @@ function NoteCardView({
             month: 'short',
           })}
         </Text>
+        <ModerationButton
+          kind="note"
+          itemId={note.id}
+          authorId={note.user_id}
+          authorName={name}
+          excerpt={note.contenu}
+          currentUserId={currentUserId}
+          onBlocked={onBlocked}
+        />
       </View>
       <Text style={styles.noteText}>{note.contenu}</Text>
 
@@ -318,9 +332,9 @@ const styles = StyleSheet.create({
     padding: theme.s(3),
     marginBottom: theme.s(3),
   },
-  noteHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
+  noteHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 6 },
   noteAuthor: { color: theme.colors.teal, fontSize: 12, fontWeight: '700' },
-  noteDate: { color: theme.colors.muted, fontSize: 11 },
+  noteDate: { color: theme.colors.muted, fontSize: 11, marginLeft: 'auto' },
   noteText: { color: theme.colors.text, fontSize: 15, lineHeight: 22 },
   reactionRow: {
     flexDirection: 'row',

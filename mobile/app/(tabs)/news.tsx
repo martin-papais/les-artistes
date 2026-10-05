@@ -24,6 +24,7 @@ import {
   type NewsLike,
   type NewsRow,
   type ProfileMini, sessionUser } from '@/lib/supabase';
+import { getBlocked, ModerationButton } from '@/lib/moderation';
 import { theme } from '@/lib/theme';
 
 const PAGE_SIZE = 20;
@@ -69,13 +70,22 @@ export default function NewsScreen() {
   const fetchPage = useCallback(
     async (offset: number, currentUserId: string | null) => {
       const lightSelect = 'id,titre,tags,cover_url,created_by,created_at';
-      const { data: rows } = await sb
-        .from('news')
-        .select(lightSelect)
-        .order('created_at', { ascending: false })
-        .range(offset, offset + PAGE_SIZE - 1);
-      if (!rows || rows.length === 0) {
+      const [{ data: page }, blocked] = await Promise.all([
+        sb
+          .from('news')
+          .select(lightSelect)
+          .order('created_at', { ascending: false })
+          .range(offset, offset + PAGE_SIZE - 1),
+        getBlocked(),
+      ]);
+      if (!page || page.length === 0) {
         return { items: [] as NewsLite[], hasMore: false };
+      }
+      const pageFull = page.length === PAGE_SIZE;
+      // Les news des membres bloqués sont masquées
+      const rows = page.filter((r: { created_by: string }) => !blocked.has(r.created_by));
+      if (rows.length === 0) {
+        return { items: [] as NewsLite[], hasMore: pageFull };
       }
 
       const ids = rows.map((r: { id: string }) => r.id);
@@ -117,7 +127,7 @@ export default function NewsScreen() {
           commentCount: commentCountByNews[(r as NewsRow).id] ?? 0,
         };
       });
-      return { items: cards, hasMore: rows.length === PAGE_SIZE };
+      return { items: cards, hasMore: pageFull };
     },
     [],
   );
@@ -235,6 +245,8 @@ export default function NewsScreen() {
               setOpenId(item.id);
             }}
             onLike={() => toggleLike(item)}
+            currentUserId={userId}
+            onBlocked={loadInitial}
           />
         )}
         onEndReached={onEndReached}
@@ -260,6 +272,10 @@ export default function NewsScreen() {
             currentUserId={userId}
             profiles={profiles}
             onClose={() => setOpenId(null)}
+            onBlocked={() => {
+              setOpenId(null);
+              loadInitial();
+            }}
             onCommentPosted={() => {
               setItems((prev) =>
                 prev.map((n) => (n.id === open.id ? { ...n, commentCount: n.commentCount + 1 } : n)),
@@ -289,10 +305,14 @@ function NewsCardView({
   card,
   onPress,
   onLike,
+  currentUserId,
+  onBlocked,
 }: {
   card: NewsLite;
   onPress: () => void;
   onLike: () => void;
+  currentUserId: string | null;
+  onBlocked: () => void;
 }) {
   const author = authorName(card.author);
   return (
@@ -334,6 +354,15 @@ function NewsCardView({
           <Ionicons name="chatbubble-outline" size={18} color={theme.colors.muted} />
           <Text style={styles.actionCount}>{card.commentCount}</Text>
         </Pressable>
+        <ModerationButton
+          kind="news"
+          itemId={card.id}
+          authorId={card.created_by}
+          authorName={author}
+          excerpt={card.titre}
+          currentUserId={currentUserId}
+          onBlocked={onBlocked}
+        />
         <View style={{ flex: 1 }} />
         <Pressable onPress={onPress} hitSlop={8} style={styles.readMoreBtn}>
           <Text style={styles.readMoreText}>Lire</Text>
@@ -350,6 +379,7 @@ function NewsDetail({
   currentUserId,
   profiles,
   onClose,
+  onBlocked,
   onCommentPosted,
 }: {
   news: NewsLite;
@@ -357,6 +387,7 @@ function NewsDetail({
   currentUserId: string;
   profiles: Record<string, ProfileMini>;
   onClose: () => void;
+  onBlocked: () => void;
   onCommentPosted: () => void;
 }) {
   const [contenu, setContenu] = useState<string | null>(null);
@@ -372,7 +403,8 @@ function NewsDetail({
       sb.from('news').select('contenu').eq('id', news.id).single(),
       sb.from('news_comments').select('*').eq('news_id', news.id).order('created_at', { ascending: true }),
     ]);
-    const list = (commentsRes.data as NewsComment[] | null) ?? [];
+    const blocked = await getBlocked();
+    const list = ((commentsRes.data as NewsComment[] | null) ?? []).filter((c) => !blocked.has(c.user_id));
     setContenu((contentRes.data as { contenu: string } | null)?.contenu ?? '');
     setComments(list);
     setLoadingDetail(false);
@@ -433,14 +465,25 @@ function NewsDetail({
             <Image source={{ uri: news.cover_url }} style={styles.detailCover} contentFit="cover" />
           )}
           <Text style={styles.detailTitle}>{news.titre}</Text>
-          <Text style={styles.detailMetaText}>
-            {authorNameStr} ·{' '}
-            {new Date(news.created_at).toLocaleDateString('fr-FR', {
-              day: 'numeric',
-              month: 'long',
-              year: 'numeric',
-            })}
-          </Text>
+          <View style={styles.commentHead}>
+            <Text style={styles.detailMetaText}>
+              {authorNameStr} ·{' '}
+              {new Date(news.created_at).toLocaleDateString('fr-FR', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+              })}
+            </Text>
+            <ModerationButton
+              kind="news"
+              itemId={news.id}
+              authorId={news.created_by}
+              authorName={authorNameStr}
+              excerpt={news.titre}
+              currentUserId={currentUserId}
+              onBlocked={onBlocked}
+            />
+          </View>
           {loadingDetail ? (
             <View style={{ marginTop: theme.s(5) }}>
               <View style={[styles.skeletonLine, { width: '95%' }]} />
@@ -457,7 +500,18 @@ function NewsDetail({
           )}
           {comments.map((c) => (
             <View key={c.id} style={styles.comment}>
-              <Text style={styles.commentAuthor}>{nameOf(c.user_id)}</Text>
+              <View style={styles.commentHead}>
+                <Text style={styles.commentAuthor}>{nameOf(c.user_id)}</Text>
+                <ModerationButton
+                  kind="news_comment"
+                  itemId={c.id}
+                  authorId={c.user_id}
+                  authorName={nameOf(c.user_id)}
+                  excerpt={c.contenu}
+                  currentUserId={currentUserId}
+                  onBlocked={() => setComments((prev) => prev.filter((x) => x.user_id !== c.user_id))}
+                />
+              </View>
               <Text style={styles.commentText}>{c.contenu}</Text>
             </View>
           ))}
@@ -622,6 +676,7 @@ const styles = StyleSheet.create({
     padding: theme.s(3),
     marginTop: theme.s(2),
   },
+  commentHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   commentAuthor: { color: theme.colors.teal, fontFamily: theme.fonts.bodyBold, fontSize: 12, marginBottom: 4 },
   commentText: { color: theme.colors.text, fontFamily: theme.fonts.body, fontSize: 14, lineHeight: 20 },
   commentInputRow: {

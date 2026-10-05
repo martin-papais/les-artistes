@@ -22,6 +22,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { localDateString, sb, type PhotoRow, sessionUser } from '@/lib/supabase';
+import { getBlocked, ModerationButton } from '@/lib/moderation';
 import { theme } from '@/lib/theme';
 
 const COLS = 3;
@@ -67,13 +68,13 @@ export default function PhotosScreen() {
   const loadPhotos = useCallback(async () => {
     const user = await sessionUser();
     setUserId(user?.id ?? null);
-    const { data } = await sb
-      .from('photos')
-      .select('*')
-      .order('date_media', { ascending: false });
+    const [{ data }, blocked] = await Promise.all([
+      sb.from('photos').select('*').order('date_media', { ascending: false }),
+      getBlocked(),
+    ]);
     // Pas de lecteur vidéo dans l'appli : on n'affiche que les photos (vidéos et fichiers restent sur le site)
     const rows = ((data as PhotoRow[] | null) ?? []).filter(
-      (p) => p.type === 'photo' && !!p.file_url,
+      (p) => p.type === 'photo' && !!p.file_url && !blocked.has(p.created_by),
     );
     setPhotos(rows);
     setLoading(false);
@@ -276,6 +277,21 @@ export default function PhotosScreen() {
                 <Ionicons name="create-outline" size={28} color="#fff" />
               </Pressable>
             )}
+            <View style={styles.viewerEdit}>
+              <ModerationButton
+                kind="photo"
+                itemId={opened.id}
+                authorId={opened.created_by}
+                authorName={opened.pris_par || 'ce membre'}
+                excerpt={opened.sujet || opened.file_url || ''}
+                currentUserId={userId}
+                color="#fff"
+                onBlocked={() => {
+                  setOpenId(null);
+                  loadPhotos();
+                }}
+              />
+            </View>
             <Image
               source={{ uri: opened.file_url ?? undefined }}
               style={StyleSheet.absoluteFill}

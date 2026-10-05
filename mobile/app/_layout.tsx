@@ -16,6 +16,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef } from 'react';
 import 'react-native-reanimated';
 
+import { resetBlocked } from '@/lib/moderation';
 import { registerPushToken, takeNotificationRoute } from '@/lib/notifications';
 import { sb } from '@/lib/supabase';
 import { theme } from '@/lib/theme';
@@ -46,6 +47,7 @@ export default function RootLayout() {
         if (session?.user) registerPushToken(session.user.id);
         return;
       }
+      if (event === 'SIGNED_OUT' || event === 'SIGNED_IN') resetBlocked();
       if (event === 'SIGNED_OUT' || !session) {
         // Le token push est retiré avant signOut (signOutAndUnregister), plus ici :
         // à ce stade la session est déjà effacée et la RLS refuserait le delete.

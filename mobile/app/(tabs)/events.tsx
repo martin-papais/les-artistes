@@ -23,6 +23,7 @@ import {
   type EventRow,
   type EventVote,
   type ProfileMini, sessionUser } from '@/lib/supabase';
+import { getBlocked, ModerationButton } from '@/lib/moderation';
 import { theme } from '@/lib/theme';
 
 type EventCard = EventRow & {
@@ -567,12 +568,15 @@ function EventDetail({
   const title = buildEventTitle(event);
 
   const loadComments = useCallback(async () => {
-    const { data } = await sb
-      .from('event_comments')
-      .select('*')
-      .eq('event_id', event.id)
-      .order('created_at', { ascending: true });
-    setComments((data as EventComment[] | null) ?? []);
+    const [{ data }, blocked] = await Promise.all([
+      sb
+        .from('event_comments')
+        .select('*')
+        .eq('event_id', event.id)
+        .order('created_at', { ascending: true }),
+      getBlocked(),
+    ]);
+    setComments(((data as EventComment[] | null) ?? []).filter((c) => !blocked.has(c.user_id)));
   }, [event.id]);
 
   useEffect(() => {
@@ -761,7 +765,18 @@ function EventDetail({
           )}
           {comments.map((c) => (
             <View key={c.id} style={styles.comment}>
-              <Text style={styles.commentAuthor}>{nameOf(c.user_id)}</Text>
+              <View style={styles.commentHead}>
+                <Text style={styles.commentAuthor}>{nameOf(c.user_id)}</Text>
+                <ModerationButton
+                  kind="event_comment"
+                  itemId={c.id}
+                  authorId={c.user_id}
+                  authorName={nameOf(c.user_id)}
+                  excerpt={c.contenu}
+                  currentUserId={currentUserId}
+                  onBlocked={() => setComments((prev) => prev.filter((x) => x.user_id !== c.user_id))}
+                />
+              </View>
               <Text style={styles.commentText}>{c.contenu}</Text>
             </View>
           ))}
@@ -1295,6 +1310,7 @@ const styles = StyleSheet.create({
     padding: theme.s(3),
     marginTop: theme.s(2),
   },
+  commentHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   commentAuthor: { color: theme.colors.teal, fontFamily: theme.fonts.bodyBold, fontSize: 12, marginBottom: 4 },
   commentText: { color: theme.colors.text, fontFamily: theme.fonts.body, fontSize: 14, lineHeight: 20 },
 
