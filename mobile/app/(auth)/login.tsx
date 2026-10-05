@@ -208,7 +208,7 @@ export default function LoginScreen() {
   }
 
   return (
-    <KeyboardAware style={styles.flex}>
+    <KeyboardAware style={styles.flex} insideSafeArea={false}>
       <ScrollView
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"

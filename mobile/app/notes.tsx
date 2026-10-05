@@ -165,7 +165,7 @@ export default function NotesScreen() {
   }
 
   return (
-    <KeyboardAware>
+    <KeyboardAware insideSafeArea={false}>
       <FlatList
         data={notes}
         keyboardShouldPersistTaps="handled"

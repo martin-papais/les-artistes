@@ -1,29 +1,65 @@
-import { useRef, useState, type ReactNode } from 'react';
-import { KeyboardAvoidingView, View, type StyleProp, type ViewStyle } from 'react-native';
+import { useEffect, useState, type ReactNode } from 'react';
+import {
+  Keyboard,
+  LayoutAnimation,
+  Platform,
+  View,
+  type KeyboardEvent,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /**
- * KeyboardAvoidingView qui tient compte de sa position réelle à l'écran.
- * Celui de React Native compare sa position relative à son parent avec celle,
- * absolue, du clavier : sous un en-tête ou dans une fiche (pageSheet), il
- * remonte trop peu et le clavier cache le champ ou le bouton du bas.
+ * Laisse la place au clavier en ajoutant sa hauteur sous le contenu.
+ *
+ * Le KeyboardAvoidingView de React Native calcule la position du champ par
+ * rapport à la fiche (pageSheet) au lieu de l'écran : il remontait trop peu
+ * et le clavier cachait le champ de commentaire. Ici, pas de calcul de
+ * position : le bas du conteneur est le bas de l'écran (fiche, écran sans
+ * onglets), moins la marge du bas de la SafeAreaView quand il est dedans.
  */
-export function KeyboardAware({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
-  const ref = useRef<View>(null);
-  const [offset, setOffset] = useState(0);
+export function KeyboardAware({
+  children,
+  style,
+  insideSafeArea = true,
+}: {
+  children: ReactNode;
+  style?: StyleProp<ViewStyle>;
+  /** false si le conteneur n'est pas dans une SafeAreaView avec le bord du bas */
+  insideSafeArea?: boolean;
+}) {
+  const insets = useSafeAreaInsets();
+  const [keyboard, setKeyboard] = useState(0);
+
+  useEffect(() => {
+    const ios = Platform.OS === 'ios';
+    const animate = (e: KeyboardEvent) => {
+      if (ios && e.duration) {
+        LayoutAnimation.configureNext({
+          duration: e.duration,
+          update: { type: LayoutAnimation.Types.keyboard },
+        });
+      }
+    };
+    const show = Keyboard.addListener(ios ? 'keyboardWillShow' : 'keyboardDidShow', (e) => {
+      animate(e);
+      setKeyboard(e.endCoordinates.height);
+    });
+    const hide = Keyboard.addListener(ios ? 'keyboardWillHide' : 'keyboardDidHide', (e) => {
+      animate(e);
+      setKeyboard(0);
+    });
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
+
+  const bottomGap = insideSafeArea ? insets.bottom : 0;
   return (
-    <View
-      ref={ref}
-      style={[{ flex: 1 }, style]}
-      onLayout={() => ref.current?.measureInWindow((_x, y) => setOffset(y))}
-    >
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        // Android aussi : en edge-to-edge (SDK 54) la fenêtre ne se redimensionne plus sous le clavier
-        behavior="padding"
-        keyboardVerticalOffset={offset}
-      >
-        {children}
-      </KeyboardAvoidingView>
+    <View style={[{ flex: 1, paddingBottom: Math.max(0, keyboard - bottomGap) }, style]}>
+      {children}
     </View>
   );
 }
