@@ -1,5 +1,5 @@
 import { useRef, useState, type ReactNode } from 'react';
-import { KeyboardAvoidingView, Platform, View, type StyleProp, type ViewStyle } from 'react-native';
+import { KeyboardAvoidingView, View, type StyleProp, type ViewStyle } from 'react-native';
 
 /**
  * KeyboardAvoidingView qui tient compte de sa position réelle à l'écran.
@@ -18,7 +18,8 @@ export function KeyboardAware({ children, style }: { children: ReactNode; style?
     >
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        // Android aussi : en edge-to-edge (SDK 54) la fenêtre ne se redimensionne plus sous le clavier
+        behavior="padding"
         keyboardVerticalOffset={offset}
       >
         {children}
