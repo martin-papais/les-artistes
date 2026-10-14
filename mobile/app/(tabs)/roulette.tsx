@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import {
@@ -22,30 +22,33 @@ import Animated, {
   useSharedValue,
   withSequence,
   withTiming,
-  ZoomIn,
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 
+import { Button, Chip, IconButton, Pastille, ScreenHeader, SectionTitle, Sheet } from '@/components/ui/kit';
 import { KeyboardAware } from '@/lib/keyboard';
 import { getBlocked } from '@/lib/moderation';
 import { sb, sessionUser } from '@/lib/supabase';
 import { theme } from '@/lib/theme';
 import { useRefreshOnFocus } from '@/lib/useRefresh';
 
+const c = theme.colors;
+
 type Source = 'membres' | 'alcool' | 'societe';
 type Entry = {
   key: string;
+  /** id de la ligne (profil ou jeu) : sert à la couleur de la pastille */
+  id: string;
   label: string;
   source: Source;
   detail: string | null;
 };
 
-type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
-const SOURCES: { id: Source; label: string; icon: IoniconName }[] = [
-  { id: 'membres', label: 'Membres', icon: 'people' },
-  { id: 'alcool', label: 'Jeux d’alcool', icon: 'beer' },
-  { id: 'societe', label: 'Jeux de société', icon: 'dice' },
+const SOURCES: { id: Source; label: string; chip: string }[] = [
+  { id: 'membres', label: 'Membres', chip: 'Membres' },
+  { id: 'alcool', label: 'Jeux d’alcool', chip: 'Jeux d’alcool' },
+  { id: 'societe', label: 'Jeux de société', chip: 'Société' },
 ];
 const SOURCE_LABEL: Record<Source, string> = {
   membres: 'Membre',
@@ -53,13 +56,7 @@ const SOURCE_LABEL: Record<Source, string> = {
   societe: 'Jeu de société',
 };
 
-const PALETTE = [
-  theme.colors.coral,
-  theme.colors.yellow,
-  theme.colors.teal,
-  theme.colors.violet,
-  theme.colors.pink,
-];
+const PALETTE = [c.coral, c.yellow, c.teal, c.violet, c.pink];
 const SPIN_MS = 5200;
 const TURNS = 6;
 
@@ -69,19 +66,22 @@ function wedgeColor(i: number, n: number) {
   return PALETTE[i % PALETTE.length];
 }
 
-const WHEEL_MARGIN = theme.s(5); // = styles.wheelZone.marginTop
-const WHEEL_EXTRA = 28; // place du pointeur au-dessus de la roue
-const ACTIONS_MARGIN = theme.s(6); // = styles.actions.marginTop
+const WHEEL_MARGIN = 12; // = styles.wheelZone.marginTop
+const WHEEL_EXTRA = 16; // place du pointeur au-dessus de la roue (haut de la roue dans wheelZone)
+const ACTIONS_MARGIN = theme.s(5); // = styles.actions.marginTop
+const BOTTOM_PAD = theme.s(4); // paddingBottom du ScrollView
+const HUB = 64;
 
 export default function RouletteScreen() {
   const { width } = useWindowDimensions();
-  // Hauteurs mesurées : la roue rétrécit pour que l'écran tienne sans défiler
+  // Hauteurs mesurées : la roue rétrécit pour que l'écran tienne sans défiler.
+  // topH = en-tête + puces + carte « dans la roue », actionsH = bouton + indice + marge
   const [viewH, setViewH] = useState(0);
   const [topH, setTopH] = useState(0);
   const [actionsH, setActionsH] = useState(0);
   const fit =
-    viewH && topH && actionsH ? viewH - topH - actionsH - WHEEL_MARGIN - WHEEL_EXTRA - theme.s(4) /* paddingBottom du ScrollView */ : Infinity;
-  const size = Math.round(Math.max(220, Math.min(width - theme.s(10), 360, fit)));
+    viewH && topH && actionsH ? viewH - topH - actionsH - WHEEL_MARGIN - WHEEL_EXTRA - BOTTOM_PAD : Infinity;
+  const size = Math.round(Math.max(220, Math.min(width - theme.gutter * 2, 360, fit)));
   const radius = size / 2;
 
   const [all, setAll] = useState<Entry[]>([]);
@@ -93,8 +93,9 @@ export default function RouletteScreen() {
   const [search, setSearch] = useState('');
   const [spinning, setSpinning] = useState(false);
   const [winner, setWinner] = useState<Entry | null>(null);
+  // Dernier tirage, gardé pendant que la feuille se referme (sinon elle descend vide)
+  const [shown, setShown] = useState<Entry | null>(null);
   const lastTick = useRef(0);
-  const scrollRef = useRef<ScrollView>(null);
 
   const rotation = useSharedValue(0);
   const pointerTilt = useSharedValue(0);
@@ -127,6 +128,7 @@ export default function RouletteScreen() {
       .filter((p) => !blocked.has(p.id))
       .map((p) => ({
         key: `membres:${p.id}`,
+        id: p.id,
         label: p.pseudo || `${p.prenom ?? ''} ${p.nom ?? ''}`.trim(),
         source: 'membres' as const,
         detail: null,
@@ -137,6 +139,7 @@ export default function RouletteScreen() {
       .filter((j) => !!j.nom)
       .map((j) => ({
         key: `alcool:${j.id}`,
+        id: String(j.id),
         label: j.nom,
         source: 'alcool' as const,
         detail: j.regles,
@@ -146,6 +149,7 @@ export default function RouletteScreen() {
       .filter((j) => !!j.nom)
       .map((j) => ({
         key: `societe:${j.id}`,
+        id: String(j.id),
         label: j.nom,
         source: 'societe' as const,
         detail: j.regles,
@@ -208,6 +212,7 @@ export default function RouletteScreen() {
       return;
     }
     setSpinning(false);
+    setShown(entry);
     setWinner(entry);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
   }, []);
@@ -293,9 +298,9 @@ export default function RouletteScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.center}>
-        <ActivityIndicator color={theme.colors.teal} />
-      </SafeAreaView>
+      <View style={styles.center}>
+        <ActivityIndicator color={c.teal} />
+      </View>
     );
   }
 
@@ -304,68 +309,51 @@ export default function RouletteScreen() {
   const half = n >= 3 ? radius * Math.tan(Math.PI / n + 0.01) : radius;
   const pickable = all.filter((e) => sources.has(e.source));
   const q = search.trim().toLocaleLowerCase('fr');
-  const shown = q ? pickable.filter((e) => e.label.toLocaleLowerCase('fr').includes(q)) : pickable;
+  const found = q ? pickable.filter((e) => e.label.toLocaleLowerCase('fr').includes(q)) : pickable;
 
   return (
-    <SafeAreaView style={styles.flex} edges={['top']}>
+    <View style={styles.flex}>
       <ScrollView
-        ref={scrollRef}
         onLayout={(e) => setViewH(e.nativeEvent.layout.height)}
-        contentContainerStyle={{ paddingBottom: theme.s(4) }}
+        contentContainerStyle={{ paddingBottom: BOTTOM_PAD }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={theme.colors.teal}
+            tintColor={c.teal}
             enabled={!spinning}
           />
         }
         showsVerticalScrollIndicator={false}
       >
         <View onLayout={(e) => setTopH(e.nativeEvent.layout.height)}>
-        <View style={styles.heroBlock}>
-          <Text style={styles.heroLabel}>Les Artistes</Text>
-          <Text style={styles.heroTitle}>Roulette</Text>
-          <Text style={styles.heroSub}>Qui s’y colle, à quoi on joue : la roue décide.</Text>
-        </View>
+          <ScreenHeader title="Roulette" sub="Qui s’y colle, à quoi on joue : la roue décide" />
 
-        <View style={styles.chips}>
-          {SOURCES.map((s) => {
-            const on = sources.has(s.id);
-            return (
-              <Pressable
+          <View style={styles.chips}>
+            {SOURCES.map((s) => (
+              <Chip
                 key={s.id}
+                label={s.chip}
+                active={sources.has(s.id)}
                 onPress={() => toggleSource(s.id)}
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: on }}
-                style={[styles.chip, on && styles.chipOn]}
-              >
-                <Ionicons
-                  name={s.icon}
-                  size={15}
-                  color={on ? theme.colors.deep : theme.colors.muted}
-                />
-                <Text style={[styles.chipText, on && styles.chipTextOn]}>{s.label}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
+                style={styles.chip}
+              />
+            ))}
+          </View>
 
-        <Pressable
-          onPress={() => setPicking(true)}
-          disabled={spinning}
-          accessibilityRole="button"
-          style={({ pressed }) => [styles.pickCard, pressed && { opacity: 0.7 }]}
-        >
-          <Ionicons name="options-outline" size={20} color={theme.colors.teal} />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.pickTitle}>
+          <Pressable
+            onPress={() => setPicking(true)}
+            disabled={spinning}
+            accessibilityRole="button"
+            accessibilityLabel={`${n} sur ${pickable.length} dans la roue. Choisir`}
+            style={({ pressed }) => [styles.pickCard, (pressed || spinning) && { opacity: 0.7 }]}
+          >
+            <Feather name="sliders" size={20} color={c.teal} />
+            <Text style={styles.pickTitle} numberOfLines={1}>
               {n} sur {pickable.length} dans la roue
             </Text>
-            <Text style={styles.pickSub}>Choisir un par un</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={theme.colors.muted} />
-        </Pressable>
+            <Text style={styles.pickSub}>Choisir</Text>
+          </Pressable>
         </View>
 
         {/* Cachée jusqu'aux mesures : sinon elle s'affiche à 360 puis rétrécit */}
@@ -373,7 +361,7 @@ export default function RouletteScreen() {
           <View
             style={[
               styles.wheelShadow,
-              { width: size, height: size, borderRadius: radius, top: 20 },
+              { width: size, height: size, borderRadius: radius, top: WHEEL_EXTRA },
             ]}
           >
             <Animated.View
@@ -385,7 +373,7 @@ export default function RouletteScreen() {
             >
               {n === 0 && (
                 <View
-                  style={[StyleSheet.absoluteFill, { backgroundColor: theme.colors.surface2 }]}
+                  style={[StyleSheet.absoluteFill, { backgroundColor: c.raised }]}
                 />
               )}
               {n === 1 && (
@@ -471,14 +459,15 @@ export default function RouletteScreen() {
             accessibilityLabel="Lancer la roue"
             style={({ pressed }) => [
               styles.hub,
-              { top: 20 + radius - 34 },
+              { top: WHEEL_EXTRA + radius - HUB / 2 },
               pressed && { transform: [{ scale: 0.94 }] },
             ]}
           >
-            <Ionicons
-              name={spinning ? 'hourglass' : 'sparkles'}
-              size={26}
-              color={theme.colors.deep}
+            <Feather
+              name={spinning ? 'loader' : 'play'}
+              size={24}
+              color={c.text}
+              style={spinning ? null : { marginLeft: 3 }}
             />
           </Pressable>
 
@@ -488,64 +477,61 @@ export default function RouletteScreen() {
         </View>
 
         <View style={styles.actions} onLayout={(e) => setActionsH(e.nativeEvent.layout.height + ACTIONS_MARGIN)}>
-          <Pressable
+          <Button
+            label={spinning ? 'Ça tourne…' : 'Lancer la roue'}
             onPress={spin}
             disabled={spinning || n < 2}
-            style={({ pressed }) => [
-              styles.spinBtn,
-              (spinning || n < 2) && { opacity: 0.5 },
-              pressed && { transform: [{ scale: 0.97 }] },
-            ]}
-          >
-            <Text style={styles.spinText}>{spinning ? 'Ça tourne…' : 'Lancer la roue'}</Text>
-          </Pressable>
+            height={54}
+            style={{ alignSelf: 'stretch' }}
+          />
           {/* Place toujours réservée : la roue ne change pas de taille quand l'indice apparaît */}
           <Text style={[styles.hint, n >= 2 && { opacity: 0 }]} accessibilityElementsHidden={n >= 2}
             importantForAccessibility={n >= 2 ? 'no-hide-descendants' : 'auto'}>
             Il faut au moins deux choix dans la roue.
           </Text>
         </View>
-
-        {!!winner && (
-          <View
-            // La carte tombe sous la roue : on fait défiler jusqu'à elle
-            onLayout={(e) =>
-              scrollRef.current?.scrollTo({
-                y: Math.max(0, e.nativeEvent.layout.y - theme.s(40)),
-                animated: true,
-              })
-            }
-          >
-            <Animated.View entering={ZoomIn.springify().damping(12)} style={styles.result}>
-              <Text style={styles.resultKind}>{SOURCE_LABEL[winner.source]}</Text>
-              <Text style={styles.resultName}>{winner.label}</Text>
-              {!!winner.detail && (
-                <Text style={styles.resultDetail} numberOfLines={5}>
-                  {winner.detail}
-                </Text>
-              )}
-              <View style={styles.resultActions}>
-                <Pressable
-                  onPress={() => toggleEntry(winner.key)}
-                  style={({ pressed }) => [styles.resultBtn, pressed && { opacity: 0.7 }]}
-                >
-                  <Ionicons name="remove-circle-outline" size={16} color={theme.colors.text} />
-                  <Text style={styles.resultBtnText}>Retirer de la roue</Text>
-                </Pressable>
-                <Pressable
-                  onPress={spin}
-                  style={({ pressed }) => [styles.resultBtn, pressed && { opacity: 0.7 }]}
-                >
-                  <Ionicons name="refresh" size={16} color={theme.colors.text} />
-                  <Text style={styles.resultBtnText}>Relancer</Text>
-                </Pressable>
-              </View>
-            </Animated.View>
-          </View>
-        )}
       </ScrollView>
 
+      {/* Le résultat monte en feuille du bas : la roue reste visible au-dessus */}
+      <Sheet
+        visible={!!winner}
+        onClose={() => setWinner(null)}
+        footer={
+          shown ? (
+            <View style={styles.resultActions}>
+              <Button
+                label="Retirer de la roue"
+                variant="secondary"
+                onPress={() => toggleEntry(shown.key)}
+                style={[styles.resultBtn, { backgroundColor: c.deep }]}
+              />
+              <Button
+                label="Relancer"
+                onPress={spin}
+                disabled={n < 2}
+                style={styles.resultBtn}
+              />
+            </View>
+          ) : null
+        }
+      >
+        {shown && (
+          <View style={{ alignItems: 'center' }}>
+            <Text style={styles.resultKicker}>La roue a choisi</Text>
+            <Text style={styles.resultName}>{shown.label}</Text>
+            <Text style={styles.resultSource}>{SOURCE_LABEL[shown.source]}</Text>
+            {!!shown.detail && (
+              <Text style={styles.resultDetail} numberOfLines={6}>
+                {shown.detail}
+              </Text>
+            )}
+          </View>
+        )}
+      </Sheet>
+
       <Modal
+        statusBarTranslucent
+        navigationBarTranslucent
         visible={picking}
         animationType="slide"
         presentationStyle="pageSheet"
@@ -553,30 +539,31 @@ export default function RouletteScreen() {
       >
         <SafeAreaView style={styles.flex}>
           <View style={styles.modalHeader}>
-            <Pressable
-              onPress={() => closePicker()}
-              hitSlop={10}
-              accessibilityRole="button"
-              accessibilityLabel="Fermer"
-            >
-              <Ionicons name="close" size={26} color={theme.colors.text} />
-            </Pressable>
+            <IconButton name="x" label="Fermer" onPress={() => closePicker()} bg="transparent" />
             <Text style={styles.modalTitle}>Dans la roue</Text>
-            <View style={{ width: 26 }} />
+            <View style={{ width: 44 }} />
           </View>
           <View style={styles.searchBox}>
-            <Ionicons name="search" size={17} color={theme.colors.muted} />
+            <Feather name="search" size={18} color={c.muted} />
             <TextInput
               value={search}
               onChangeText={setSearch}
-              placeholder="Rechercher"
-              placeholderTextColor={theme.colors.muted}
+              placeholder="Chercher un nom"
+              placeholderTextColor={c.muted}
+              selectionColor={c.coral}
+              accessibilityLabel="Chercher un nom"
               style={styles.searchInput}
               autoCorrect={false}
             />
             {!!search && (
-              <Pressable onPress={() => setSearch('')} hitSlop={10} accessibilityLabel="Effacer">
-                <Ionicons name="close-circle" size={18} color={theme.colors.muted} />
+              <Pressable
+                onPress={() => setSearch('')}
+                hitSlop={12}
+                accessibilityRole="button"
+                accessibilityLabel="Effacer"
+                style={styles.clearBtn}
+              >
+                <Feather name="x-circle" size={18} color={c.muted} />
               </Pressable>
             )}
           </View>
@@ -586,29 +573,43 @@ export default function RouletteScreen() {
               keyboardShouldPersistTaps="handled"
               keyboardDismissMode="on-drag"
               contentContainerStyle={{
-                padding: theme.s(4),
-                paddingBottom: theme.s(10),
+                paddingHorizontal: theme.gutter,
+                paddingTop: theme.s(4),
+                paddingBottom: theme.s(6),
               }}
             >
               {SOURCES.filter((s) => sources.has(s.id)).map((s) => {
                 const group = pickable.filter((e) => e.source === s.id);
-                const list = shown.filter((e) => e.source === s.id);
+                const list = found.filter((e) => e.source === s.id);
                 const onCount = group.filter((e) => !excluded.has(e.key)).length;
                 return (
                   <View key={s.id} style={{ marginBottom: theme.s(5) }}>
-                    <View style={styles.groupHead}>
-                      <Text style={styles.groupLabel}>
-                        {s.label} · {onCount}/{group.length}
-                      </Text>
-                      <View style={styles.groupBulk}>
-                        <Pressable onPress={() => setGroupIncluded(s.id, true)} hitSlop={8}>
-                          <Text style={styles.bulkText}>Tout</Text>
-                        </Pressable>
-                        <Pressable onPress={() => setGroupIncluded(s.id, false)} hitSlop={8}>
-                          <Text style={styles.bulkText}>Aucun</Text>
-                        </Pressable>
-                      </View>
-                    </View>
+                    <SectionTitle
+                      count={`${onCount} sur ${group.length}`}
+                      style={{ marginBottom: 4 }}
+                      right={
+                        <View style={styles.groupBulk}>
+                          <Pressable
+                            onPress={() => setGroupIncluded(s.id, true)}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Tout cocher : ${s.label}`}
+                            style={({ pressed }) => [styles.bulkBtn, pressed && { opacity: 0.6 }]}
+                          >
+                            <Text style={styles.bulkText}>Tout</Text>
+                          </Pressable>
+                          <Pressable
+                            onPress={() => setGroupIncluded(s.id, false)}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Tout décocher : ${s.label}`}
+                            style={({ pressed }) => [styles.bulkBtn, pressed && { opacity: 0.6 }]}
+                          >
+                            <Text style={styles.bulkText}>Aucun</Text>
+                          </Pressable>
+                        </View>
+                      }
+                    >
+                      {s.label}
+                    </SectionTitle>
                     {list.length === 0 && (
                       <Text style={styles.hint}>{q ? 'Aucun résultat.' : 'Rien pour l’instant.'}</Text>
                     )}
@@ -620,16 +621,16 @@ export default function RouletteScreen() {
                           onPress={() => toggleEntry(e.key)}
                           accessibilityRole="checkbox"
                           accessibilityState={{ checked: on }}
+                          accessibilityLabel={e.label}
                           style={({ pressed }) => [styles.pickRow, pressed && { opacity: 0.7 }]}
                         >
-                          <Ionicons
-                            name={on ? 'checkbox' : 'square-outline'}
-                            size={22}
-                            color={on ? theme.colors.teal : theme.colors.muted}
-                          />
-                          <Text style={[styles.pickRowText, !on && { color: theme.colors.muted }]}>
+                          {e.source === 'membres' && <Pastille id={e.id} name={e.label} size={34} />}
+                          <Text style={[styles.pickRowText, !on && { color: c.muted }]} numberOfLines={2}>
                             {e.label}
                           </Text>
+                          <View style={[styles.box, !on && styles.boxOff]}>
+                            {on && <Feather name="check" size={16} color={c.tealInk} />}
+                          </View>
                         </Pressable>
                       );
                     })}
@@ -638,111 +639,78 @@ export default function RouletteScreen() {
               })}
             </ScrollView>
             <View style={styles.modalFooter}>
-              <Pressable
+              <Button
+                label={n < 2 ? 'Coche au moins deux choix' : `C’est bon, ${n} dans la roue`}
                 onPress={() => closePicker()}
-                style={({ pressed }) => [styles.spinBtn, pressed && { transform: [{ scale: 0.97 }] }]}
-              >
-                <Text style={styles.spinText}>
-                  {n < 2 ? 'Coche au moins deux choix' : `C’est bon · ${n} dans la roue`}
-                </Text>
-              </Pressable>
+                height={54}
+              />
             </View>
           </KeyboardAware>
         </SafeAreaView>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: theme.colors.deep },
+  flex: { flex: 1, backgroundColor: c.deep },
   center: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: theme.colors.deep,
-  },
-  heroBlock: {
-    paddingHorizontal: theme.s(5),
-    paddingTop: theme.s(6),
-    paddingBottom: theme.s(2),
-  },
-  heroLabel: {
-    color: theme.colors.coral,
-    fontFamily: theme.fonts.bodyBold,
-    fontSize: 12,
-    letterSpacing: 2,
-    textTransform: 'uppercase',
-    marginBottom: 6,
-  },
-  heroTitle: {
-    color: theme.colors.text,
-    fontFamily: theme.fonts.serifBlack,
-    fontSize: 38,
-  },
-  heroSub: {
-    color: theme.colors.muted,
-    fontFamily: theme.fonts.body,
-    fontSize: 14,
-    marginTop: 6,
+    backgroundColor: c.deep,
   },
   chips: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    paddingHorizontal: theme.s(5),
-    marginTop: theme.s(4),
+    paddingHorizontal: theme.gutter,
+    marginTop: 16,
   },
-  chip: {
+  chip: { height: 44, borderRadius: 22 },
+  pickCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: theme.radius.pill,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
+    gap: 10,
+    marginHorizontal: theme.gutter,
+    marginTop: 10,
+    height: 52,
+    paddingHorizontal: 16,
+    borderRadius: 18,
+    backgroundColor: c.card,
   },
-  chipOn: {
-    backgroundColor: theme.colors.yellow,
-    borderColor: theme.colors.yellow,
-  },
-  chipText: {
-    color: theme.colors.muted,
-    fontFamily: theme.fonts.bodyBold,
-    fontSize: 13,
-  },
-  chipTextOn: { color: theme.colors.deep },
+  pickTitle: { flex: 1, color: c.text, fontFamily: theme.fonts.bodyBold, fontSize: 15 },
+  pickSub: { color: c.muted, fontFamily: theme.fonts.body, fontSize: 14 },
+
   wheelZone: { marginTop: WHEEL_MARGIN, alignItems: 'center' },
   wheelShadow: {
     position: 'absolute',
-    shadowColor: theme.colors.violet,
-    shadowOpacity: 0.55,
-    shadowRadius: 24,
+    shadowColor: c.violet,
+    shadowOpacity: 0.45,
+    shadowRadius: 30,
     shadowOffset: { width: 0, height: 0 },
     elevation: 12,
-    backgroundColor: theme.colors.deep,
+    backgroundColor: c.deep,
   },
-  wheel: { overflow: 'hidden', backgroundColor: theme.colors.deep },
-  rim: { borderWidth: 6, borderColor: '#fff' },
+  wheel: { overflow: 'hidden', backgroundColor: c.deep },
+  rim: { borderWidth: 6, borderColor: c.text },
   wedgeLabel: {
     position: 'absolute',
     height: 22,
     lineHeight: 22,
-    color: theme.colors.deep,
+    color: c.ink,
     fontFamily: theme.fonts.bodyBold,
     textAlign: 'center',
     transform: [{ rotate: '90deg' }],
   },
   hub: {
     position: 'absolute',
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    backgroundColor: '#fff',
+    width: HUB,
+    height: HUB,
+    borderRadius: HUB / 2,
+    backgroundColor: c.deep,
     borderWidth: 4,
-    borderColor: theme.colors.deep,
+    borderColor: c.text,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
@@ -761,166 +729,120 @@ const styles = StyleSheet.create({
   pointer: {
     width: 0,
     height: 0,
-    borderLeftWidth: 15,
-    borderRightWidth: 15,
-    borderTopWidth: 34,
+    borderLeftWidth: 14,
+    borderRightWidth: 14,
+    borderTopWidth: 28,
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
-    borderTopColor: '#fff',
+    borderTopColor: c.text,
   },
   actions: {
     alignItems: 'center',
     marginTop: ACTIONS_MARGIN,
-    paddingHorizontal: theme.s(5),
-  },
-  spinBtn: {
-    alignSelf: 'stretch',
-    backgroundColor: theme.colors.coral,
-    borderRadius: theme.radius.pill,
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  spinText: { color: '#fff', fontFamily: theme.fonts.bodyBold, fontSize: 17 },
-  pickCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginHorizontal: theme.s(5),
-    marginTop: theme.s(3),
-    paddingHorizontal: theme.s(4),
-    paddingVertical: theme.s(3),
-    borderRadius: theme.radius.lg,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-  },
-  pickTitle: { color: theme.colors.text, fontFamily: theme.fonts.bodyBold, fontSize: 15 },
-  pickSub: { color: theme.colors.muted, fontFamily: theme.fonts.body, fontSize: 13, marginTop: 2 },
-  searchBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginHorizontal: theme.s(4),
-    marginTop: theme.s(3),
-    paddingHorizontal: theme.s(3),
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  searchInput: {
-    flex: 1,
-    paddingVertical: 10,
-    color: theme.colors.text,
-    fontFamily: theme.fonts.body,
-    fontSize: 15,
-  },
-  groupHead: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: theme.s(2),
-  },
-  groupBulk: { flexDirection: 'row', gap: theme.s(4) },
-  modalFooter: {
-    paddingHorizontal: theme.s(4),
-    paddingTop: theme.s(3),
-    paddingBottom: theme.s(2),
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
+    paddingHorizontal: theme.gutter,
   },
   hint: {
-    color: theme.colors.muted,
+    color: c.muted,
     fontFamily: theme.fonts.body,
     fontSize: 13,
     marginTop: theme.s(2),
   },
-  result: {
-    marginTop: theme.s(6),
-    marginHorizontal: theme.s(5),
-    padding: theme.s(5),
-    borderRadius: theme.radius.xl,
-    borderWidth: 2,
-    borderColor: theme.colors.yellow,
-    backgroundColor: theme.colors.cardBg,
-    alignItems: 'center',
-  },
-  resultKind: {
-    color: theme.colors.yellow,
-    fontFamily: theme.fonts.bodyBold,
-    fontSize: 12,
-    letterSpacing: 2,
-    textTransform: 'uppercase',
-  },
+
+  resultKicker: { color: c.yellow, fontFamily: theme.fonts.bodyBold, fontSize: 14 },
   resultName: {
-    color: theme.colors.text,
+    color: c.text,
     fontFamily: theme.fonts.serifBlack,
-    fontSize: 32,
+    fontSize: 38,
+    lineHeight: 44,
     textAlign: 'center',
     marginTop: 6,
   },
+  resultSource: { color: c.muted, fontFamily: theme.fonts.body, fontSize: 14, marginTop: 4 },
   resultDetail: {
-    color: theme.colors.muted,
+    color: c.text,
     fontFamily: theme.fonts.body,
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 15,
+    lineHeight: 22,
     textAlign: 'center',
-    marginTop: theme.s(3),
+    marginTop: 14,
   },
-  resultActions: { flexDirection: 'row', gap: 10, marginTop: theme.s(5) },
-  resultBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: theme.radius.pill,
-    backgroundColor: theme.colors.surface2,
-  },
-  resultBtnText: {
-    color: theme.colors.text,
-    fontFamily: theme.fonts.bodyBold,
-    fontSize: 13,
-  },
+  resultActions: { flexDirection: 'row', gap: 10 },
+  resultBtn: { flex: 1, paddingHorizontal: 10 },
+
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: theme.s(4),
-    paddingVertical: theme.s(3),
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
   },
   modalTitle: {
-    color: theme.colors.text,
+    color: c.text,
     fontFamily: theme.fonts.serif,
     fontSize: 18,
   },
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginHorizontal: theme.gutter,
+    marginTop: 4,
+    height: 48,
+    paddingLeft: 16,
+    paddingRight: 6,
+    borderRadius: 24,
+    backgroundColor: c.card,
+  },
+  searchInput: {
+    flex: 1,
+    height: 48,
+    color: c.text,
+    fontFamily: theme.fonts.body,
+    fontSize: 15,
+    ...(Platform.OS === 'android' ? { paddingVertical: 0 } : null),
+  },
+  clearBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  groupBulk: { flexDirection: 'row', marginRight: -12 },
+  bulkBtn: { height: 44, paddingHorizontal: 12, justifyContent: 'center' },
   bulkText: {
-    color: theme.colors.teal,
+    color: c.teal,
     fontFamily: theme.fonts.bodyBold,
     fontSize: 14,
-  },
-  groupLabel: {
-    color: theme.colors.muted,
-    fontFamily: theme.fonts.bodyBold,
-    fontSize: 12,
-    letterSpacing: 1.5,
-    textTransform: 'uppercase',
-    flexShrink: 1,
   },
   pickRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: theme.colors.border,
+    minHeight: 54,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.06)',
   },
   pickRowText: {
-    color: theme.colors.text,
+    color: c.text,
     fontFamily: theme.fonts.body,
-    fontSize: 15,
+    fontSize: 16,
     flex: 1,
+  },
+  box: {
+    width: 26,
+    height: 26,
+    borderRadius: 8,
+    backgroundColor: c.teal,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  boxOff: { backgroundColor: 'transparent', borderWidth: 2, borderColor: c.rail },
+  modalFooter: {
+    paddingHorizontal: theme.gutter,
+    paddingTop: 14,
+    paddingBottom: theme.s(2),
+    backgroundColor: c.deep,
+    shadowColor: c.deep,
+    shadowOpacity: 0.9,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: -12 },
+    elevation: 12,
   },
 });

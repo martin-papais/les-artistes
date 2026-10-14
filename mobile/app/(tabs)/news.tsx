@@ -1,12 +1,14 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
+import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   FlatList,
   Modal,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -17,17 +19,20 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { BottomFade, commentTime, dayLabel, MoreButton } from '@/components/news/parts';
+import { EmptyState, IconButton, Pastille, ScreenHeader, SectionTitle } from '@/components/ui/kit';
 import {
   sb,
   type NewsComment,
   type NewsLike,
   type NewsRow,
   type ProfileMini, sessionUser } from '@/lib/supabase';
-import { getBlocked, ModerationButton } from '@/lib/moderation';
+import { getBlocked } from '@/lib/moderation';
 import { KeyboardAware } from '@/lib/keyboard';
 import { theme } from '@/lib/theme';
 import { useRefreshOnFocus } from '@/lib/useRefresh';
 
+const c = theme.colors;
 const PAGE_SIZE = 20;
 
 type NewsLite = Omit<NewsRow, 'contenu'> & {
@@ -81,6 +86,7 @@ function authorName(p: ProfileMini | null | undefined) {
 }
 
 export default function NewsScreen() {
+  const router = useRouter();
   const [items, setItems] = useState<NewsLite[]>([]);
   const [profiles, setProfiles] = useState<Record<string, ProfileMini>>({});
   const [loading, setLoading] = useState(true);
@@ -88,9 +94,11 @@ export default function NewsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
+  const [me, setMe] = useState<ProfileMini | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const lastOpen = useRef<NewsLite | null>(null);
   const liking = useRef(new Set<string>());
+  const meLoaded = useRef(false);
   // Lignes déjà lues côté serveur, news masquées comprises (items.length les ignore)
   const offset = useRef(0);
 
@@ -163,7 +171,16 @@ export default function NewsScreen() {
     const user = await sessionUser();
     const uid = user?.id ?? null;
     setUserId(uid);
-    const { items, hasMore, consumed } = await fetchPage(0, uid);
+    // Ma pastille dans l'en-tête : un seul chargement par session de l'écran
+    const mineRes =
+      uid && !meLoaded.current
+        ? sb.from('profiles').select('id,prenom,nom,pseudo').eq('id', uid).maybeSingle()
+        : null;
+    const [{ items, hasMore, consumed }, mine] = await Promise.all([fetchPage(0, uid), mineRes]);
+    if (mine?.data) {
+      meLoaded.current = true;
+      setMe(mine.data as ProfileMini);
+    }
     offset.current = consumed;
     setItems(items);
     setHasMore(hasMore);
@@ -228,19 +245,36 @@ export default function NewsScreen() {
     liking.current.delete(card.id);
   }
 
+  const header = (
+    <ScreenHeader
+      title="Actualités"
+      sub="Quoi de neuf chez nous ?"
+      style={{ paddingBottom: 20 }}
+      right={
+        me ? (
+          <Pressable
+            onPress={() => router.push('/profil')}
+            accessibilityRole="button"
+            accessibilityLabel="Mon profil"
+            style={({ pressed }) => pressed && { opacity: 0.7 }}
+          >
+            <Pastille id={me.id} name={authorName(me)} size={44} />
+          </Pressable>
+        ) : null
+      }
+    />
+  );
+
   if (loading) {
     return (
-      <SafeAreaView style={styles.flex}>
-        <View style={styles.heroBlock}>
-          <Text style={styles.heroLabel}>Les Artistes</Text>
-          <Text style={styles.heroTitle}>Actualités</Text>
-        </View>
-        <View style={{ paddingHorizontal: theme.s(5) }}>
+      <View style={styles.flex}>
+        {header}
+        <View style={{ paddingHorizontal: theme.gutter }}>
           {[0, 1, 2].map((i) => (
             <SkeletonCard key={i} />
           ))}
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -251,28 +285,19 @@ export default function NewsScreen() {
   const open = openId ? (found ?? lastOpen.current) : null;
 
   return (
-    <SafeAreaView style={styles.flex}>
+    <View style={styles.flex}>
       <FlatList
         data={items}
         keyExtractor={(n) => n.id}
-        contentContainerStyle={{ paddingBottom: theme.s(10) }}
-        ListHeaderComponent={
-          <View style={styles.heroBlock}>
-            <Text style={styles.heroLabel}>Les Artistes</Text>
-            <Text style={styles.heroTitle}>Actualités</Text>
-            <Text style={styles.heroSub}>Quoi de neuf chez nous ?</Text>
-          </View>
-        }
+        contentContainerStyle={{ paddingBottom: theme.s(8) }}
+        ListHeaderComponent={header}
         ListEmptyComponent={
-          <View style={styles.empty}>
-            <Ionicons name="newspaper-outline" size={40} color={theme.colors.muted} />
-            <Text style={styles.emptyText}>Aucune actu pour l&apos;instant.</Text>
-          </View>
+          <EmptyState icon="file-text" title="Aucune actu pour l'instant" text="Les nouvelles du groupe arriveront ici." />
         }
         ListFooterComponent={
           loadingMore ? (
             <View style={{ paddingVertical: theme.s(4) }}>
-              <ActivityIndicator color={theme.colors.teal} />
+              <ActivityIndicator color={c.teal} />
             </View>
           ) : !hasMore && items.length > PAGE_SIZE ? (
             <Text style={styles.endText}>Tu as tout vu.</Text>
@@ -296,11 +321,13 @@ export default function NewsScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={theme.colors.teal}
+            tintColor={c.teal}
           />
         }
       />
       <Modal
+        statusBarTranslucent
+        navigationBarTranslucent
         visible={!!open}
         animationType="slide"
         presentationStyle="pageSheet"
@@ -313,6 +340,7 @@ export default function NewsScreen() {
             currentUserId={userId}
             profiles={profiles}
             onClose={() => setOpenId(null)}
+            onLike={() => toggleLike(open)}
             onBlocked={() => {
               setOpenId(null);
               loadInitial();
@@ -325,7 +353,7 @@ export default function NewsScreen() {
           />
         )}
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -333,12 +361,27 @@ function SkeletonCard() {
   return (
     <View style={styles.skeletonCard}>
       <View style={styles.skeletonImage} />
-      <View style={{ padding: theme.s(3) }}>
-        <View style={[styles.skeletonLine, { width: '70%', height: 18 }]} />
-        <View style={[styles.skeletonLine, { width: '90%', marginTop: 8 }]} />
-        <View style={[styles.skeletonLine, { width: '60%', marginTop: 6 }]} />
+      <View style={{ padding: 16 }}>
+        <View style={[styles.skeletonLine, { width: '45%' }]} />
+        <View style={[styles.skeletonLine, { width: '80%', height: 18, marginTop: 12 }]} />
       </View>
     </View>
+  );
+}
+
+function LikeButton({ liked, count, onPress, style }: { liked: boolean; count: number; onPress: () => void; style?: object }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`J'aime, ${count}`}
+      accessibilityState={{ selected: liked }}
+      style={({ pressed }) => [styles.act, style, pressed && styles.actPressed]}
+    >
+      {/* Feather n'a pas de cœur plein : Ionicons pour les deux états */}
+      <Ionicons name={liked ? 'heart' : 'heart-outline'} size={21} color={c.coral} />
+      <Text style={styles.actText}>{count}</Text>
+    </Pressable>
   );
 }
 
@@ -358,44 +401,39 @@ function NewsCardView({
   const author = authorName(card.author);
   return (
     <View style={styles.card}>
+      {/* Toute la carte ouvre l'actu */}
       <Pressable
         onPress={onPress}
-        style={({ pressed }) => [styles.cardTapZone, pressed && { opacity: 0.92 }]}
+        accessibilityRole="button"
+        accessibilityLabel={`${card.titre}, par ${author}`}
+        style={({ pressed }) => pressed && { opacity: 0.9 }}
       >
         {!!card.cover_url && (
           <Image source={{ uri: card.cover_url }} style={styles.cover} contentFit="cover" />
         )}
-        <View style={{ padding: theme.s(3) }}>
+        <View style={styles.cardBody}>
+          <View style={styles.byline}>
+            <Pastille id={card.created_by} name={author} size={24} />
+            <Text style={styles.bylineText} numberOfLines={1}>
+              <Text style={styles.bylineName}>{author}</Text>, {dayLabel(card.created_at)}
+            </Text>
+          </View>
           <Text style={styles.cardTitle}>{card.titre}</Text>
-          <Text style={styles.cardMeta}>
-            {author} · {new Date(card.created_at).toLocaleDateString('fr-FR')}
-          </Text>
         </View>
       </Pressable>
       <View style={styles.cardActions}>
-        <Pressable
-          onPress={onLike}
-          hitSlop={8}
-          style={({ pressed }) => [styles.actionBtn, pressed && styles.actionBtnPressed]}
-        >
-          <Ionicons
-            name={card.iLiked ? 'heart' : 'heart-outline'}
-            size={20}
-            color={card.iLiked ? theme.colors.coral : theme.colors.muted}
-          />
-          <Text style={[styles.actionCount, card.iLiked && { color: theme.colors.coral }]}>
-            {card.likeCount}
-          </Text>
-        </Pressable>
+        <LikeButton liked={card.iLiked} count={card.likeCount} onPress={onLike} />
         <Pressable
           onPress={onPress}
-          hitSlop={8}
-          style={({ pressed }) => [styles.actionBtn, pressed && styles.actionBtnPressed]}
+          accessibilityRole="button"
+          accessibilityLabel={card.commentCount > 1 ? `${card.commentCount} commentaires` : `${card.commentCount} commentaire`}
+          style={({ pressed }) => [styles.act, pressed && styles.actPressed]}
         >
-          <Ionicons name="chatbubble-outline" size={18} color={theme.colors.muted} />
-          <Text style={styles.actionCount}>{card.commentCount}</Text>
+          <Feather name="message-circle" size={21} color={c.text} />
+          <Text style={styles.actText}>{card.commentCount}</Text>
         </Pressable>
-        <ModerationButton
+        <View style={{ flex: 1 }} />
+        <MoreButton
           kind="news"
           itemId={card.id}
           authorId={card.created_by}
@@ -404,11 +442,6 @@ function NewsCardView({
           currentUserId={currentUserId}
           onBlocked={onBlocked}
         />
-        <View style={{ flex: 1 }} />
-        <Pressable onPress={onPress} hitSlop={8} style={styles.readMoreBtn}>
-          <Text style={styles.readMoreText}>Lire</Text>
-          <Ionicons name="arrow-forward" size={14} color={theme.colors.coral} />
-        </Pressable>
       </View>
     </View>
   );
@@ -420,6 +453,7 @@ function NewsDetail({
   currentUserId,
   profiles,
   onClose,
+  onLike,
   onBlocked,
   onCommentPosted,
 }: {
@@ -428,6 +462,7 @@ function NewsDetail({
   currentUserId: string;
   profiles: Record<string, ProfileMini>;
   onClose: () => void;
+  onLike: () => void;
   onBlocked: () => void;
   onCommentPosted: () => void;
 }) {
@@ -499,138 +534,163 @@ function NewsDetail({
     return authorName(profiles[uid] ?? commenters[uid]);
   }
 
+  const canSend = !posting && !!text.trim();
+
   return (
     <SafeAreaView style={styles.flex}>
-      <View style={styles.detailHeader}>
-        <Pressable onPress={onClose} hitSlop={10} style={styles.detailHeaderBtn}>
-          <Ionicons name="close" size={26} color={theme.colors.text} />
-        </Pressable>
-      </View>
-      <KeyboardAware>
-        <ScrollView contentContainerStyle={{ padding: theme.s(5) }}>
-          {!!news.cover_url && (
-            <Pressable
-              onPress={() => setViewerUrl(news.cover_url)}
-              accessibilityRole="imagebutton"
-              accessibilityLabel="Agrandir la photo"
-            >
-              <Image source={{ uri: news.cover_url }} style={styles.detailCover} contentFit="cover" />
-            </Pressable>
-          )}
-          <Text style={styles.detailTitle}>{news.titre}</Text>
-          <View style={styles.commentHead}>
-            <Text style={styles.detailMetaText}>
-              {authorNameStr} ·{' '}
-              {new Date(news.created_at).toLocaleDateString('fr-FR', {
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric',
-              })}
-            </Text>
-            <ModerationButton
-              kind="news"
-              itemId={news.id}
-              authorId={news.created_by}
-              authorName={authorNameStr}
-              excerpt={news.titre}
-              currentUserId={currentUserId}
-              onBlocked={onBlocked}
-            />
-          </View>
-          {loadingDetail ? (
-            <View style={{ marginTop: theme.s(5) }}>
-              <View style={[styles.skeletonLine, { width: '95%' }]} />
-              <View style={[styles.skeletonLine, { width: '88%', marginTop: 8 }]} />
-              <View style={[styles.skeletonLine, { width: '72%', marginTop: 8 }]} />
-            </View>
-          ) : (
-            <>
-              <Text style={styles.detailContent}>{body.text}</Text>
-              {body.images.map((url, i) =>
-                brokenImages.has(i) ? null : (
-                  <Pressable
-                    key={i}
-                    onPress={() => setViewerUrl(url)}
-                    accessibilityRole="imagebutton"
-                    accessibilityLabel="Agrandir l’image"
-                  >
-                    <Image
-                      source={{ uri: url }}
-                      style={styles.inlineImage}
-                      contentFit="cover"
-                      onError={() => setBrokenImages((prev) => new Set(prev).add(i))}
-                    />
-                  </Pressable>
-                ),
-              )}
-            </>
-          )}
-
-          <Text style={styles.detailSection}>Commentaires ({comments.length})</Text>
-          {comments.length === 0 && !loadingDetail && (
-            <Text style={styles.emptyText}>Personne n&apos;a encore commenté.</Text>
-          )}
-          {comments.map((c) => (
-            <View key={c.id} style={styles.comment}>
-              <View style={styles.commentHead}>
-                <Text style={styles.commentAuthor}>{nameOf(c.user_id)}</Text>
-                <ModerationButton
-                  kind="news_comment"
-                  itemId={c.id}
-                  authorId={c.user_id}
-                  authorName={nameOf(c.user_id)}
-                  excerpt={c.contenu}
-                  currentUserId={currentUserId}
-                  onBlocked={() => setComments((prev) => prev.filter((x) => x.user_id !== c.user_id))}
-                />
-              </View>
-              <Text style={styles.commentText}>{c.contenu}</Text>
-            </View>
-          ))}
-        </ScrollView>
-        <View style={styles.commentInputRow}>
-          <TextInput
-            value={text}
-            onChangeText={setText}
-            placeholder="Écrire un commentaire…"
-            placeholderTextColor={theme.colors.muted}
-            style={styles.commentInput}
-            multiline
-          />
-          <Pressable
-            onPress={postComment}
-            disabled={posting || !text.trim()}
-            style={({ pressed }) => [
-              styles.sendBtn,
-              (pressed || posting || !text.trim()) && { opacity: 0.5 },
-            ]}
-          >
-            {posting ? (
-              <ActivityIndicator color="#fff" />
+      <View style={styles.flex}>
+        <KeyboardAware>
+          <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: theme.s(6) }}>
+            {news.cover_url ? (
+              <Pressable
+                onPress={() => setViewerUrl(news.cover_url)}
+                accessibilityRole="imagebutton"
+                accessibilityLabel="Agrandir la photo"
+              >
+                <Image source={{ uri: news.cover_url }} style={styles.detailCover} contentFit="cover" />
+                <BottomFade />
+              </Pressable>
             ) : (
-              <Ionicons name="send" size={18} color="#fff" />
+              // Place des boutons Fermer et « … » quand il n'y a pas de photo
+              <View style={{ height: 68 }} />
             )}
-          </Pressable>
+            <View style={{ paddingHorizontal: theme.gutter }}>
+              <Text style={[styles.detailTitle, !!news.cover_url && { marginTop: -6 }]}>{news.titre}</Text>
+              <View style={[styles.byline, { marginTop: 10 }]}>
+                <Pastille id={news.created_by} name={authorNameStr} size={28} />
+                <Text style={[styles.bylineText, { fontSize: 14 }]} numberOfLines={1}>
+                  <Text style={styles.bylineName}>{authorNameStr}</Text>, {dayLabel(news.created_at, true)}
+                </Text>
+              </View>
+              {loadingDetail ? (
+                <View style={{ marginTop: 18 }}>
+                  <View style={[styles.skeletonLine, { width: '95%' }]} />
+                  <View style={[styles.skeletonLine, { width: '88%', marginTop: 10 }]} />
+                  <View style={[styles.skeletonLine, { width: '72%', marginTop: 10 }]} />
+                </View>
+              ) : (
+                <>
+                  {!!body.text && <Text style={styles.detailContent}>{body.text}</Text>}
+                  {body.images.map((url, i) =>
+                    brokenImages.has(i) ? null : (
+                      <Pressable
+                        key={i}
+                        onPress={() => setViewerUrl(url)}
+                        accessibilityRole="imagebutton"
+                        accessibilityLabel="Agrandir l’image"
+                      >
+                        <Image
+                          source={{ uri: url }}
+                          style={styles.inlineImage}
+                          contentFit="cover"
+                          onError={() => setBrokenImages((prev) => new Set(prev).add(i))}
+                        />
+                      </Pressable>
+                    ),
+                  )}
+                </>
+              )}
+
+              <SectionTitle count={comments.length} style={{ marginTop: 22, marginBottom: 10 }}>
+                Commentaires
+              </SectionTitle>
+              {comments.length === 0 && !loadingDetail && (
+                <Text style={styles.emptyText}>Personne n&apos;a encore commenté.</Text>
+              )}
+              {comments.map((cm) => (
+                <View key={cm.id} style={styles.comment}>
+                  <Pastille id={cm.user_id} name={nameOf(cm.user_id)} size={32} />
+                  <View style={styles.bubble}>
+                    <View style={styles.bubbleHead}>
+                      <Text style={styles.commentAuthor} numberOfLines={1}>
+                        {nameOf(cm.user_id)} <Text style={styles.commentTime}>{commentTime(cm.created_at)}</Text>
+                      </Text>
+                      <MoreButton
+                        kind="news_comment"
+                        itemId={cm.id}
+                        authorId={cm.user_id}
+                        authorName={nameOf(cm.user_id)}
+                        excerpt={cm.contenu}
+                        currentUserId={currentUserId}
+                        size={28}
+                        style={{ marginRight: -8, marginVertical: -4 }}
+                        onBlocked={() => setComments((prev) => prev.filter((x) => x.user_id !== cm.user_id))}
+                      />
+                    </View>
+                    <Text style={styles.commentText}>{cm.contenu}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </ScrollView>
+          <View style={styles.composer}>
+            <LikeButton liked={news.iLiked} count={news.likeCount} onPress={onLike} style={styles.composerLike} />
+            <TextInput
+              value={text}
+              onChangeText={setText}
+              placeholder="Écrire un commentaire"
+              placeholderTextColor={c.muted}
+              selectionColor={c.coral}
+              accessibilityLabel="Écrire un commentaire"
+              style={styles.commentInput}
+              multiline
+            />
+            <Pressable
+              onPress={postComment}
+              disabled={!canSend}
+              accessibilityRole="button"
+              accessibilityLabel="Envoyer"
+              accessibilityState={{ disabled: !canSend }}
+              style={({ pressed }) => [
+                styles.sendBtn,
+                { backgroundColor: canSend || posting ? c.coral : c.rail },
+                pressed && { opacity: 0.8 },
+              ]}
+            >
+              {posting ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Feather name="send" size={19} color={canSend ? '#fff' : c.muted} />
+              )}
+            </Pressable>
+          </View>
+        </KeyboardAware>
+
+        {/* Posés sur la photo, fixes pendant le défilement */}
+        <View style={styles.detailTop} pointerEvents="box-none">
+          <IconButton name="x" label="Fermer" onPress={onClose} bg="rgba(26,16,37,0.6)" />
+          <MoreButton
+            kind="news"
+            itemId={news.id}
+            authorId={news.created_by}
+            authorName={authorNameStr}
+            excerpt={news.titre}
+            currentUserId={currentUserId}
+            color={c.text}
+            bg="rgba(26,16,37,0.6)"
+            onBlocked={onBlocked}
+          />
         </View>
-      </KeyboardAware>
+      </View>
       <Modal
         visible={!!viewerUrl}
         transparent
         animationType="fade"
         onRequestClose={() => setViewerUrl(null)}
+        statusBarTranslucent
+        navigationBarTranslucent
       >
         {!!viewerUrl && (
           <View style={styles.viewer}>
             <Image source={{ uri: viewerUrl }} style={StyleSheet.absoluteFill} contentFit="contain" />
-            <Pressable
+            <IconButton
+              name="x"
+              label="Fermer"
               onPress={() => setViewerUrl(null)}
+              color="#fff"
+              bg="rgba(0,0,0,0.5)"
               style={[styles.viewerClose, { top: insets.top + 8 }]}
-              hitSlop={20}
-              accessibilityRole="button"
-              accessibilityLabel="Fermer"
-            >
-              <Ionicons name="close" size={32} color="#fff" />
-            </Pressable>
+            />
           </View>
         )}
       </Modal>
@@ -639,73 +699,49 @@ function NewsDetail({
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: theme.colors.deep },
-
-  heroBlock: { paddingHorizontal: theme.s(5), paddingTop: theme.s(6), paddingBottom: theme.s(2) },
-  heroLabel: {
-    color: theme.colors.coral,
-    fontFamily: theme.fonts.bodyBold,
-    fontSize: 12,
-    letterSpacing: 2,
-    textTransform: 'uppercase',
-    marginBottom: 6,
-  },
-  heroTitle: {
-    color: theme.colors.text,
-    fontFamily: theme.fonts.serifBlack,
-    fontSize: 40,
-    lineHeight: 44,
-    letterSpacing: -1,
-  },
-  heroSub: { color: theme.colors.muted, fontFamily: theme.fonts.body, fontSize: 14, marginTop: 6, marginBottom: theme.s(4) },
+  flex: { flex: 1, backgroundColor: c.deep },
 
   card: {
-    backgroundColor: theme.colors.cardBg,
-    borderRadius: theme.radius.lg,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    marginBottom: theme.s(3),
+    backgroundColor: c.card,
+    borderRadius: 22,
+    marginBottom: 12,
     overflow: 'hidden',
-    marginHorizontal: theme.s(5),
+    marginHorizontal: theme.gutter,
   },
-  cardTapZone: {},
-  cover: { width: '100%', height: 180 },
+  cover: { width: '100%', height: 190 },
+  cardBody: { paddingTop: 14, paddingHorizontal: 16 },
+  byline: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  bylineText: { flex: 1, color: c.muted, fontFamily: theme.fonts.body, fontSize: 13 },
+  bylineName: { color: c.text, fontFamily: theme.fonts.bodyBold },
   cardTitle: {
-    color: theme.colors.text,
+    color: c.text,
     fontFamily: theme.fonts.serif,
-    fontSize: 19,
-    lineHeight: 24,
-    marginBottom: 6,
+    fontSize: 22,
+    lineHeight: 27,
+    marginTop: 8,
   },
-  cardMeta: { color: theme.colors.muted, fontFamily: theme.fonts.body, fontSize: 12 },
 
   cardActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: theme.s(3),
-    paddingVertical: theme.s(2),
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-    gap: 6,
+    paddingTop: 4,
+    paddingHorizontal: 6,
+    paddingBottom: 6,
   },
-  actionBtn: {
+  act: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: theme.radius.pill,
-    minHeight: 36,
+    height: 44,
+    paddingHorizontal: 12,
+    borderRadius: 22,
   },
-  actionBtnPressed: { backgroundColor: theme.colors.surface2 },
-  actionCount: { color: theme.colors.muted, fontFamily: theme.fonts.bodyBold, fontSize: 13 },
-  readMoreBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6 },
-  readMoreText: { color: theme.colors.coral, fontFamily: theme.fonts.bodyBold, fontSize: 13 },
+  actPressed: { backgroundColor: c.raised },
+  actText: { color: c.text, fontFamily: theme.fonts.bodyBold, fontSize: 14 },
 
-  empty: { padding: theme.s(10), alignItems: 'center', gap: theme.s(2) },
-  emptyText: { color: theme.colors.muted, fontFamily: theme.fonts.body, fontSize: 14 },
+  emptyText: { color: c.muted, fontFamily: theme.fonts.body, fontSize: 14 },
   endText: {
-    color: theme.colors.muted,
+    color: c.muted,
     fontFamily: theme.fonts.body,
     fontSize: 13,
     textAlign: 'center',
@@ -713,99 +749,86 @@ const styles = StyleSheet.create({
   },
 
   skeletonCard: {
-    backgroundColor: theme.colors.cardBg,
-    borderRadius: theme.radius.lg,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    marginBottom: theme.s(3),
+    backgroundColor: c.card,
+    borderRadius: 22,
+    marginBottom: 12,
     overflow: 'hidden',
   },
-  skeletonImage: { height: 180, backgroundColor: theme.colors.surface2 },
-  skeletonLine: { height: 12, borderRadius: 4, backgroundColor: theme.colors.surface2 },
+  skeletonImage: { height: 190, backgroundColor: c.raised },
+  skeletonLine: { height: 12, borderRadius: 6, backgroundColor: c.raised },
 
-  detailHeader: {
+  detailTop: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    right: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: theme.s(3),
-    paddingTop: theme.s(2),
-    paddingBottom: theme.s(1),
   },
-  detailHeaderBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: theme.colors.surface,
-  },
+  detailCover: { width: '100%', height: 270 },
   inlineImage: {
     width: '100%',
     height: 220,
     borderRadius: theme.radius.lg,
-    marginTop: theme.s(3),
+    marginTop: theme.s(4),
   },
   viewer: { flex: 1, backgroundColor: '#000' },
-  viewerClose: { position: 'absolute', right: 20, zIndex: 10 },
-  detailCover: {
-    width: '100%',
-    height: 200,
-    borderRadius: theme.radius.lg,
-    marginBottom: theme.s(4),
-  },
+  viewerClose: { position: 'absolute', right: 16, zIndex: 10 },
   detailTitle: {
-    color: theme.colors.text,
+    color: c.text,
     fontFamily: theme.fonts.serifBlack,
-    fontSize: 28,
-    lineHeight: 32,
-    letterSpacing: -0.5,
-    marginBottom: 6,
+    fontSize: 30,
+    lineHeight: 36,
   },
-  detailMetaText: { color: theme.colors.muted, fontFamily: theme.fonts.body, fontSize: 13, marginBottom: theme.s(4) },
-  detailContent: { color: theme.colors.text, fontFamily: theme.fonts.body, fontSize: 16, lineHeight: 24 },
-  detailSection: {
-    color: theme.colors.muted,
-    fontFamily: theme.fonts.bodyBold,
-    fontSize: 12,
-    letterSpacing: 1.5,
-    textTransform: 'uppercase',
-    marginTop: theme.s(6),
-    marginBottom: theme.s(2),
+  detailContent: { color: c.text, fontFamily: theme.fonts.body, fontSize: 16, lineHeight: 25, marginTop: 16 },
+
+  comment: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 10 },
+  bubble: {
+    flexShrink: 1,
+    backgroundColor: c.card,
+    borderTopLeftRadius: 4,
+    borderTopRightRadius: 18,
+    borderBottomLeftRadius: 18,
+    borderBottomRightRadius: 18,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
   },
-  comment: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.md,
-    padding: theme.s(3),
-    marginTop: theme.s(2),
-  },
-  commentHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  commentAuthor: { color: theme.colors.teal, fontFamily: theme.fonts.bodyBold, fontSize: 12, marginBottom: 4 },
-  commentText: { color: theme.colors.text, fontFamily: theme.fonts.body, fontSize: 14, lineHeight: 20 },
-  commentInputRow: {
+  bubbleHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  commentAuthor: { flexShrink: 1, color: c.text, fontFamily: theme.fonts.bodyBold, fontSize: 13 },
+  commentTime: { color: c.muted, fontFamily: theme.fonts.bodyMedium },
+  commentText: { color: c.text, fontFamily: theme.fonts.body, fontSize: 15, lineHeight: 21, marginTop: 4 },
+
+  composer: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    padding: theme.s(3),
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-    backgroundColor: theme.colors.deep,
-  },
-  commentInput: {
-    flex: 1,
-    backgroundColor: theme.colors.inputBg,
-    borderRadius: theme.radius.md,
+    gap: 8,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    color: theme.colors.text,
+    borderTopWidth: 1,
+    borderTopColor: c.hairline,
+    backgroundColor: c.deep,
+  },
+  composerLike: { height: 46, borderRadius: 23, paddingHorizontal: 14, backgroundColor: c.card },
+  commentInput: {
+    flex: 1,
+    minWidth: 0,
+    minHeight: 46,
+    maxHeight: 120,
+    backgroundColor: c.card,
+    borderRadius: 23,
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === 'ios' ? 13 : 10,
+    paddingBottom: Platform.OS === 'ios' ? 13 : 10,
+    color: c.text,
     fontFamily: theme.fonts.body,
     fontSize: 15,
-    maxHeight: 120,
+    textAlignVertical: 'center',
   },
   sendBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: theme.colors.coral,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 8,
   },
 });

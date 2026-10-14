@@ -1,28 +1,24 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  FlatList,
-  Modal,
   Pressable,
   RefreshControl,
-  ScrollView,
+  SectionList,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ContactCard, displayName, type ContactData } from '@/components/plus/ContactCard';
+import { Button, EmptyState, Field, FieldLabel, Icon, IconButton, Pastille, ScreenHeader, Sheet } from '@/components/ui/kit';
 import { parseDobInput, sb, type AnnuaireExtra, type Profile, sessionUser } from '@/lib/supabase';
-import { KeyboardAware } from '@/lib/keyboard';
 import { theme } from '@/lib/theme';
 
-type Card = Profile & {
-  addresses: string[];
-  rib: string | null;
-};
+const c = theme.colors;
+const f = theme.fonts;
 
 function parseAddresses(raw: string | null): string[] {
   if (!raw) return [];
@@ -33,12 +29,25 @@ function parseAddresses(raw: string | null): string[] {
   return [raw];
 }
 
+/** Minuscules sans accents, pour la recherche et le tri. */
+function fold(s: string) {
+  return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+}
+
+/** Lettre de section : initiale du nom de famille, sinon du nom affiché. */
+function letterOf(p: ContactData) {
+  const l = fold((p.nom || displayName(p)).trim())[0]?.toUpperCase() ?? '#';
+  return /[A-Z]/.test(l) ? l : '#';
+}
+
 export default function AnnuaireScreen() {
-  const [cards, setCards] = useState<Card[]>([]);
+  const [cards, setCards] = useState<ContactData[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
-  const [editing, setEditing] = useState<Card | null>(null);
+  const [editing, setEditing] = useState<ContactData | null>(null);
+  const [query, setQuery] = useState('');
+  const insets = useSafeAreaInsets();
 
   const loadAll = useCallback(async () => {
     const user = await sessionUser();
@@ -87,7 +96,7 @@ export default function AnnuaireScreen() {
   }
 
   function editMine() {
-    const me = cards.find((c) => c.id === userId);
+    const me = cards.find((p) => p.id === userId);
     if (me) setEditing(me);
     else Alert.alert('Profil introuvable', 'Tire vers le bas pour rafraîchir, puis réessaie.');
   }
@@ -95,108 +104,105 @@ export default function AnnuaireScreen() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator color={theme.colors.teal} />
+        <ActivityIndicator color={c.teal} />
       </View>
     );
   }
 
+  const me = cards.find((p) => p.id === userId) ?? null;
+  const q = fold(query.trim());
+  const shown = q
+    ? cards.filter((p) => fold(`${p.prenom ?? ''} ${p.nom ?? ''} ${p.pseudo ?? ''}`).includes(q))
+    : cards;
+  // Sections par lettre ; l'ordre du serveur (par nom) est gardé dans chaque section
+  const sections: { title: string; data: ContactData[] }[] = [];
+  [...shown]
+    .sort((a, b) => letterOf(a).localeCompare(letterOf(b)))
+    .forEach((p) => {
+      const l = letterOf(p);
+      const last = sections[sections.length - 1];
+      if (last && last.title === l) last.data.push(p);
+      else sections.push({ title: l, data: [p] });
+    });
+  const n = cards.length;
+
   return (
-    <SafeAreaView style={styles.flex} edges={['left', 'right', 'bottom']}>
-      <FlatList
-        data={cards}
-        keyExtractor={(c) => c.id}
-        contentContainerStyle={{ padding: theme.s(4), paddingBottom: theme.s(10) }}
+    <View style={styles.flex}>
+      <SectionList
+        sections={sections}
+        keyExtractor={(p) => p.id}
+        stickySectionHeadersEnabled={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
         ListHeaderComponent={
-          <Pressable
-            onPress={editMine}
-            style={({ pressed }) => [styles.editBanner, pressed && { opacity: 0.85 }]}
-          >
-            <Ionicons name="create-outline" size={18} color={theme.colors.coral} />
-            <Text style={styles.editBannerText}>Modifier mon profil</Text>
-            <Ionicons name="chevron-forward" size={18} color={theme.colors.muted} style={{ marginLeft: 'auto' }} />
-          </Pressable>
-        }
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <Text style={styles.emptyText}>Aucun contact pour l&apos;instant.</Text>
+          <View>
+            <ScreenHeader back title="Annuaire" sub={`${n} membre${n > 1 ? 's' : ''}`} />
+            <View style={styles.search}>
+              <Icon name="search" size={18} color={c.muted} />
+              <TextInput
+                value={query}
+                onChangeText={setQuery}
+                placeholder="Chercher un membre"
+                placeholderTextColor={c.muted}
+                selectionColor={c.coral}
+                accessibilityLabel="Chercher un membre"
+                autoCorrect={false}
+                returnKeyType="search"
+                style={styles.searchInput}
+              />
+              {!!query && <IconButton name="x" label="Effacer la recherche" onPress={() => setQuery('')} bg="transparent" color={c.muted} size={36} />}
+            </View>
+            <Pressable
+              onPress={editMine}
+              accessibilityRole="button"
+              accessibilityLabel="Modifier ta fiche"
+              style={({ pressed }) => [styles.mine, pressed && { opacity: 0.85 }]}
+            >
+              <Pastille id={userId} name={me?.prenom || me?.pseudo} size={40} />
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={styles.mineTitle}>Ta fiche</Text>
+                <Text style={styles.mineSub}>Ce que le groupe voit de toi</Text>
+              </View>
+              <Text style={styles.mineAction}>Modifier</Text>
+            </Pressable>
           </View>
         }
-        renderItem={({ item }) => <ContactCard card={item} isMine={item.id === userId} />}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.teal} />
-        }
-      />
-      <Modal
-        visible={!!editing}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setEditing(null)}
-      >
-        {!!editing && (
-          <EditProfileModal
-            card={editing}
-            onClose={() => setEditing(null)}
-            onSaved={() => {
-              setEditing(null);
-              loadAll();
-            }}
-          />
+        renderSectionHeader={({ section }) => <Text style={styles.letter}>{section.title}</Text>}
+        renderItem={({ item }) => (
+          <View style={styles.item}>
+            <ContactCard card={item} isMine={item.id === userId} />
+          </View>
         )}
-      </Modal>
-    </SafeAreaView>
-  );
-}
-
-function ContactCard({ card, isMine }: { card: Card; isMine: boolean }) {
-  const name = card.pseudo || `${card.prenom ?? ''} ${card.nom ?? ''}`.trim() || '?';
-  const initial = name[0]?.toUpperCase() ?? '?';
-  return (
-    <View style={[styles.card, isMine && styles.cardMine]}>
-      <View style={styles.cardHeader}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{initial}</Text>
-        </View>
-        <View style={{ flex: 1, marginLeft: 12 }}>
-          <Text style={styles.cardName}>
-            {name} {!!isMine && <Text style={styles.youTag}>· toi</Text>}
-          </Text>
-          {!!card.dob && <Text style={styles.cardSub}>{formatDob(card.dob)}</Text>}
-        </View>
-      </View>
-      {!!card.email && <InfoRow icon="mail-outline" label={card.email} />}
-      {!!card.tel && <InfoRow icon="call-outline" label={card.tel} />}
-      {card.addresses.map((a, i) => (
-        <InfoRow key={i} icon="location-outline" label={a} />
-      ))}
-      {!!card.rib && <InfoRow icon="card-outline" label={card.rib} />}
+        ListEmptyComponent={
+          q ? (
+            <EmptyState icon="search" title="Personne à ce nom" text="Essaie avec le prénom, le nom ou le pseudo." />
+          ) : (
+            <EmptyState icon="users" title="Aucun contact pour l'instant" text="Tire vers le bas pour rafraîchir." />
+          )
+        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={c.teal} />}
+      />
+      {!!editing && (
+        <EditProfileSheet
+          card={editing}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            loadAll();
+          }}
+        />
+      )}
     </View>
   );
 }
 
-function InfoRow({ icon, label }: { icon: React.ComponentProps<typeof Ionicons>['name']; label: string }) {
-  return (
-    <View style={styles.infoRow}>
-      <Ionicons name={icon} size={14} color={theme.colors.muted} />
-      <Text style={styles.infoText} selectable>
-        {label}
-      </Text>
-    </View>
-  );
-}
-
-function formatDob(dob: string) {
-  // Minuit local : new Date('AAAA-MM-JJ') est lu en UTC et peut afficher la veille
-  const d = new Date(`${dob}T00:00:00`);
-  if (Number.isNaN(d.getTime())) return dob;
-  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
-}
-
-function EditProfileModal({
+function EditProfileSheet({
   card,
   onClose,
   onSaved,
 }: {
-  card: Card;
+  card: ContactData;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -258,179 +264,89 @@ function EditProfileModal({
   }
 
   return (
-    <SafeAreaView style={styles.flex}>
-      <View style={styles.modalHeader}>
-        <Pressable onPress={onClose} hitSlop={10}>
-          <Ionicons name="close" size={28} color={theme.colors.text} />
-        </Pressable>
-        <Text style={styles.modalTitle}>Mon profil</Text>
-        <View style={{ width: 28 }} />
-      </View>
-      <KeyboardAware>
-        <ScrollView contentContainerStyle={{ padding: theme.s(5) }} keyboardShouldPersistTaps="handled">
-          <FormField label="Prénom" value={prenom} onChangeText={setPrenom} />
-          <FormField label="Nom" value={nom} onChangeText={setNom} />
-          <FormField
-            label="Date de naissance (JJ/MM/AAAA)"
-            value={dob}
-            onChangeText={setDob}
-            placeholder="21/03/1995"
-            autoCapitalize="none"
+    <Sheet
+      visible
+      onClose={onClose}
+      title="Ta fiche"
+      sub="Ce que le groupe voit de toi dans l'annuaire."
+      footer={<Button label="Enregistrer" icon="check" onPress={save} loading={saving} />}
+    >
+      <FieldLabel>Prénom</FieldLabel>
+      <Field value={prenom} onChangeText={setPrenom} onDark autoComplete="given-name" />
+      <View style={styles.gap} />
+      <FieldLabel>Nom</FieldLabel>
+      <Field value={nom} onChangeText={setNom} onDark autoComplete="family-name" />
+      <View style={styles.gap} />
+      <FieldLabel hint="JJ/MM/AAAA">Date de naissance</FieldLabel>
+      <Field value={dob} onChangeText={setDob} placeholder="21/03/1995" autoCapitalize="none" keyboardType="numbers-and-punctuation" onDark />
+      <View style={styles.gap} />
+      <FieldLabel>Téléphone</FieldLabel>
+      <Field value={tel} onChangeText={setTel} keyboardType="phone-pad" onDark autoComplete="tel" />
+      <View style={styles.gap} />
+      <FieldLabel>Adresses</FieldLabel>
+      {addresses.map((a, i) => (
+        <View key={i} style={styles.addrRow}>
+          <Field
+            value={a}
+            onChangeText={(v) => setAddrAt(i, v)}
+            placeholder={`Adresse ${i + 1}`}
+            onDark
+            multiline
+            style={{ flex: 1, minHeight: 50 }}
           />
-          <FormField
-            label="Téléphone"
-            value={tel}
-            onChangeText={setTel}
-            keyboardType="phone-pad"
-          />
-          <Text style={styles.label}>Adresses</Text>
-          {addresses.map((a, i) => (
-            <View key={i} style={styles.addrRow}>
-              <TextInput
-                value={a}
-                onChangeText={(v) => setAddrAt(i, v)}
-                placeholder={`Adresse ${i + 1}`}
-                placeholderTextColor="rgba(255,255,255,0.3)"
-                style={[styles.input, { flex: 1 }]}
-                multiline
-              />
-              <Pressable onPress={() => removeAddr(i)} hitSlop={6} style={styles.addrRemove}>
-                <Ionicons name="close" size={18} color={theme.colors.muted} />
-              </Pressable>
-            </View>
-          ))}
-          <Pressable onPress={addAddr} style={styles.addAddrBtn}>
-            <Ionicons name="add" size={16} color={theme.colors.teal} />
-            <Text style={styles.addAddrText}>Ajouter une adresse</Text>
-          </Pressable>
-          <FormField label="RIB / IBAN" value={rib} onChangeText={setRib} autoCapitalize="characters" />
-
-          <Pressable
-            onPress={save}
-            disabled={saving}
-            style={({ pressed }) => [styles.saveBtn, (pressed || saving) && { opacity: 0.7 }]}
-          >
-            {saving ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.saveText}>Enregistrer ✓</Text>
-            )}
-          </Pressable>
-        </ScrollView>
-      </KeyboardAware>
-    </SafeAreaView>
-  );
-}
-
-function FormField(props: React.ComponentProps<typeof TextInput> & { label: string }) {
-  const { label, style, ...rest } = props;
-  return (
-    <View style={{ marginBottom: theme.s(4) }}>
-      <Text style={styles.label}>{label}</Text>
-      <TextInput
-        placeholderTextColor="rgba(255,255,255,0.3)"
-        style={[styles.input, style]}
-        {...rest}
-      />
-    </View>
+          <IconButton name="x" label={`Retirer l'adresse ${i + 1}`} onPress={() => removeAddr(i)} bg="transparent" color={c.muted} />
+        </View>
+      ))}
+      <Button label="Ajouter une adresse" icon="plus" variant="raised" height={44} onPress={addAddr} style={{ alignSelf: 'flex-start' }} />
+      <View style={styles.gap} />
+      <FieldLabel hint="visible par le groupe, masqué à l'affichage">RIB ou IBAN</FieldLabel>
+      <Field value={rib} onChangeText={setRib} autoCapitalize="characters" autoCorrect={false} onDark />
+    </Sheet>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: theme.colors.deep },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.deep },
-  editBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: theme.colors.surface2,
-    borderRadius: theme.radius.lg,
-    padding: theme.s(3),
-    marginBottom: theme.s(4),
-  },
-  editBannerText: { color: theme.colors.text, fontSize: 14, fontWeight: '600' },
-  card: {
-    backgroundColor: theme.colors.cardBg,
-    borderRadius: theme.radius.lg,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    padding: theme.s(3),
-    marginBottom: theme.s(3),
-  },
-  cardMine: { borderColor: theme.colors.coral },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: theme.s(2) },
-  avatar: {
-    width: 48,
+  flex: { flex: 1, backgroundColor: c.deep },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.deep },
+  search: {
+    marginTop: 16,
+    marginHorizontal: theme.gutter,
     height: 48,
     borderRadius: 24,
-    backgroundColor: theme.colors.violet,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: { color: '#fff', fontSize: 20, fontWeight: '700' },
-  cardName: { color: theme.colors.text, fontSize: 16, fontWeight: '700' },
-  youTag: { color: theme.colors.coral, fontSize: 12, fontWeight: '600' },
-  cardSub: { color: theme.colors.muted, fontSize: 12, marginTop: 2 },
-  infoRow: {
+    backgroundColor: c.card,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingVertical: 6,
+    gap: 10,
+    paddingLeft: 16,
+    paddingRight: 6,
   },
-  infoText: { color: theme.colors.text, fontSize: 13, flex: 1 },
-  empty: { padding: theme.s(8), alignItems: 'center' },
-  emptyText: { color: theme.colors.muted, fontSize: 14 },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: theme.s(4),
-    paddingTop: theme.s(2),
-    paddingBottom: theme.s(2),
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  modalTitle: { color: theme.colors.text, fontFamily: theme.fonts.title, fontSize: 18, fontWeight: '700' },
-  label: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: theme.colors.muted,
-    marginBottom: 6,
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-  },
-  input: {
-    backgroundColor: theme.colors.inputBg,
-    borderWidth: 1.5,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
-    color: theme.colors.text,
-    fontSize: 15,
-    paddingHorizontal: 14,
+  searchInput: { flex: 1, height: 48, color: c.text, fontFamily: f.body, fontSize: 15, paddingVertical: 0 },
+  mine: {
+    marginTop: 12,
+    marginHorizontal: theme.gutter,
     paddingVertical: 12,
-  },
-  addrRow: {
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    backgroundColor: c.card,
+    borderWidth: 1.5,
+    borderColor: c.yellow,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: theme.s(2),
+    gap: 12,
   },
-  addrRemove: { padding: 6 },
-  addAddrBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    alignSelf: 'flex-start',
-    paddingVertical: 6,
-    marginBottom: theme.s(4),
+  mineTitle: { color: c.text, fontFamily: f.bodyBold, fontSize: 15, lineHeight: 20 },
+  mineSub: { color: c.muted, fontFamily: f.body, fontSize: 13, lineHeight: 18 },
+  mineAction: { color: c.yellow, fontFamily: f.bodyBold, fontSize: 14 },
+  letter: {
+    marginTop: 20,
+    marginBottom: 8,
+    marginHorizontal: theme.gutter,
+    color: c.text,
+    fontFamily: f.bodyBold,
+    fontSize: 18,
+    lineHeight: 24,
   },
-  addAddrText: { color: theme.colors.teal, fontSize: 13, fontWeight: '600' },
-  saveBtn: {
-    backgroundColor: theme.colors.coral,
-    borderRadius: theme.radius.md,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: theme.s(4),
-  },
-  saveText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  item: { marginHorizontal: theme.gutter, marginBottom: 10 },
+  gap: { height: 16 },
+  addrRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 8 },
 });

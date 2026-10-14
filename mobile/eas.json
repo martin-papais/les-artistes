@@ -36,10 +36,19 @@
       "ios": {
         "resourceClass": "m-medium"
       }
+    },
+    "testflight": {
+      "extends": "production",
+      "channel": "refonte"
     }
   },
   "submit": {
     "production": {
+      "ios": {
+        "ascAppId": "6819082593"
+      }
+    },
+    "testflight": {
       "ios": {
         "ascAppId": "6819082593"
       }

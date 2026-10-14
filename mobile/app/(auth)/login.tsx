@@ -1,7 +1,6 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
 import { useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Linking,
   Platform,
@@ -9,10 +8,12 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
+  type TextInputProps,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Button, Field, FieldLabel, Segmented } from '@/components/ui/kit';
 import { KeyboardAware } from '@/lib/keyboard';
 import { sb } from '@/lib/supabase';
 import { theme } from '@/lib/theme';
@@ -20,6 +21,7 @@ import { theme } from '@/lib/theme';
 type Panel = 'login' | 'signup';
 
 export default function LoginScreen() {
+  const insets = useSafeAreaInsets();
   const [panel, setPanel] = useState<Panel>('login');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -105,7 +107,7 @@ export default function LoginScreen() {
       dobIso = fr ? `${fr[3]}-${fr[2].padStart(2, '0')}-${fr[1].padStart(2, '0')}` : dobRaw;
       const d = new Date(`${dobIso}T00:00:00`);
       if (!/^\d{4}-\d{2}-\d{2}$/.test(dobIso) || Number.isNaN(d.getTime())) {
-        setError('Date de naissance invalide (format AAAA-MM-JJ).');
+        setError('Date de naissance invalide (JJ/MM/AAAA).');
         return;
       }
     }
@@ -202,213 +204,190 @@ export default function LoginScreen() {
     } else {
       Alert.alert(
         'Mot de passe oublié',
-        'Saisis ton adresse email dans le champ « Pseudo ou email », puis appuie à nouveau sur « Mot de passe oublié ».',
+        'Saisis ton adresse email dans le champ « Prénom Nom ou email », puis appuie à nouveau sur « Mot de passe oublié ».',
       );
     }
   }
 
+
   return (
     <KeyboardAware style={styles.flex} insideSafeArea={false}>
       <ScrollView
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 56, paddingBottom: insets.bottom + 32 }]}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.header}>
-          <View style={styles.logoMark}>
-            <Text style={styles.logoMarkText}>LA</Text>
-          </View>
-          <Text style={styles.title}>Les Artistes</Text>
-          <Text style={styles.subtitle}>L&apos;espace privé du groupe.</Text>
+        <View style={styles.logo} accessible={false}>
+          <Text style={styles.logoText}>LA</Text>
         </View>
+        <Text style={styles.title} accessibilityRole="header">
+          Les Artistes
+        </Text>
+        <Text style={styles.subtitle}>L&apos;espace privé du groupe</Text>
 
-        <View style={styles.card}>
-          <View style={styles.tabs}>
-            <Pressable
-              onPress={() => switchPanel('login')}
-              style={[styles.tab, panel === 'login' && styles.tabActive]}
-            >
-              <Text style={[styles.tabText, panel === 'login' && styles.tabTextActive]}>
-                Connexion
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={() => switchPanel('signup')}
-              style={[styles.tab, panel === 'signup' && styles.tabActive]}
-            >
-              <Text style={[styles.tabText, panel === 'signup' && styles.tabTextActive]}>
-                Inscription
-              </Text>
-            </Pressable>
+        <Segmented
+          style={{ marginTop: 28 }}
+          value={panel}
+          onChange={switchPanel}
+          options={[
+            { key: 'login', label: 'Connexion' },
+            { key: 'signup', label: 'Inscription' },
+          ]}
+        />
+
+        {!!error && (
+          <View style={styles.alert} accessibilityLiveRegion="polite">
+            <Feather name="alert-circle" size={18} color={theme.colors.coralSoft} />
+            <Text style={styles.alertText}>{error}</Text>
           </View>
+        )}
 
-          {!!error && (
-            <View style={styles.alert}>
-              <Text style={styles.alertText}>{error}</Text>
+        {panel === 'login' ? (
+          <>
+            <LabeledField
+              label="Prénom Nom ou email"
+              value={identifiant}
+              onChangeText={setIdentifiant}
+              placeholder="Marie Dupont"
+              autoCapitalize="words"
+              textContentType="username"
+            />
+            <LabeledField
+              label="Mot de passe"
+              value={loginPassword}
+              onChangeText={setLoginPassword}
+              placeholder="Ton mot de passe"
+              password
+              textContentType="password"
+            />
+            <Pressable onPress={handleForgot} accessibilityRole="button" style={styles.forgot}>
+              <Text style={styles.link}>Mot de passe oublié ?</Text>
+            </Pressable>
+            <Button label="Se connecter" onPress={handleLogin} loading={loading} height={56} style={{ marginTop: 10 }} />
+          </>
+        ) : (
+          <>
+            <View style={styles.row2}>
+              <View style={styles.flex}>
+                <LabeledField label="Prénom" value={prenom} onChangeText={setPrenom} placeholder="Marie" textContentType="givenName" />
+              </View>
+              <View style={styles.flex}>
+                <LabeledField label="Nom" value={nom} onChangeText={setNom} placeholder="Dupont" textContentType="familyName" />
+              </View>
             </View>
-          )}
-
-          {panel === 'login' ? (
-            <>
-              <Field
-                label="Pseudo (prénom + nom) ou email"
-                value={identifiant}
-                onChangeText={setIdentifiant}
-                placeholder="Marie Dupont"
-                autoCapitalize="words"
-                textContentType="username"
-              />
-              <Field
-                label="Mot de passe"
-                value={loginPassword}
-                onChangeText={setLoginPassword}
-                placeholder="••••••••"
-                secureTextEntry
-                textContentType="password"
-              />
-              <Pressable onPress={handleForgot} style={styles.forgotRow}>
-                <Text style={styles.link}>Mot de passe oublié ?</Text>
+            <LabeledField
+              label="Email"
+              value={email}
+              onChangeText={setEmail}
+              placeholder="marie@email.com"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              textContentType="emailAddress"
+            />
+            <LabeledField
+              label="Téléphone"
+              hint="facultatif"
+              value={tel}
+              onChangeText={setTel}
+              placeholder="06 12 34 56 78"
+              keyboardType="phone-pad"
+              textContentType="telephoneNumber"
+            />
+            <LabeledField
+              label="Date de naissance"
+              hint="JJ/MM/AAAA, facultatif"
+              value={dob}
+              onChangeText={setDob}
+              placeholder="21/03/1995"
+              autoCapitalize="none"
+            />
+            <LabeledField
+              label="Mot de passe"
+              hint="8 caractères minimum"
+              value={signupPassword}
+              onChangeText={setSignupPassword}
+              placeholder="Ton mot de passe"
+              password
+              textContentType="newPassword"
+            />
+            <LabeledField
+              label="Confirme le mot de passe"
+              value={signupPassword2}
+              onChangeText={setSignupPassword2}
+              placeholder="Le même, une deuxième fois"
+              password
+              textContentType="newPassword"
+            />
+            <LabeledField
+              label="Mot de passe du groupe"
+              value={groupePassword}
+              onChangeText={setGroupePassword}
+              placeholder="Demande-le à un membre"
+              password
+              autoCapitalize="none"
+            />
+            <View style={styles.termsRow}>
+              <Pressable
+                onPress={() => setAcceptTerms((v) => !v)}
+                hitSlop={4}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: acceptTerms }}
+                accessibilityLabel="J'accepte les conditions d'utilisation"
+                style={styles.checkTarget}
+              >
+                <View style={[styles.checkBox, acceptTerms && styles.checkBoxOn]}>
+                  {acceptTerms && <Feather name="check" size={16} color={theme.colors.tealInk} />}
+                </View>
               </Pressable>
-              <PrimaryButton
-                label="Se connecter"
-                onPress={handleLogin}
-                loading={loading}
-              />
-            </>
-          ) : (
-            <>
-              <View style={styles.row2}>
-                <View style={styles.flex}>
-                  <Field label="Prénom" value={prenom} onChangeText={setPrenom} placeholder="Marie" />
-                </View>
-                <View style={{ width: 12 }} />
-                <View style={styles.flex}>
-                  <Field label="Nom" value={nom} onChangeText={setNom} placeholder="Dupont" />
-                </View>
-              </View>
-              <Field
-                label="Email"
-                value={email}
-                onChangeText={setEmail}
-                placeholder="marie@email.com"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                textContentType="emailAddress"
-              />
-              <Field
-                label="Téléphone (optionnel)"
-                value={tel}
-                onChangeText={setTel}
-                placeholder="06 12 34 56 78"
-                keyboardType="phone-pad"
-                textContentType="telephoneNumber"
-              />
-              <Field
-                label="Date de naissance (AAAA-MM-JJ)"
-                value={dob}
-                onChangeText={setDob}
-                placeholder="1995-03-21"
-                autoCapitalize="none"
-              />
-              <Field
-                label="Mot de passe"
-                value={signupPassword}
-                onChangeText={setSignupPassword}
-                placeholder="Min. 8 caractères"
-                secureTextEntry
-                textContentType="newPassword"
-              />
-              <Field
-                label="Confirmer le mot de passe"
-                value={signupPassword2}
-                onChangeText={setSignupPassword2}
-                placeholder="••••••••"
-                secureTextEntry
-                textContentType="newPassword"
-              />
-              <Field
-                label="Mot de passe du groupe"
-                value={groupePassword}
-                onChangeText={setGroupePassword}
-                placeholder="Demande-le à un membre"
-                secureTextEntry
-                autoCapitalize="none"
-              />
-              <View style={styles.termsRow}>
-                <Pressable
-                  onPress={() => setAcceptTerms((v) => !v)}
-                  hitSlop={8}
-                  accessibilityRole="checkbox"
-                  accessibilityState={{ checked: acceptTerms }}
+              <Text style={styles.termsText}>
+                J&apos;accepte les{' '}
+                <Text
+                  style={styles.termsLink}
+                  onPress={() => Linking.openURL('https://les--artistes.fr/confidentialite.html#conditions')}
                 >
-                  <Ionicons
-                    name={acceptTerms ? 'checkbox' : 'square-outline'}
-                    size={22}
-                    color={acceptTerms ? theme.colors.teal : theme.colors.muted}
-                  />
-                </Pressable>
-                <Text style={styles.termsText}>
-                  J&apos;accepte les{' '}
-                  <Text
-                    style={styles.link}
-                    onPress={() => Linking.openURL('https://les--artistes.fr/confidentialite.html#conditions')}
-                  >
-                    conditions d&apos;utilisation
-                  </Text>
-                  {' '}: aucun contenu offensant ou abusif n&apos;est toléré.
+                  conditions d&apos;utilisation
                 </Text>
-              </View>
-              <PrimaryButton
-                label="Rejoindre le groupe"
-                onPress={handleSignup}
-                loading={loading}
-              />
-            </>
-          )}
-        </View>
+                {' '}: aucun contenu offensant ou abusif n&apos;est toléré.
+              </Text>
+            </View>
+            <Button label="Rejoindre le groupe" onPress={handleSignup} loading={loading} height={56} style={{ marginTop: 6 }} />
+          </>
+        )}
       </ScrollView>
     </KeyboardAware>
   );
 }
 
-function Field(props: React.ComponentProps<typeof TextInput> & { label: string }) {
-  const { label, style, ...rest } = props;
+/** Champ avec son libellé ; `password` ajoute l'œil pour afficher la saisie. */
+function LabeledField({
+  label,
+  hint,
+  password,
+  ...rest
+}: TextInputProps & { label: string; hint?: string; password?: boolean }) {
+  const [shown, setShown] = useState(false);
   return (
     <View style={styles.field}>
-      <Text style={styles.label}>{label}</Text>
-      <TextInput
-        placeholderTextColor="rgba(255,255,255,0.3)"
-        style={[styles.input, style]}
-        {...rest}
-      />
+      <FieldLabel hint={hint}>{label}</FieldLabel>
+      <View>
+        <Field
+          accessibilityLabel={label}
+          secureTextEntry={password && !shown}
+          autoCorrect={password ? false : rest.autoCorrect}
+          style={[styles.input, password && { paddingRight: 56 }]}
+          {...rest}
+        />
+        {password && (
+          <Pressable
+            onPress={() => setShown((v) => !v)}
+            accessibilityRole="button"
+            accessibilityLabel={shown ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+            style={styles.eye}
+          >
+            <Feather name={shown ? 'eye-off' : 'eye'} size={20} color={theme.colors.muted} />
+          </Pressable>
+        )}
+      </View>
     </View>
-  );
-}
-
-function PrimaryButton({
-  label,
-  onPress,
-  loading,
-}: {
-  label: string;
-  onPress: () => void;
-  loading: boolean;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      disabled={loading}
-      style={({ pressed }) => [
-        styles.btn,
-        pressed && { opacity: 0.85 },
-        loading && { opacity: 0.6 },
-      ]}
-    >
-      {loading ? (
-        <ActivityIndicator color="#fff" />
-      ) : (
-        <Text style={styles.btnText}>{label}</Text>
-      )}
-    </Pressable>
   );
 }
 
@@ -416,96 +395,72 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   scroll: {
     flexGrow: 1,
-    justifyContent: 'center',
-    padding: theme.s(6),
+    paddingHorizontal: 24,
     backgroundColor: theme.colors.deep,
   },
-  header: { alignItems: 'center', marginBottom: theme.s(8) },
-  logoMark: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+  logo: {
+    width: 72,
+    height: 72,
+    borderRadius: 22,
     backgroundColor: theme.colors.coral,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: theme.s(3),
+    transform: [{ rotate: '-6deg' }],
+    shadowColor: theme.colors.coral,
+    shadowOpacity: 0.35,
+    shadowRadius: 15,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 10,
   },
-  logoMarkText: {
-    color: '#fff',
-    fontFamily: theme.fonts.serifBlack,
-    fontSize: 22,
-    letterSpacing: 1,
-  },
+  logoText: { color: '#fff', fontFamily: theme.fonts.serifBlack, fontSize: 30, lineHeight: 38 },
   title: {
-    fontFamily: theme.fonts.title,
-    fontSize: 32,
-    fontWeight: '900',
-    color: theme.colors.yellow,
+    marginTop: 22,
+    fontFamily: theme.fonts.serifBlack,
+    fontSize: 44,
+    lineHeight: 50,
     letterSpacing: -0.5,
-  },
-  subtitle: { color: theme.colors.muted, marginTop: theme.s(1) },
-  card: {
-    backgroundColor: theme.colors.cardBg,
-    borderRadius: theme.radius.xl,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    padding: theme.s(6),
-  },
-  tabs: {
-    flexDirection: 'row',
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.pill,
-    padding: 4,
-    marginBottom: theme.s(5),
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: theme.radius.pill,
-    alignItems: 'center',
-  },
-  tabActive: { backgroundColor: theme.colors.surface2 },
-  tabText: { color: theme.colors.muted, fontWeight: '600', fontSize: 14 },
-  tabTextActive: { color: theme.colors.text },
-  field: { marginBottom: theme.s(4) },
-  label: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: theme.colors.muted,
-    marginBottom: 6,
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-  },
-  input: {
-    backgroundColor: theme.colors.inputBg,
-    borderWidth: 1.5,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
     color: theme.colors.text,
-    fontSize: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
   },
-  row2: { flexDirection: 'row' },
-  forgotRow: { alignSelf: 'flex-end', marginTop: -theme.s(1), marginBottom: theme.s(4) },
-  link: { color: theme.colors.teal, fontSize: 13, fontWeight: '500' },
-  termsRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: theme.s(4) },
-  termsText: { flex: 1, color: theme.colors.muted, fontSize: 13, lineHeight: 19 },
-  btn: {
-    backgroundColor: theme.colors.coral,
-    borderRadius: theme.radius.md,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: theme.s(2),
-  },
-  btnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  subtitle: { color: theme.colors.muted, fontFamily: theme.fonts.body, fontSize: 16, marginTop: 6 },
   alert: {
-    backgroundColor: 'rgba(255,107,107,0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,107,107,0.4)',
-    borderRadius: theme.radius.sm,
-    padding: 10,
-    marginBottom: theme.s(3),
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: 'rgba(255,107,107,0.12)',
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    marginTop: 18,
   },
-  alertText: { color: theme.colors.danger, fontSize: 13 },
+  alertText: { flex: 1, color: theme.colors.coralSoft, fontFamily: theme.fonts.bodyBold, fontSize: 14, lineHeight: 19 },
+  field: { marginTop: 18 },
+  input: { height: 54 },
+  eye: {
+    position: 'absolute',
+    right: 5,
+    top: 5,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  row2: { flexDirection: 'row', gap: 12 },
+  forgot: { alignSelf: 'flex-end', minHeight: 44, paddingHorizontal: 4, justifyContent: 'center' },
+  link: { color: theme.colors.teal, fontFamily: theme.fonts.bodyBold, fontSize: 14 },
+  termsRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginTop: 18, marginBottom: 12 },
+  checkTarget: { width: 44, height: 44, marginLeft: -10, marginTop: -10, alignItems: 'center', justifyContent: 'center' },
+  checkBox: {
+    width: 24,
+    height: 24,
+    borderRadius: 7,
+    borderWidth: 2,
+    borderColor: theme.colors.rail,
+    backgroundColor: theme.colors.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkBoxOn: { backgroundColor: theme.colors.teal, borderColor: theme.colors.teal },
+  termsText: { flex: 1, color: theme.colors.muted, fontFamily: theme.fonts.body, fontSize: 14, lineHeight: 20 },
+  termsLink: { color: theme.colors.teal, fontFamily: theme.fonts.bodyBold },
 });

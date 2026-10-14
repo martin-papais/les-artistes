@@ -1,4 +1,3 @@
-import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
@@ -8,28 +7,30 @@ import {
   Alert,
   Dimensions,
   FlatList,
-  Modal,
   Platform,
   Pressable,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { CaptionSheet, PhotoEditSheet } from '@/components/plus/PhotoSheets';
+import { PhotoViewer } from '@/components/plus/PhotoViewer';
+import { Button, Fab, Icon, ScreenHeader } from '@/components/ui/kit';
 import { localDateString, sb, type PhotoRow, sessionUser } from '@/lib/supabase';
-import { getBlocked, ModerationButton } from '@/lib/moderation';
-import { KeyboardAware } from '@/lib/keyboard';
+import { getBlocked } from '@/lib/moderation';
 import { theme } from '@/lib/theme';
 import { useRefreshOnFocus } from '@/lib/useRefresh';
 
+const c = theme.colors;
+const f = theme.fonts;
+
 const COLS = 3;
-const GUTTER = 2;
-// padding GUTTER de chaque côté + marge GUTTER/2 autour de chaque vignette
-const TILE = (Dimensions.get('window').width - GUTTER * 2 - GUTTER * COLS) / COLS;
+const GAP = 4;
+// marge latérale de l'écran de chaque côté + un espace entre deux vignettes
+const TILE = Math.floor((Dimensions.get('window').width - theme.gutter * 2 - GAP * (COLS - 1)) / COLS);
 
 const MAX_SIDE = 1920;
 
@@ -66,6 +67,8 @@ export default function PhotosScreen() {
   const [editing, setEditing] = useState<PhotoRow | null>(null);
   const [uploading, setUploading] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  // Photo choisie, en attente de sa légende
+  const [pending, setPending] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const insets = useSafeAreaInsets();
   // iOS refuse d'ouvrir la fiche d'édition tant que la visionneuse est affichée :
   // on ferme d'abord, puis on ouvre l'édition dans onDismiss
@@ -109,12 +112,13 @@ export default function PhotosScreen() {
   }
 
   function chooseSource() {
+    if (uploading) return;
     Alert.alert(
       'Ajouter une photo',
       undefined,
       [
         { text: 'Prendre une photo', onPress: () => takePhoto() },
-        { text: 'Choisir depuis la pellicule', onPress: () => pickFromLibrary() },
+        { text: 'Choisir dans la pellicule', onPress: () => pickFromLibrary() },
         { text: 'Annuler', style: 'cancel' },
       ],
       { cancelable: true },
@@ -136,7 +140,7 @@ export default function PhotosScreen() {
       allowsEditing: false,
     });
     if (result.canceled || !result.assets[0]) return;
-    await askCaptionAndUpload(result.assets[0]);
+    setPending(result.assets[0]);
   }
 
   async function pickFromLibrary() {
@@ -154,25 +158,13 @@ export default function PhotosScreen() {
       allowsMultipleSelection: false,
     });
     if (result.canceled || !result.assets[0]) return;
-    await askCaptionAndUpload(result.assets[0]);
+    setPending(result.assets[0]);
   }
 
-  async function askCaptionAndUpload(asset: ImagePicker.ImagePickerAsset) {
-    let sujet: string | null = null;
-    if (Platform.OS === 'ios') {
-      sujet = await new Promise<string | null>((resolve) => {
-        Alert.prompt(
-          'Sujet (optionnel)',
-          'Ajoute un petit mot pour cette photo',
-          [
-            { text: 'Sans', onPress: () => resolve(null), style: 'cancel' },
-            { text: 'Publier', onPress: (v?: string) => resolve(v?.trim() || null) },
-          ],
-          'plain-text',
-        );
-      });
-    }
-    await uploadPhoto(asset, sujet);
+  function publishPending(sujet: string | null) {
+    const asset = pending;
+    setPending(null);
+    if (asset) uploadPhoto(asset, sujet);
   }
 
   async function uploadPhoto(
@@ -218,43 +210,53 @@ export default function PhotosScreen() {
       }
       await loadPhotos();
     } catch (e) {
-      Alert.alert('Échec upload', e instanceof Error ? e.message : 'Réessaie.');
+      Alert.alert('Échec de l’envoi', e instanceof Error ? e.message : 'Réessaie.');
     } finally {
       setUploading(false);
     }
   }
 
+  function editFromViewer(p: PhotoRow) {
+    pendingEdit.current = p;
+    setOpenId(null);
+    // onDismiss n'existe que sur iOS (RN 0.81)
+    if (Platform.OS !== 'ios') setTimeout(flushPendingEdit, 300);
+  }
+
   if (loading) {
     return (
-      <SafeAreaView style={styles.center}>
-        <ActivityIndicator color={theme.colors.teal} />
-      </SafeAreaView>
+      <View style={styles.center}>
+        <ActivityIndicator color={c.teal} />
+      </View>
     );
   }
 
-  // Suivi par id : modifier la date retrie la liste, un index pointerait sur une autre photo
-  const opened = openId !== null ? photos.find((p) => p.id === openId) ?? null : null;
-  const isOwner = !!opened && opened.created_by === userId;
+  const n = photos.length;
 
   return (
-    // L'en-tête de la pile occupe déjà le haut de l'écran
-    <SafeAreaView style={styles.flex} edges={['bottom']}>
-      <View style={styles.titleBlock}>
-        <Text style={styles.bigSub}>{photos.length} souvenirs partagés</Text>
-      </View>
+    <View style={styles.flex}>
       <FlatList
         data={photos}
         keyExtractor={(p) => p.id}
         numColumns={COLS}
-        contentContainerStyle={{ padding: GUTTER, paddingBottom: theme.s(20) }}
-        ListEmptyComponent={
-          <View style={styles.emptyWrap}>
-            <Text style={styles.emptyText}>Aucune photo pour l&apos;instant.</Text>
-            <Text style={styles.emptySub}>Tap sur + pour en publier une.</Text>
-          </View>
+        columnWrapperStyle={{ gap: GAP, paddingHorizontal: theme.gutter }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        ListHeaderComponent={
+          <ScreenHeader
+            back
+            title="Photos"
+            sub={n ? `${n} souvenir${n > 1 ? 's' : ''} partagé${n > 1 ? 's' : ''}` : 'Les souvenirs du groupe'}
+            style={{ marginBottom: 18 }}
+          />
         }
+        ListEmptyComponent={<EmptyPhotos onAdd={chooseSource} />}
         renderItem={({ item }) => (
-          <Pressable onPress={() => setOpenId(item.id)} style={styles.tile}>
+          <Pressable
+            onPress={() => setOpenId(item.id)}
+            accessibilityRole="imagebutton"
+            accessibilityLabel={item.sujet ? `Ouvrir la photo ${item.sujet}` : 'Ouvrir la photo'}
+            style={({ pressed }) => [styles.tile, pressed && { opacity: 0.8 }]}
+          >
             <Image
               source={{ uri: item.file_url ?? undefined }}
               style={{ width: TILE, height: TILE }}
@@ -264,337 +266,98 @@ export default function PhotosScreen() {
             />
           </Pressable>
         )}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.teal} />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={c.teal} />}
       />
-      <Pressable
-        onPress={chooseSource}
-        disabled={uploading}
-        style={({ pressed }) => [
-          styles.fab,
-          // Écran de pile bord à bord : plus de barre d'onglets pour protéger le bas
-          { bottom: 24 + insets.bottom },
-          pressed && { transform: [{ scale: 0.96 }] },
-          uploading && { opacity: 0.7 },
-        ]}
-      >
-        {uploading ? <ActivityIndicator color="#fff" /> : <Ionicons name="add" size={32} color="#fff" />}
-      </Pressable>
-      <Modal
-        visible={!!opened}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setOpenId(null)}
+
+      {(n > 0 || uploading) && (
+        <Fab
+          label={uploading ? 'Envoi en cours' : 'Ajouter'}
+          icon={uploading ? 'upload-cloud' : 'plus'}
+          onPress={chooseSource}
+          // Écran de pile bord à bord : pas de barre d'onglets pour protéger le bas
+          bottom={insets.bottom + 16}
+        />
+      )}
+
+      <PhotoViewer
+        photos={photos}
+        openId={openId}
+        userId={userId}
+        onChange={setOpenId}
+        onClose={() => setOpenId(null)}
+        onEdit={editFromViewer}
+        onBlocked={loadPhotos}
         onDismiss={flushPendingEdit}
-      >
-        {!!opened && (
-          <View style={styles.viewer}>
-            <Pressable
-              onPress={() => setOpenId(null)}
-              style={[styles.viewerClose, { top: insets.top + 8 }]}
-              hitSlop={20}
-            >
-              <Ionicons name="close" size={32} color="#fff" />
-            </Pressable>
-            {!!isOwner && (
-              <Pressable
-                onPress={() => {
-                  pendingEdit.current = opened;
-                  setOpenId(null);
-                  // onDismiss n'existe que sur iOS (RN 0.81)
-                  if (Platform.OS !== 'ios') setTimeout(flushPendingEdit, 300);
-                }}
-                style={[styles.viewerEdit, { top: insets.top + 8 }]}
-                hitSlop={20}
-              >
-                <Ionicons name="create-outline" size={28} color="#fff" />
-              </Pressable>
-            )}
-            <View style={[styles.viewerEdit, { top: insets.top + 8 }]}>
-              <ModerationButton
-                kind="photo"
-                itemId={opened.id}
-                authorId={opened.created_by}
-                authorName={opened.pris_par || 'ce membre'}
-                excerpt={opened.sujet || opened.file_url || ''}
-                currentUserId={userId}
-                color="#fff"
-                onBlocked={() => {
-                  setOpenId(null);
-                  loadPhotos();
-                }}
-              />
-            </View>
-            <Image
-              source={{ uri: opened.file_url ?? undefined }}
-              style={StyleSheet.absoluteFill}
-              contentFit="contain"
-            />
-            {(opened.sujet || opened.description) && (
-              <View style={[styles.viewerCaption, { paddingBottom: insets.bottom + 16 }]}>
-                {!!opened.sujet && <Text style={styles.viewerCaptionText}>{opened.sujet}</Text>}
-                {!!opened.description && (
-                  <Text style={[styles.viewerCaptionText, { opacity: 0.75, marginTop: 4 }]}>
-                    {opened.description}
-                  </Text>
-                )}
-              </View>
-            )}
-          </View>
-        )}
-      </Modal>
-      <Modal
-        visible={!!editing}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setEditing(null)}
-      >
-        {!!editing && (
-          <PhotoEdit
-            photo={editing}
-            onClose={() => setEditing(null)}
-            onSaved={() => {
-              setEditing(null);
-              loadPhotos();
-            }}
-            onDeleted={() => {
-              setEditing(null);
-              setOpenId(null);
-              loadPhotos();
-            }}
-          />
-        )}
-      </Modal>
-    </SafeAreaView>
+      />
+
+      <CaptionSheet uri={pending?.uri ?? null} onPublish={publishPending} onCancel={() => setPending(null)} />
+
+      {!!editing && (
+        <PhotoEditSheet
+          photo={editing}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            loadPhotos();
+          }}
+          onDeleted={() => {
+            setEditing(null);
+            setOpenId(null);
+            loadPhotos();
+          }}
+        />
+      )}
+    </View>
   );
 }
 
-function PhotoEdit({
-  photo,
-  onClose,
-  onSaved,
-  onDeleted,
-}: {
-  photo: PhotoRow;
-  onClose: () => void;
-  onSaved: () => void;
-  onDeleted: () => void;
-}) {
-  const [sujet, setSujet] = useState(photo.sujet ?? '');
-  const [description, setDescription] = useState(photo.description ?? '');
-  const [date, setDate] = useState(
-    photo.date_media ? photo.date_media.split('T')[0] : '',
-  );
-  const [saving, setSaving] = useState(false);
-
-  async function save() {
-    if (date.trim() && !/^\d{4}-\d{2}-\d{2}$/.test(date.trim())) {
-      Alert.alert('Date invalide', 'Format attendu : AAAA-MM-JJ');
-      return;
-    }
-    setSaving(true);
-    try {
-      const { error } = await sb
-        .from('photos')
-        .update({
-          sujet: sujet.trim() || photo.sujet,
-          description: description.trim() || null,
-          // date_media est une date simple côté web (AAAA-MM-JJ)
-          date_media: date.trim() || null,
-        })
-        .eq('id', photo.id);
-      if (error) throw error;
-      onSaved();
-    } catch (e) {
-      Alert.alert('Erreur', e instanceof Error ? e.message : 'Réessaie.');
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  function deletePhoto() {
-    Alert.alert('Supprimer cette photo ?', 'Cette action est irréversible.', [
-      { text: 'Annuler', style: 'cancel' },
-      {
-        text: 'Supprimer',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            const url = photo.file_url ?? '';
-            const idx = url.indexOf('/media/');
-            const path = idx >= 0 ? url.slice(idx + '/media/'.length) : null;
-            const del = await sb.from('photos').delete().eq('id', photo.id);
-            if (del.error) throw del.error;
-            if (path) await sb.storage.from('media').remove([path]);
-            onDeleted();
-          } catch (e) {
-            Alert.alert('Erreur', e instanceof Error ? e.message : 'Réessaie.');
-          }
-        },
-      },
-    ]);
-  }
-
+/** Écran vide : deux polaroïds, et le bouton pour publier. */
+function EmptyPhotos({ onAdd }: { onAdd: () => void }) {
   return (
-    <SafeAreaView style={styles.flex}>
-      <View style={styles.modalHeader}>
-        <Pressable onPress={onClose} hitSlop={10}>
-          <Ionicons name="close" size={28} color={theme.colors.text} />
-        </Pressable>
-        <Text style={styles.modalTitle}>Modifier la photo</Text>
-        <Pressable onPress={deletePhoto} hitSlop={10}>
-          <Ionicons name="trash-outline" size={24} color={theme.colors.danger} />
-        </Pressable>
+    <View style={styles.empty}>
+      <View style={styles.polaroids} accessible={false}>
+        <View style={[styles.polaroid, { left: 14, top: 16, transform: [{ rotate: '-9deg' }] }]}>
+          <View style={[styles.polaroidPic, { backgroundColor: c.violet }]} />
+        </View>
+        <View style={[styles.polaroid, { left: 66, top: 6, transform: [{ rotate: '7deg' }] }]}>
+          <View style={[styles.polaroidPic, { backgroundColor: c.yellow }]}>
+            <Icon name="camera" size={34} color={c.ink} />
+          </View>
+        </View>
       </View>
-      <KeyboardAware>
-        <ScrollView contentContainerStyle={{ padding: theme.s(5) }}>
-          <Image source={{ uri: photo.file_url ?? undefined }} style={styles.editPreview} contentFit="cover" />
-          <Text style={styles.editLabel}>Sujet</Text>
-          <TextInput
-            value={sujet}
-            onChangeText={setSujet}
-            placeholder="Un petit mot…"
-            placeholderTextColor="rgba(255,255,255,0.3)"
-            style={styles.editInput}
-          />
-          <Text style={styles.editLabel}>Description</Text>
-          <TextInput
-            value={description}
-            onChangeText={setDescription}
-            placeholder="Optionnel"
-            placeholderTextColor="rgba(255,255,255,0.3)"
-            style={styles.editInput}
-            multiline
-          />
-          <Text style={styles.editLabel}>Date (AAAA-MM-JJ)</Text>
-          <TextInput
-            value={date}
-            onChangeText={setDate}
-            placeholder="2026-05-09"
-            placeholderTextColor="rgba(255,255,255,0.3)"
-            style={styles.editInput}
-            autoCapitalize="none"
-          />
-          <Pressable
-            onPress={save}
-            disabled={saving}
-            style={({ pressed }) => [
-              styles.saveBtn,
-              (pressed || saving) && { opacity: 0.7 },
-            ]}
-          >
-            {saving ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.saveText}>Enregistrer ✓</Text>
-            )}
-          </Pressable>
-        </ScrollView>
-      </KeyboardAware>
-    </SafeAreaView>
+      <Text style={styles.emptyTitle}>Aucune photo pour l&apos;instant</Text>
+      <Text style={styles.emptyText}>Partage le premier souvenir. Tout le groupe pourra le voir.</Text>
+      <Button label="Ajouter une photo" icon="plus" onPress={onAdd} height={54} style={{ marginTop: 24, paddingHorizontal: 28 }} />
+      <Text style={styles.emptyHint}>Prendre une photo ou choisir dans la pellicule</Text>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: theme.colors.deep },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.deep },
-  titleBlock: { paddingHorizontal: theme.s(4), paddingTop: theme.s(3), paddingBottom: theme.s(1) },
-  bigSub: { color: theme.colors.muted, marginTop: 2 },
+  flex: { flex: 1, backgroundColor: c.deep },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.deep },
   tile: {
-    margin: GUTTER / 2,
-    backgroundColor: theme.colors.surface,
-    borderRadius: 4,
+    marginBottom: GAP,
+    backgroundColor: c.card,
+    borderRadius: 10,
     overflow: 'hidden',
   },
-  emptyWrap: { padding: theme.s(10), alignItems: 'center' },
-  emptyText: { color: theme.colors.muted, fontSize: 15 },
-  emptySub: { color: theme.colors.muted, fontSize: 13, marginTop: 4 },
-  fab: {
+  empty: { marginTop: 52, alignItems: 'center', paddingHorizontal: 36 },
+  polaroids: { width: 190, height: 150 },
+  polaroid: {
     position: 'absolute',
-    right: 20,
-    bottom: 24,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: theme.colors.coral,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: theme.colors.coral,
-    shadowOpacity: 0.5,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 6,
+    width: 110,
+    height: 124,
+    borderRadius: 10,
+    backgroundColor: c.text,
+    shadowColor: '#000',
+    shadowOpacity: 0.4,
+    shadowRadius: 15,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 8,
   },
-  viewer: { flex: 1, backgroundColor: '#000' },
-  viewerClose: {
-    position: 'absolute',
-    top: 60,
-    right: 20,
-    zIndex: 10,
-  },
-  viewerEdit: {
-    position: 'absolute',
-    top: 60,
-    left: 20,
-    zIndex: 10,
-  },
-  viewerCaption: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    padding: theme.s(4),
-  },
-  viewerCaptionText: { color: '#fff', textAlign: 'center', fontSize: 14 },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: theme.s(4),
-    paddingTop: theme.s(2),
-    paddingBottom: theme.s(2),
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  modalTitle: {
-    color: theme.colors.text,
-    fontFamily: theme.fonts.title,
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  editPreview: {
-    width: '100%',
-    height: 220,
-    borderRadius: theme.radius.lg,
-    marginBottom: theme.s(4),
-  },
-  editLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: theme.colors.muted,
-    marginBottom: 6,
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-  },
-  editInput: {
-    backgroundColor: theme.colors.inputBg,
-    borderWidth: 1.5,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
-    color: theme.colors.text,
-    fontSize: 15,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    marginBottom: theme.s(4),
-  },
-  saveBtn: {
-    backgroundColor: theme.colors.coral,
-    borderRadius: theme.radius.md,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: theme.s(2),
-  },
-  saveText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  polaroidPic: { margin: 8, height: 82, borderRadius: 4, alignItems: 'center', justifyContent: 'center' },
+  emptyTitle: { marginTop: 28, fontFamily: f.serifBlack, fontSize: 26, lineHeight: 32, color: c.text, textAlign: 'center' },
+  emptyText: { marginTop: 8, fontFamily: f.body, fontSize: 15, lineHeight: 22, color: c.muted, textAlign: 'center' },
+  emptyHint: { marginTop: 12, fontFamily: f.body, fontSize: 13, lineHeight: 18, color: c.muted, textAlign: 'center' },
 });

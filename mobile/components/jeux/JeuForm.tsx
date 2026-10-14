@@ -1,25 +1,18 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { useRef, useState, type ReactNode } from 'react';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Button, Chip, Field, FieldLabel, IconButton } from '@/components/ui/kit';
 import { KeyboardAware } from '@/lib/keyboard';
 import { sb, type JeuAlcool, type JeuSociete } from '@/lib/supabase';
 import { theme } from '@/lib/theme';
 
 // Mêmes champs et mêmes valeurs que games.html : un jeu créé ici s'affiche à l'identique sur le site
-const CATEGORIES = ['Cartes', 'Dés', 'Oral', 'Balle', 'Autre'];
-const NIVEAUX = ['Soft', 'Medium', 'Hard', 'Destruction'];
+import { CATEGORIES, NIVEAUX, NiveauGauge } from './JeuCards';
+
+const c = theme.colors;
 
 function tap() {
   Haptics.selectionAsync().catch(() => {});
@@ -34,7 +27,6 @@ export function JeuForm(props: Props) {
   const alc = kind === 'alcool' ? props.initial : null;
   const soc = kind === 'societe' ? props.initial : null;
   const isEdit = !!props.initial;
-  const tone = kind === 'alcool' ? theme.colors.coral : theme.colors.teal;
 
   const [nom, setNom] = useState(props.initial?.nom ?? '');
   const [regles, setRegles] = useState(props.initial?.regles ?? '');
@@ -107,74 +99,152 @@ export function JeuForm(props: Props) {
     }
   }
 
+  const title = isEdit ? 'Modifier le jeu' : kind === 'alcool' ? 'Nouveau jeu d’alcool' : 'Nouveau jeu de société';
+
   return (
-    <SafeAreaView style={styles.flex}>
-      <View style={styles.header}>
-        <Pressable onPress={onClose} hitSlop={10} style={styles.headerBtn} accessibilityRole="button" accessibilityLabel="Fermer">
-          <Ionicons name="close" size={24} color={theme.colors.text} />
-        </Pressable>
-        <Text style={styles.headerTitle} numberOfLines={1}>
-          {isEdit ? 'Modifier le jeu' : kind === 'alcool' ? 'Nouveau jeu d’alcool' : 'Nouveau jeu de société'}
-        </Text>
-        <View style={{ width: 36 }} />
+    <SafeAreaView style={styles.flex} edges={['top', 'bottom', 'left', 'right']}>
+      <View style={styles.topBar}>
+        <IconButton name="x" label="Fermer" onPress={onClose} bg="transparent" />
       </View>
       <KeyboardAware>
-        <ScrollView contentContainerStyle={{ padding: theme.s(5) }} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          contentContainerStyle={styles.body}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+        >
+          <Text style={[styles.kicker, { color: kind === 'alcool' ? c.coralSoft : c.teal }]}>
+            {kind === 'alcool' ? 'Jeu d’alcool' : 'Jeu de société'}
+          </Text>
+          <Text style={styles.title} accessibilityRole="header">
+            {title}
+          </Text>
+
           {kind === 'alcool' && (
-            <Chips label="Catégorie" options={CATEGORIES} value={categorie} onChange={setCategorie} tone={tone} />
+            <Group label="Catégorie">
+              <View style={styles.chipRow}>
+                {CATEGORIES.map((o) => (
+                  <Chip
+                    key={o}
+                    label={o}
+                    active={categorie === o}
+                    color={c.coral}
+                    onPress={() => {
+                      tap();
+                      setCategorie(o);
+                    }}
+                  />
+                ))}
+              </View>
+            </Group>
           )}
-          <Field label="Nom du jeu" value={nom} onChangeText={setNom} tone={tone}
-            placeholder={kind === 'alcool' ? 'Bière-pong, Roi de l’alcool…' : 'Catan, Codenames, Uno…'} />
+
+          <Group label="Nom du jeu">
+            <Field
+              value={nom}
+              onChangeText={setNom}
+              accessibilityLabel="Nom du jeu"
+              placeholder={kind === 'alcool' ? 'Bière-pong, Roi de l’alcool…' : 'Catan, Codenames, Uno…'}
+            />
+          </Group>
 
           {kind === 'alcool' ? (
             <>
-              <Field label="Nombre de joueurs idéal (optionnel)" value={joueurs} onChangeText={setJoueurs}
-                placeholder="4-8, 2+…" tone={tone} />
-              <Chips label="Niveau d’ivresse (optionnel)" options={NIVEAUX} value={niveau} tone={tone}
-                // Toucher le niveau choisi le retire : le champ reste facultatif
-                onChange={(v) => setNiveau((cur) => (cur === v ? '' : v))} />
+              <Group label="Nombre de joueurs idéal" hint="(optionnel)">
+                <Field value={joueurs} onChangeText={setJoueurs} placeholder="4-8, 2+…" accessibilityLabel="Nombre de joueurs idéal" />
+              </Group>
+              <Group label="Niveau d’ivresse" hint="(optionnel)">
+                <View style={styles.chipRow}>
+                  {NIVEAUX.map((o) => (
+                    <Chip
+                      key={o}
+                      label={o}
+                      active={niveau === o}
+                      color={c.coral}
+                      onPress={() => {
+                        tap();
+                        // Toucher le niveau choisi le retire : le champ reste facultatif
+                        setNiveau((cur) => (cur === o ? '' : o));
+                      }}
+                    />
+                  ))}
+                </View>
+                {!!niveau && (
+                  <View style={styles.gauge}>
+                    <NiveauGauge niveau={niveau} size={10} />
+                  </View>
+                )}
+              </Group>
             </>
           ) : (
             <>
-              <Field label="Joueurs max (optionnel)" value={joueursMax} onChangeText={setJoueursMax}
-                placeholder="6" keyboardType="number-pad" maxLength={2} tone={tone} />
-              <Field label="Durée (optionnel)" value={duree} onChangeText={setDuree} placeholder="30 min, 1 h…" tone={tone} />
-              <Text style={styles.label}>Qui l’a ?</Text>
-              <Pressable
-                onPress={() => {
-                  tap();
-                  setAAcheter((a) => !a);
-                }}
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: aAcheter }}
-                style={styles.toggle}
-              >
-                <Ionicons name={aAcheter ? 'checkbox' : 'square-outline'} size={22} color={aAcheter ? tone : theme.colors.muted} />
-                <Text style={styles.toggleText}>Personne, il est à acheter</Text>
-              </Pressable>
-              {!aAcheter && (
-                <Field label="" value={detenteur} onChangeText={setDetenteur} placeholder="Prénom de la personne" tone={tone} />
-              )}
+              <View style={styles.pair}>
+                <View style={{ flex: 1 }}>
+                  <Group label="Joueurs max" hint="(optionnel)">
+                    <Field
+                      value={joueursMax}
+                      onChangeText={setJoueursMax}
+                      placeholder="6"
+                      keyboardType="number-pad"
+                      maxLength={2}
+                      accessibilityLabel="Joueurs max, de 1 à 20"
+                    />
+                  </Group>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Group label="Durée" hint="(optionnel)">
+                    <Field value={duree} onChangeText={setDuree} placeholder="30 min, 1 h…" accessibilityLabel="Durée d’une partie" />
+                  </Group>
+                </View>
+              </View>
+              <Group label="Qui l’a ?">
+                <Pressable
+                  onPress={() => {
+                    tap();
+                    setAAcheter((a) => !a);
+                  }}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: aAcheter }}
+                  style={({ pressed }) => [styles.toggle, pressed && { opacity: 0.8 }]}
+                >
+                  <Feather name={aAcheter ? 'check-square' : 'square'} size={22} color={aAcheter ? c.teal : c.muted} />
+                  <Text style={styles.toggleText}>Personne, il est à acheter</Text>
+                </Pressable>
+                {!aAcheter && (
+                  <Field
+                    value={detenteur}
+                    onChangeText={setDetenteur}
+                    placeholder="Prénom de la personne"
+                    accessibilityLabel="Prénom de la personne qui a le jeu"
+                    style={{ marginTop: 10 }}
+                  />
+                )}
+              </Group>
             </>
           )}
 
-          <Field
-            label={kind === 'alcool' ? 'Règles du jeu' : 'Règle en bref'}
-            value={regles}
-            onChangeText={setRegles}
-            placeholder={kind === 'alcool' ? 'Comment on joue, les règles, les gages…' : 'Le principe du jeu en quelques lignes'}
-            multiline
-            tone={tone}
-            style={{ minHeight: 110, textAlignVertical: 'top' }}
-          />
+          <Group label={kind === 'alcool' ? 'Règles du jeu' : 'Règle en bref'}>
+            <Field
+              value={regles}
+              onChangeText={setRegles}
+              placeholder={kind === 'alcool' ? 'Comment on joue, les règles, les gages…' : 'Le principe du jeu en quelques lignes'}
+              accessibilityLabel={kind === 'alcool' ? 'Règles du jeu' : 'Règle en bref'}
+              multiline
+              style={{ minHeight: 120 }}
+            />
+          </Group>
 
           {kind === 'alcool' ? (
-            <Field label="Matériel (optionnel)" value={materiel} onChangeText={setMateriel}
-              placeholder="Un jeu de cartes, des dés, des verres…" tone={tone} />
+            <Group label="Matériel" hint="(optionnel)">
+              <Field
+                value={materiel}
+                onChangeText={setMateriel}
+                placeholder="Un jeu de cartes, des dés, des verres…"
+                accessibilityLabel="Matériel"
+              />
+            </Group>
           ) : (
-            <>
-              <Text style={styles.label}>Ton avis (optionnel)</Text>
-              <View style={styles.stars}>
+            <Group label="Ta note" hint="(optionnel)">
+              <View style={styles.stars} accessibilityRole="radiogroup" accessibilityLabel="Ta note">
                 {[1, 2, 3, 4, 5].map((n) => (
                   <Pressable
                     key={n}
@@ -182,171 +252,55 @@ export function JeuForm(props: Props) {
                       tap();
                       setNote((cur) => (cur === n ? 0 : n));
                     }}
-                    hitSlop={6}
+                    accessibilityRole="radio"
                     accessibilityLabel={`${n} étoile${n > 1 ? 's' : ''}`}
-                    accessibilityState={{ selected: note === n }}
+                    accessibilityState={{ checked: note === n }}
+                    style={({ pressed }) => [styles.star, pressed && { opacity: 0.6 }]}
                   >
-                    <Ionicons name={note >= n ? 'star' : 'star-outline'} size={30}
-                      color={note >= n ? theme.colors.yellow : theme.colors.muted} />
+                    <Ionicons name={note >= n ? 'star' : 'star-outline'} size={30} color={note >= n ? c.yellow : c.muted} />
                   </Pressable>
                 ))}
               </View>
-              <Field label="" value={avis} onChangeText={setAvis} placeholder="Ton avis en quelques mots" tone={tone} />
-            </>
+              <Field value={avis} onChangeText={setAvis} placeholder="Ton avis en quelques mots" accessibilityLabel="Ton avis" style={{ marginTop: 6 }} />
+            </Group>
           )}
-
-          <Pressable
-            onPress={save}
-            disabled={saving}
-            accessibilityRole="button"
-            style={({ pressed }) => [styles.saveBtn, { backgroundColor: tone }, (pressed || saving) && { opacity: 0.7 }]}
-          >
-            {saving ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.saveText}>{isEdit ? 'Enregistrer' : 'Ajouter le jeu'}</Text>
-            )}
-          </Pressable>
         </ScrollView>
+        {/* Bouton toujours visible, au-dessus du clavier */}
+        <View style={styles.footer}>
+          <Button
+            label={isEdit ? 'Enregistrer' : 'Ajouter le jeu'}
+            variant={kind === 'alcool' ? 'primary' : 'yes'}
+            onPress={save}
+            loading={saving}
+          />
+        </View>
       </KeyboardAware>
     </SafeAreaView>
   );
 }
 
-function Field({
-  label,
-  tone,
-  style,
-  ...rest
-}: React.ComponentProps<typeof TextInput> & { label: string; tone: string }) {
-  const [focused, setFocused] = useState(false);
+function Group({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
-    <View style={{ marginBottom: theme.s(4) }}>
-      {!!label && <Text style={styles.label}>{label}</Text>}
-      <TextInput
-        placeholderTextColor="rgba(255,255,255,0.3)"
-        accessibilityLabel={label || rest.placeholder}
-        {...rest}
-        onFocus={(e) => {
-          setFocused(true);
-          rest.onFocus?.(e);
-        }}
-        onBlur={(e) => {
-          setFocused(false);
-          rest.onBlur?.(e);
-        }}
-        style={[styles.input, focused && { borderColor: tone }, style]}
-      />
-    </View>
-  );
-}
-
-function Chips({
-  label,
-  options,
-  value,
-  onChange,
-  tone,
-}: {
-  label: string;
-  options: string[];
-  value: string;
-  onChange: (v: string) => void;
-  tone: string;
-}) {
-  return (
-    <View style={{ marginBottom: theme.s(4) }}>
-      <Text style={styles.label}>{label}</Text>
-      <View style={styles.chipRow}>
-        {options.map((o) => {
-          const on = value === o;
-          return (
-            <Pressable
-              key={o}
-              onPress={() => {
-                tap();
-                onChange(o);
-              }}
-              accessibilityRole="radio"
-              accessibilityState={{ selected: on }}
-              style={[styles.chip, on && { backgroundColor: tone, borderColor: tone }]}
-            >
-              <Text style={[styles.chipText, on && styles.chipTextOn]}>{o}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
+    <View style={styles.group}>
+      <FieldLabel hint={hint}>{label}</FieldLabel>
+      {children}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: theme.colors.deep },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: theme.s(3),
-    paddingVertical: theme.s(2),
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  headerBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: theme.colors.surface,
-  },
-  headerTitle: {
-    flex: 1,
-    textAlign: 'center',
-    marginHorizontal: theme.s(2),
-    color: theme.colors.text,
-    fontFamily: theme.fonts.serif,
-    fontSize: 18,
-  },
-  label: {
-    fontFamily: theme.fonts.bodyBold,
-    fontSize: 11,
-    color: theme.colors.muted,
-    marginBottom: 6,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-  },
-  input: {
-    backgroundColor: theme.colors.inputBg,
-    borderWidth: 1.5,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
-    color: theme.colors.text,
-    fontFamily: theme.fonts.body,
-    fontSize: 15,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
+  flex: { flex: 1, backgroundColor: c.deep },
+  topBar: { paddingHorizontal: 12, paddingTop: 4 },
+  body: { paddingHorizontal: theme.gutter, paddingTop: 4, paddingBottom: 16 },
+  kicker: { fontFamily: theme.fonts.bodyBold, fontSize: 13 },
+  title: { fontFamily: theme.fonts.serifBlack, fontSize: 32, lineHeight: 38, color: c.text, marginTop: 4, marginBottom: 8 },
+  group: { marginTop: 18 },
+  pair: { flexDirection: 'row', gap: 10 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: theme.radius.pill,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1.5,
-    borderColor: theme.colors.border,
-  },
-  chipText: { color: theme.colors.muted, fontFamily: theme.fonts.bodyMedium, fontSize: 13 },
-  chipTextOn: { color: '#fff', fontFamily: theme.fonts.bodyBold },
-  toggle: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 44, marginBottom: theme.s(2) },
-  toggleText: { color: theme.colors.text, fontFamily: theme.fonts.body, fontSize: 15 },
-  stars: { flexDirection: 'row', gap: 10, marginBottom: theme.s(3) },
-  saveBtn: {
-    borderRadius: theme.radius.md,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: theme.s(4),
-    minHeight: 52,
-    justifyContent: 'center',
-  },
-  saveText: { color: '#fff', fontFamily: theme.fonts.bodyBold, fontSize: 16 },
+  gauge: { marginTop: 10 },
+  toggle: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 50, paddingHorizontal: 16, borderRadius: 16, backgroundColor: c.card },
+  toggleText: { color: c.text, fontFamily: theme.fonts.body, fontSize: 16, flexShrink: 1 },
+  stars: { flexDirection: 'row', marginLeft: -8 },
+  star: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
+  footer: { paddingHorizontal: theme.gutter, paddingTop: 10, paddingBottom: 8, backgroundColor: c.deep },
 });

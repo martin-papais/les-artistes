@@ -12,45 +12,47 @@ export default function TabLayout() {
         tabBarInactiveTintColor: theme.colors.muted,
         tabBarStyle: {
           backgroundColor: theme.colors.deep,
-          borderTopColor: theme.colors.border,
+          borderTopColor: theme.colors.hairline,
           borderTopWidth: 1,
+          paddingTop: 6,
         },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+        tabBarLabelStyle: { fontSize: 11, fontFamily: theme.fonts.bodyMedium },
+        sceneStyle: { backgroundColor: theme.colors.deep },
       }}
     >
       <Tabs.Screen
         name="events"
         options={{
           title: 'Événements',
-          tabBarIcon: ({ color, size }) => <Ionicons name="calendar" size={size} color={color} />,
+          tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? 'calendar' : 'calendar-outline'} size={24} color={color} />,
         }}
       />
       <Tabs.Screen
         name="news"
         options={{
           title: 'Actu',
-          tabBarIcon: ({ color, size }) => <Ionicons name="newspaper" size={size} color={color} />,
+          tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? 'newspaper' : 'newspaper-outline'} size={24} color={color} />,
         }}
       />
       <Tabs.Screen
         name="roulette"
         options={{
           title: 'Roulette',
-          tabBarIcon: ({ color, size }) => <Ionicons name="disc" size={size} color={color} />,
+          tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? 'disc' : 'disc-outline'} size={24} color={color} />,
         }}
       />
       <Tabs.Screen
         name="jeux"
         options={{
           title: 'Jeux',
-          tabBarIcon: ({ color, size }) => <Ionicons name="game-controller" size={size} color={color} />,
+          tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? 'game-controller' : 'game-controller-outline'} size={24} color={color} />,
         }}
       />
       <Tabs.Screen
         name="plus"
         options={{
           title: 'Plus',
-          tabBarIcon: ({ color, size }) => <Ionicons name="grid" size={size} color={color} />,
+          tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? 'grid' : 'grid-outline'} size={24} color={color} />,
         }}
       />
     </Tabs>

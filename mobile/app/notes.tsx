@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -11,7 +11,10 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { reactionOf, REACTIONS } from '@/components/plus/reactions';
+import { EmptyState, IconButton, Pastille, ScreenHeader } from '@/components/ui/kit';
 import {
   sb,
   type Note,
@@ -21,7 +24,8 @@ import { getBlocked, ModerationButton } from '@/lib/moderation';
 import { KeyboardAware } from '@/lib/keyboard';
 import { theme } from '@/lib/theme';
 
-const EMOJIS = ['👍', '❤️', '😂', '🔥', '👀', '💯', '✅', '😮'] as const;
+const c = theme.colors;
+const f = theme.fonts;
 
 type NoteCard = Note & {
   author?: ProfileMini | null;
@@ -36,6 +40,9 @@ export default function NotesScreen() {
   const [posting, setPosting] = useState(false);
   const reacting = useRef(false);
   const [userId, setUserId] = useState<string | null>(null);
+  // Une seule grille de réactions ouverte à la fois
+  const [pickerFor, setPickerFor] = useState<string | null>(null);
+  const insets = useSafeAreaInsets();
 
   const loadAll = useCallback(async () => {
     const user = await sessionUser();
@@ -159,66 +166,75 @@ export default function NotesScreen() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator color={theme.colors.teal} />
+        <ActivityIndicator color={c.teal} />
       </View>
     );
   }
 
+  const canSend = !!text.trim() && !posting;
+
   return (
-    <KeyboardAware insideSafeArea={false}>
+    <KeyboardAware insideSafeArea={false} style={styles.flex}>
       <FlatList
         data={notes}
         keyboardShouldPersistTaps="handled"
         keyExtractor={(n) => n.id}
-        contentContainerStyle={{ padding: theme.s(4), paddingBottom: theme.s(40) }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
         ListHeaderComponent={
-          <View style={styles.composer}>
-            <TextInput
-              value={text}
-              onChangeText={setText}
-              placeholder="Écris une pensée du moment…"
-              placeholderTextColor={theme.colors.muted}
-              style={styles.composerInput}
-              multiline
-            />
-            <Pressable
-              onPress={publish}
-              disabled={posting || !text.trim()}
-              style={({ pressed }) => [
-                styles.publishBtn,
-                (pressed || posting || !text.trim()) && { opacity: 0.5 },
-              ]}
-            >
+          <View>
+            <ScreenHeader back title="Notes" sub="Le mur des pensées du groupe" />
+            <View style={styles.composer}>
+              <TextInput
+                value={text}
+                onChangeText={setText}
+                placeholder="Écris une pensée du moment"
+                placeholderTextColor={c.muted}
+                selectionColor={c.coral}
+                accessibilityLabel="Écris une pensée du moment"
+                style={styles.composerInput}
+                multiline
+              />
               {posting ? (
-                <ActivityIndicator color="#fff" />
+                <View style={[styles.send, { backgroundColor: c.coral }]}>
+                  <ActivityIndicator color="#fff" />
+                </View>
               ) : (
-                <Text style={styles.publishText}>Publier</Text>
+                <IconButton
+                  name="send"
+                  label="Publier"
+                  onPress={publish}
+                  disabled={!canSend}
+                  bg={canSend ? c.coral : c.rail}
+                  color={canSend ? '#fff' : c.muted}
+                />
               )}
-            </Pressable>
+            </View>
           </View>
         }
         ListEmptyComponent={
-          <View style={styles.empty}>
-            <Text style={styles.emptyText}>Aucune note pour l&apos;instant.</Text>
-            <Text style={styles.emptySub}>Sois le premier à publier.</Text>
-          </View>
+          <EmptyState
+            icon="edit-3"
+            iconBg={c.yellow}
+            iconColor={c.ink}
+            title="Aucune note pour l'instant"
+            text="Écris la première pensée du groupe, juste au-dessus."
+          />
         }
         renderItem={({ item }) => (
           <NoteCardView
             note={item}
             currentUserId={userId}
-            onReact={(e) => toggleReact(item, e)}
+            pickerOpen={pickerFor === item.id}
+            onTogglePicker={() => setPickerFor((p) => (p === item.id ? null : item.id))}
+            onReact={(e) => {
+              setPickerFor(null);
+              toggleReact(item, e);
+            }}
             onDelete={() => deleteNote(item)}
             onBlocked={loadAll}
           />
         )}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={theme.colors.teal}
-          />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={c.teal} />}
       />
     </KeyboardAware>
   );
@@ -227,12 +243,16 @@ export default function NotesScreen() {
 function NoteCardView({
   note,
   currentUserId,
+  pickerOpen,
+  onTogglePicker,
   onReact,
   onDelete,
   onBlocked,
 }: {
   note: NoteCard;
   currentUserId: string | null;
+  pickerOpen: boolean;
+  onTogglePicker: () => void;
   onBlocked: () => void;
   onReact: (emoji: string) => void;
   onDelete: () => void;
@@ -251,51 +271,86 @@ function NoteCardView({
   return (
     <View style={styles.note}>
       <View style={styles.noteHeader}>
-        <Text style={styles.noteAuthor}>{name}</Text>
-        <Text style={styles.noteDate}>
-          {new Date(note.created_at).toLocaleDateString('fr-FR', {
-            day: 'numeric',
-            month: 'short',
-          })}
-        </Text>
-        <ModerationButton
-          kind="note"
-          itemId={note.id}
-          authorId={note.user_id}
-          authorName={name}
-          excerpt={note.contenu}
-          currentUserId={currentUserId}
-          onBlocked={onBlocked}
-        />
+        <Pastille id={note.user_id} name={name} size={32} />
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={styles.noteAuthor} numberOfLines={1}>
+            {name}
+          </Text>
+          <Text style={styles.noteDate}>
+            {new Date(note.created_at).toLocaleDateString('fr-FR', {
+              day: 'numeric',
+              month: 'long',
+            })}
+          </Text>
+        </View>
+        {isMine ? (
+          <IconButton name="trash-2" label="Supprimer ma note" onPress={onDelete} bg="transparent" color={c.muted} size={40} />
+        ) : (
+          <ModerationButton
+            kind="note"
+            itemId={note.id}
+            authorId={note.user_id}
+            authorName={name}
+            excerpt={note.contenu}
+            currentUserId={currentUserId}
+            onBlocked={onBlocked}
+          />
+        )}
       </View>
       <Text style={styles.noteText}>{note.contenu}</Text>
 
-      <View style={styles.reactionRow}>
-        {usedEmojis.map(([emoji, count]) => (
-          <Pressable
-            key={emoji}
-            onPress={() => onReact(emoji)}
-            style={[styles.reactionPill, mine.has(emoji) && styles.reactionPillMine]}
-          >
-            <Text style={styles.reactionEmoji}>{emoji}</Text>
-            <Text style={[styles.reactionCount, mine.has(emoji) && { color: theme.colors.coral }]}>
-              {count}
-            </Text>
-          </Pressable>
-        ))}
-        <View style={styles.emojiPicker}>
-          {EMOJIS.map((e) => (
-            <Pressable key={e} onPress={() => onReact(e)} style={styles.emojiPickBtn}>
-              <Text style={styles.emojiChar}>{e}</Text>
-            </Pressable>
-          ))}
+      {pickerOpen ? (
+        <View style={styles.picker} accessibilityLabel="Choisir une réaction">
+          {REACTIONS.map((r) => {
+            const on = mine.has(r.emoji);
+            return (
+              <Pressable
+                key={r.emoji}
+                onPress={() => onReact(r.emoji)}
+                accessibilityRole="button"
+                accessibilityLabel={on ? `${r.label}, retirer ma réaction` : r.label}
+                accessibilityState={{ selected: on }}
+                style={({ pressed }) => [styles.pickCell, pressed && { opacity: 0.6 }]}
+              >
+                <View style={[styles.pickDot, on && styles.pickCellMine]}>{r.draw(22, r.color)}</View>
+              </Pressable>
+            );
+          })}
         </View>
-      </View>
-
-      {!!isMine && (
-        <Pressable onPress={onDelete} style={styles.deleteBtn} hitSlop={6}>
-          <Ionicons name="trash-outline" size={14} color={theme.colors.muted} />
-          <Text style={styles.deleteText}>Supprimer</Text>
+      ) : (
+        <View style={styles.reactionRow}>
+          {usedEmojis.map(([emoji, count]) => {
+            const r = reactionOf(emoji);
+            const on = mine.has(emoji);
+            return (
+              <Pressable
+                key={emoji}
+                onPress={() => onReact(emoji)}
+                accessibilityRole="button"
+                accessibilityLabel={`${r.label}, ${count}${on ? ', tu as réagi' : ''}`}
+                accessibilityState={{ selected: on }}
+                hitSlop={{ top: 2, bottom: 2 }}
+                style={({ pressed }) => [styles.reactionPill, on && styles.reactionPillMine, pressed && { opacity: 0.7 }]}
+              >
+                {r.draw(18, on ? c.coralSoft : r.color)}
+                <Text style={[styles.reactionCount, on && { color: c.coralSoft }]}>{count}</Text>
+              </Pressable>
+            );
+          })}
+          <Pressable
+            onPress={onTogglePicker}
+            accessibilityRole="button"
+            accessibilityLabel="Réagir"
+            hitSlop={{ top: 2, bottom: 2, left: 2, right: 2 }}
+            style={({ pressed }) => [styles.reactBtn, pressed && { opacity: 0.7 }]}
+          >
+            <MaterialCommunityIcons name="emoticon-plus-outline" size={21} color={c.muted} />
+          </Pressable>
+        </View>
+      )}
+      {pickerOpen && (
+        <Pressable onPress={onTogglePicker} accessibilityRole="button" style={styles.pickerClose}>
+          <Text style={styles.pickerCloseText}>Fermer</Text>
         </Pressable>
       )}
     </View>
@@ -303,84 +358,70 @@ function NoteCardView({
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: theme.colors.deep },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.deep },
+  flex: { flex: 1, backgroundColor: c.deep },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.deep },
   composer: {
-    backgroundColor: theme.colors.cardBg,
-    borderRadius: theme.radius.lg,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    padding: theme.s(3),
-    marginBottom: theme.s(4),
+    marginTop: 18,
+    marginBottom: 18,
+    marginHorizontal: theme.gutter,
+    paddingVertical: 6,
+    paddingRight: 6,
+    paddingLeft: 16,
+    borderRadius: 26,
+    backgroundColor: c.card,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 8,
   },
   composerInput: {
-    color: theme.colors.text,
+    flex: 1,
+    minWidth: 0,
+    minHeight: 44,
+    maxHeight: 140,
+    paddingTop: 11,
+    paddingBottom: 11,
+    color: c.text,
+    fontFamily: f.body,
     fontSize: 15,
-    minHeight: 80,
     textAlignVertical: 'top',
   },
-  publishBtn: {
-    backgroundColor: theme.colors.coral,
-    borderRadius: theme.radius.md,
-    paddingVertical: 10,
-    alignItems: 'center',
-    marginTop: theme.s(2),
-  },
-  publishText: { color: '#fff', fontWeight: '700', fontSize: 14 },
-  empty: { padding: theme.s(8), alignItems: 'center' },
-  emptyText: { color: theme.colors.muted, fontSize: 15 },
-  emptySub: { color: theme.colors.muted, fontSize: 13, marginTop: 4 },
+  send: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   note: {
-    backgroundColor: theme.colors.cardBg,
-    borderRadius: theme.radius.lg,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    padding: theme.s(3),
-    marginBottom: theme.s(3),
+    marginHorizontal: theme.gutter,
+    marginBottom: 10,
+    padding: 16,
+    borderRadius: theme.radius.card,
+    backgroundColor: c.card,
   },
-  noteHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 6 },
-  noteAuthor: { color: theme.colors.teal, fontSize: 12, fontWeight: '700' },
-  noteDate: { color: theme.colors.muted, fontSize: 11, marginLeft: 'auto' },
-  noteText: { color: theme.colors.text, fontSize: 15, lineHeight: 22 },
-  reactionRow: {
+  noteHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  noteAuthor: { color: c.text, fontFamily: f.bodyBold, fontSize: 15, lineHeight: 20 },
+  noteDate: { color: c.muted, fontFamily: f.body, fontSize: 13, lineHeight: 18 },
+  noteText: { color: c.text, fontFamily: f.body, fontSize: 16, lineHeight: 23, marginTop: 12, marginBottom: 14 },
+  reactionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' },
+  reactionPill: {
+    height: 40,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    backgroundColor: c.deep,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  reactionPillMine: { backgroundColor: 'rgba(255,107,107,0.18)' },
+  reactionCount: { color: c.text, fontFamily: f.bodyBold, fontSize: 14 },
+  reactBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: c.deep, alignItems: 'center', justifyContent: 'center' },
+  picker: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
-    marginTop: theme.s(3),
-    alignItems: 'center',
+    padding: 4,
+    rowGap: 2,
+    borderRadius: 24,
+    backgroundColor: c.deep,
   },
-  reactionPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.pill,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  reactionPillMine: {
-    backgroundColor: 'rgba(255,107,107,0.15)',
-    borderWidth: 1,
-    borderColor: theme.colors.coral,
-  },
-  reactionEmoji: { fontSize: 14 },
-  reactionCount: { color: theme.colors.muted, fontSize: 11, fontWeight: '700' },
-  emojiPicker: {
-    flexDirection: 'row',
-    gap: 2,
-    marginLeft: 'auto',
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.pill,
-    padding: 2,
-  },
-  emojiPickBtn: { paddingHorizontal: 4, paddingVertical: 2 },
-  emojiChar: { fontSize: 14 },
-  deleteBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: theme.s(2),
-    alignSelf: 'flex-end',
-  },
-  deleteText: { color: theme.colors.muted, fontSize: 11 },
+  // 4 colonnes
+  pickCell: { width: '25%', height: 44, alignItems: 'center', justifyContent: 'center' },
+  pickDot: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  pickCellMine: { backgroundColor: 'rgba(255,107,107,0.18)' },
+  pickerClose: { alignSelf: 'flex-end', minHeight: 44, justifyContent: 'center', paddingHorizontal: 8, marginBottom: -10 },
+  pickerCloseText: { color: c.muted, fontFamily: f.bodyBold, fontSize: 14 },
 });

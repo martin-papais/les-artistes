@@ -1,10 +1,13 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { sb, type EventCoursesVote, type EventFoodVote, type EventRow } from '@/lib/supabase';
 import { theme } from '@/lib/theme';
+
+const c = theme.colors;
+const f = theme.fonts;
 
 type Poll =
   | { kind: 'food'; meal: string; title: string; yes: string; no: string }
@@ -51,29 +54,40 @@ export function pollsFor(e: EventRow): Poll[] {
   return polls;
 }
 
+
 const YES_NO: Record<string, string> = { oui: 'Oui', non: 'Non', nsp: 'Je ne sais pas' };
 
-/** Infos pratiques saisies à la création (alcool, jeux, dodo, courses…). */
+type InfoIcon =
+  | { lib: 'f'; name: React.ComponentProps<typeof Feather>['name'] }
+  | { lib: 'i'; name: React.ComponentProps<typeof Ionicons>['name'] };
+
+/** Infos pratiques en étiquettes : chez qui, lieu, et ce qui a été saisi à la création. */
 export function EventInfos({ event }: { event: EventRow }) {
-  const rows: { icon: React.ComponentProps<typeof Ionicons>['name']; text: string }[] = [];
+  const rows: { icon: InfoIcon; text: string }[] = [];
+  if (event.chez_qui) rows.push({ icon: { lib: 'f', name: 'home' }, text: `Chez ${event.chez_qui}` });
+  if (event.lieu) rows.push({ icon: { lib: 'f', name: 'map-pin' }, text: event.lieu });
   if (event.dormir && event.dormir !== 'nsp') {
-    rows.push({ icon: 'bed-outline', text: `Dormir sur place : ${YES_NO[event.dormir] ?? event.dormir}` });
+    rows.push({ icon: { lib: 'i', name: 'bed-outline' }, text: `Dormir sur place : ${(YES_NO[event.dormir] ?? event.dormir).toLowerCase()}` });
   }
-  if (event.budget) rows.push({ icon: 'wallet-outline', text: `Budget : ${event.budget}` });
+  if (event.budget) rows.push({ icon: { lib: 'f', name: 'credit-card' }, text: `Budget : ${event.budget}` });
   if (event.courses === 'oui') {
     const parts = [event.heure_courses && `à ${event.heure_courses.slice(0, 5)}`, event.lieu_courses]
       .filter(Boolean)
       .join(' · ');
-    rows.push({ icon: 'cart-outline', text: `Courses${parts ? ` : ${parts}` : ' prévues'}` });
+    rows.push({ icon: { lib: 'f', name: 'shopping-cart' }, text: `Courses${parts ? ` : ${parts}` : ' prévues'}` });
   }
-  if (event.alcool) rows.push({ icon: 'beer-outline', text: `Déjà là : ${event.alcool}` });
-  if (event.jeux_liste) rows.push({ icon: 'dice-outline', text: `Jeux dispo : ${event.jeux_liste}` });
+  if (event.alcool) rows.push({ icon: { lib: 'i', name: 'beer-outline' }, text: `Déjà là : ${event.alcool}` });
+  if (event.jeux_liste) rows.push({ icon: { lib: 'i', name: 'dice-outline' }, text: `Jeux dispo : ${event.jeux_liste}` });
   if (rows.length === 0) return null;
   return (
     <View style={styles.infos}>
       {rows.map((r) => (
-        <View key={r.text} style={styles.infoRow}>
-          <Ionicons name={r.icon} size={15} color={theme.colors.muted} />
+        <View key={r.text} style={styles.info}>
+          {r.icon.lib === 'f' ? (
+            <Feather name={r.icon.name} size={15} color={c.muted} />
+          ) : (
+            <Ionicons name={r.icon.name} size={15} color={c.muted} />
+          )}
           <Text style={styles.infoText}>{r.text}</Text>
         </View>
       ))}
@@ -98,7 +112,7 @@ export function EventPolls({
   const busy = useRef(false);
 
   const load = useCallback(async () => {
-    const [f, c] = await Promise.all([
+    const [fv, cv] = await Promise.all([
       hasFood
         ? sb.from('event_food_votes').select('id,event_id,user_id,meal,repas,mange').eq('event_id', event.id)
         : Promise.resolve({ data: [] }),
@@ -106,8 +120,8 @@ export function EventPolls({
         ? sb.from('event_courses_votes').select('id,event_id,user_id,vient').eq('event_id', event.id)
         : Promise.resolve({ data: [] }),
     ]);
-    setFood((f.data ?? []) as EventFoodVote[]);
-    setCourses((c.data ?? []) as EventCoursesVote[]);
+    setFood((fv.data ?? []) as EventFoodVote[]);
+    setCourses((cv.data ?? []) as EventCoursesVote[]);
   }, [event.id, hasFood, hasCourses]);
 
   useEffect(() => {
@@ -177,7 +191,9 @@ export function EventPolls({
 
   return (
     <View style={styles.block}>
-      <Text style={styles.blockTitle}>Repas & organisation</Text>
+      <Text style={styles.blockTitle} accessibilityRole="header">
+        Repas et organisation
+      </Text>
       {polls.map((poll, idx) => {
         const votes =
           poll.kind === 'food'
@@ -194,31 +210,22 @@ export function EventPolls({
             <View style={styles.choiceRow}>
               {(['oui', 'non'] as const).map((val) => {
                 const active = mine === val;
-                const tone = val === 'oui' ? theme.colors.teal : theme.colors.coral;
+                const bg = active ? (val === 'oui' ? c.teal : c.text) : c.deep;
+                const fg = active ? (val === 'oui' ? c.tealInk : c.ink) : c.text;
                 const count = (val === 'oui' ? yes : no).length;
+                const label = val === 'oui' ? poll.yes : poll.no;
                 return (
                   <Pressable
                     key={val}
                     onPress={() => vote(poll, val)}
                     accessibilityRole="button"
+                    accessibilityLabel={`${label}, ${count}${active ? ', choisi. Toucher pour retirer' : ''}`}
                     accessibilityState={{ selected: active }}
-                    style={({ pressed }) => [
-                      styles.choice,
-                      { borderColor: active ? tone : tone + '55' },
-                      active && { backgroundColor: tone },
-                      pressed && { transform: [{ scale: 0.97 }] },
-                    ]}
+                    style={({ pressed }) => [styles.choice, { backgroundColor: bg }, pressed && { opacity: 0.8 }]}
                   >
-                    <Ionicons
-                      name={val === 'oui' ? 'checkmark-circle' : 'close-circle'}
-                      size={17}
-                      color={active ? theme.colors.deep : tone}
-                    />
-                    <Text
-                      style={[styles.choiceText, { color: active ? theme.colors.deep : tone }]}
-                      numberOfLines={1}
-                    >
-                      {val === 'oui' ? poll.yes : poll.no} · {count}
+                    {active && <Feather name={val === 'oui' ? 'check' : 'x'} size={16} color={fg} />}
+                    <Text style={[styles.choiceText, { color: fg }]} numberOfLines={1}>
+                      {label} · {count}
                     </Text>
                   </Pressable>
                 );
@@ -228,14 +235,14 @@ export function EventPolls({
               <Text style={styles.names}>
                 {yes.length > 0 && (
                   <>
-                    <Text style={{ color: theme.colors.teal }}>Oui : </Text>
+                    <Text style={{ color: c.teal, fontFamily: f.bodyBold }}>Oui : </Text>
                     {yes.map((v) => nameOf(v.user_id)).join(', ')}
                   </>
                 )}
-                {yes.length > 0 && no.length > 0 && '   '}
+                {yes.length > 0 && no.length > 0 && '\n'}
                 {no.length > 0 && (
                   <>
-                    <Text style={{ color: theme.colors.coral }}>Non : </Text>
+                    <Text style={{ color: c.coralSoft, fontFamily: f.bodyBold }}>Non : </Text>
                     {no.map((v) => nameOf(v.user_id)).join(', ')}
                   </>
                 )}
@@ -249,53 +256,34 @@ export function EventPolls({
 }
 
 const styles = StyleSheet.create({
-  infos: {
-    marginTop: theme.s(4),
-    gap: 8,
-    padding: theme.s(3),
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+  infos: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  info: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    maxWidth: '100%',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 14,
+    backgroundColor: c.card,
   },
-  infoRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
-  infoText: { flex: 1, color: theme.colors.text, fontFamily: theme.fonts.body, fontSize: 14, lineHeight: 19 },
-  block: {
-    marginTop: theme.s(6),
-    padding: theme.s(4),
-    borderRadius: theme.radius.lg,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-  },
-  blockTitle: {
-    color: theme.colors.muted,
-    fontFamily: theme.fonts.bodyBold,
-    fontSize: 12,
-    letterSpacing: 1.5,
-    textTransform: 'uppercase',
-    marginBottom: theme.s(3),
-  },
+  infoText: { flexShrink: 1, color: c.text, fontFamily: f.body, fontSize: 14, lineHeight: 19, marginTop: -1 },
+  block: { padding: 14, borderRadius: theme.radius.card, backgroundColor: c.card },
+  blockTitle: { color: c.text, fontFamily: f.bodyBold, fontSize: 18, lineHeight: 24, marginBottom: 12 },
   poll: {},
-  pollSep: {
-    marginTop: theme.s(4),
-    paddingTop: theme.s(4),
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: theme.colors.border,
-  },
-  pollTitle: { color: theme.colors.text, fontFamily: theme.fonts.bodyBold, fontSize: 15, marginBottom: theme.s(2) },
+  pollSep: { marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: c.hairline },
+  pollTitle: { color: c.text, fontFamily: f.bodyBold, fontSize: 15, marginBottom: 10 },
   choiceRow: { flexDirection: 'row', gap: 8 },
   choice: {
     flex: 1,
+    height: 44,
+    borderRadius: 22,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: 10,
-    paddingHorizontal: 6,
-    borderRadius: theme.radius.md,
-    borderWidth: 1.5,
+    paddingHorizontal: 8,
   },
-  choiceText: { fontFamily: theme.fonts.bodyBold, fontSize: 14, flexShrink: 1 },
-  names: { color: theme.colors.muted, fontFamily: theme.fonts.body, fontSize: 13, lineHeight: 18, marginTop: 8 },
+  choiceText: { fontFamily: f.bodyBold, fontSize: 14, flexShrink: 1 },
+  names: { color: c.muted, fontFamily: f.body, fontSize: 13, lineHeight: 19, marginTop: 10 },
 });

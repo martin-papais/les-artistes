@@ -1,23 +1,27 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
+import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
+import * as Updates from 'expo-updates';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
+  type TextInputProps,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Button, Field, FieldLabel, IconButton, Pastille, Sheet } from '@/components/ui/kit';
 import { signOutAndUnregister, unregisterPushToken } from '@/lib/notifications';
 import { parseDobInput, sb, type AnnuaireExtra, type Profile, sessionUser } from '@/lib/supabase';
-import { KeyboardAware } from '@/lib/keyboard';
 import { theme } from '@/lib/theme';
+
+const c = theme.colors;
+const f = theme.fonts;
 
 function parseAddresses(raw: string | null | undefined): string[] {
   if (!raw) return [];
@@ -28,8 +32,29 @@ function parseAddresses(raw: string | null | undefined): string[] {
   return [raw];
 }
 
+/** AAAA-MM-JJ → « 9 juin 2001 » (la valeur brute si elle n'est pas lisible). */
+function dobLabel(dob: string | null | undefined): string | null {
+  if (!dob) return null;
+  const m = dob.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return dob;
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return Number.isNaN(d.getTime()) ? dob : d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+/** « Les Artistes, version 1.0.0 », avec la date de la mise à jour reçue s'il y en a une. */
+function versionLabel(): string {
+  let label = `Les Artistes, version ${Constants.expoConfig?.version ?? '?'}`;
+  try {
+    if (!Updates.isEmbeddedLaunch && Updates.createdAt) {
+      label += `, mise à jour du ${Updates.createdAt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`;
+    }
+  } catch {}
+  return label;
+}
+
 export default function ProfilScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [extra, setExtra] = useState<AnnuaireExtra | null>(null);
   const [email, setEmail] = useState<string | null>(null);
@@ -58,6 +83,11 @@ export default function ProfilScreen() {
     loadAll();
   }, [loadAll]);
 
+  function openEdit() {
+    if (profile) setEditing(true);
+    else Alert.alert('Profil introuvable', 'Reviens sur cette page dans un instant pour réessayer.');
+  }
+
   function confirmLogout() {
     Alert.alert('Déconnexion', 'Tu veux vraiment te déconnecter ?', [
       { text: 'Annuler', style: 'cancel' },
@@ -81,7 +111,7 @@ export default function ProfilScreen() {
     try {
       for (const folder of [user.id, `${user.id}/covers`, `${user.id}/agenda`]) {
         const { data: files } = await sb.storage.from('media').list(folder, { limit: 1000 });
-        const paths = (files ?? []).filter((f) => f.id).map((f) => `${folder}/${f.name}`);
+        const paths = (files ?? []).filter((x) => x.id).map((x) => `${folder}/${x.name}`);
         if (paths.length) await sb.storage.from('media').remove(paths);
       }
       await unregisterPushToken();
@@ -108,141 +138,142 @@ export default function ProfilScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.flex, styles.center]}>
-        <ActivityIndicator color={theme.colors.teal} />
+      <View style={styles.flex}>
+        <BackRow />
+        <View style={styles.center}>
+          <ActivityIndicator color={c.teal} />
+        </View>
       </View>
     );
   }
 
-  const displayName = profile?.pseudo || profile?.prenom || email || '?';
-  const initial = displayName[0]?.toUpperCase() ?? '?';
+  const fullName = [profile?.prenom, profile?.nom].filter(Boolean).join(' ').trim();
+  const displayName = fullName || profile?.pseudo || email || '?';
   const addresses = parseAddresses(extra?.addresses);
 
   return (
-    <SafeAreaView style={styles.flex} edges={['left', 'right', 'bottom']}>
-      <ScrollView contentContainerStyle={styles.scroll}>
-        <View style={styles.avatarRow}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{initial}</Text>
-          </View>
-          <View style={{ marginLeft: 16, flex: 1 }}>
-            <Text style={styles.name}>{displayName}</Text>
-            {!!email && <Text style={styles.email}>{email}</Text>}
-          </View>
-        </View>
+    <View style={styles.flex}>
+      <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}>
+        <BackRow />
 
-        <Pressable
-          onPress={() =>
-            profile
-              ? setEditing(true)
-              : Alert.alert('Profil introuvable', 'Reviens sur cette page dans un instant pour réessayer.')
-          }
-          style={({ pressed }) => [styles.editBtn, pressed && { opacity: 0.85 }]}
-        >
-          <Ionicons name="create-outline" size={18} color={theme.colors.coral} />
-          <Text style={styles.editBtnText}>Modifier mon profil</Text>
-          <Ionicons name="chevron-forward" size={18} color={theme.colors.muted} style={{ marginLeft: 'auto' }} />
-        </Pressable>
-
-        <Text style={styles.section}>Identité</Text>
-        <View style={styles.card}>
-          <Row icon="person-outline" label="Prénom" value={profile?.prenom} />
-          <Row icon="person-outline" label="Nom" value={profile?.nom} />
-          <Row icon="balloon-outline" label="Date de naissance" value={profile?.dob} last />
-        </View>
-
-        <Text style={styles.section}>Contact</Text>
-        <View style={styles.card}>
-          <Row icon="mail-outline" label="Email" value={email} />
-          <Row icon="call-outline" label="Téléphone" value={profile?.tel} last />
-        </View>
-
-        <Text style={styles.section}>Annuaire</Text>
-        <View style={styles.card}>
-          {addresses.length === 0 ? (
-            <Row icon="location-outline" label="Adresses" value={null} last />
-          ) : (
-            addresses.map((a, i) => (
-              <Row
-                key={i}
-                icon="location-outline"
-                label={i === 0 ? 'Adresse' : `Adresse ${i + 1}`}
-                value={a}
-                last={i === addresses.length - 1 && !extra?.rib}
-              />
-            ))
+        <View style={styles.hero}>
+          <Pastille id={profile?.id ?? null} name={displayName} size={88} serif />
+          <Text style={styles.name} accessibilityRole="header">
+            {displayName}
+          </Text>
+          {!!email && (
+            <Text style={styles.email} selectable>
+              {email}
+            </Text>
           )}
-          {!!extra?.rib && <Row icon="card-outline" label="RIB / IBAN" value={extra.rib} last />}
+          <Button label="Modifier mon profil" variant="secondary" height={44} onPress={openEdit} style={{ marginTop: 14 }} />
         </View>
 
-        <Pressable
-          onPress={confirmLogout}
-          style={({ pressed }) => [styles.logoutBtn, pressed && { opacity: 0.85 }]}
-        >
-          <Ionicons name="log-out-outline" size={18} color={theme.colors.coral} />
-          <Text style={styles.logoutText}>Se déconnecter</Text>
-        </Pressable>
+        <View style={{ paddingHorizontal: theme.gutter }}>
+          <Text style={styles.groupTitle} accessibilityRole="header">
+            Ce que le groupe voit
+          </Text>
+          <View style={styles.group}>
+            <InfoRow label="Anniversaire" value={dobLabel(profile?.dob)} onAdd={openEdit} />
+            <InfoRow label="Téléphone" value={profile?.tel} onAdd={openEdit} />
+            {addresses.length === 0 ? (
+              <InfoRow label="Adresses" value={null} onAdd={openEdit} />
+            ) : (
+              addresses.map((a, i) => (
+                <InfoRow key={i} label={i === 0 ? 'Adresse' : `Adresse ${i + 1}`} value={a} onAdd={openEdit} />
+              ))
+            )}
+            <InfoRow label="RIB" value={extra?.rib} onAdd={openEdit} last />
+          </View>
 
-        <Pressable
-          onPress={confirmDeleteAccount}
-          disabled={deleting}
-          style={({ pressed }) => [styles.deleteBtn, (pressed || deleting) && { opacity: 0.6 }]}
-        >
-          {deleting ? (
-            <ActivityIndicator color={theme.colors.danger} />
-          ) : (
-            <Text style={styles.deleteText}>Supprimer mon compte</Text>
-          )}
-        </Pressable>
+          <View style={[styles.group, { marginTop: 20 }]}>
+            <Pressable
+              onPress={confirmLogout}
+              accessibilityRole="button"
+              style={({ pressed }) => [styles.item, styles.itemBorder, pressed && { opacity: 0.7 }]}
+            >
+              <Text style={styles.actionText}>Se déconnecter</Text>
+              <Feather name="log-out" size={18} color={c.muted} />
+            </Pressable>
+            <Pressable
+              onPress={confirmDeleteAccount}
+              disabled={deleting}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: deleting }}
+              style={({ pressed }) => [styles.item, (pressed || deleting) && { opacity: 0.7 }]}
+            >
+              <Text style={[styles.actionText, { color: c.danger }]}>Supprimer mon compte</Text>
+              {deleting && <ActivityIndicator color={c.danger} />}
+            </Pressable>
+          </View>
+
+          <Text style={styles.version}>{versionLabel()}</Text>
+        </View>
       </ScrollView>
 
-      <Modal
-        visible={editing && !!profile}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setEditing(false)}
-      >
-        {!!profile && (
-          <EditProfileModal
-            profile={profile}
-            extra={extra}
-            onClose={() => setEditing(false)}
-            onSaved={() => {
-              setEditing(false);
-              loadAll();
-            }}
-          />
-        )}
-      </Modal>
-    </SafeAreaView>
-  );
-}
-
-function Row({
-  icon,
-  label,
-  value,
-  last,
-}: {
-  icon: React.ComponentProps<typeof Ionicons>['name'];
-  label: string;
-  value: string | null | undefined;
-  last?: boolean;
-}) {
-  return (
-    <View style={[styles.row, !last && styles.rowBorder]}>
-      <Ionicons name={icon} size={16} color={theme.colors.muted} style={{ marginRight: 10 }} />
-      <View style={{ flex: 1 }}>
-        <Text style={styles.rowLabel}>{label}</Text>
-        <Text style={styles.rowValue} selectable>
-          {value || '—'}
-        </Text>
-      </View>
+      {editing && !!profile && (
+        <EditProfileSheet
+          profile={profile}
+          extra={extra}
+          onClose={() => setEditing(false)}
+          onSaved={() => {
+            setEditing(false);
+            loadAll();
+          }}
+        />
+      )}
     </View>
   );
 }
 
-function EditProfileModal({
+/** Chevron de retour seul : le nom en grand, centré, sert de titre. */
+function BackRow() {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  return (
+    <View style={{ paddingTop: insets.top + 4, paddingHorizontal: theme.gutter }}>
+      <Pressable
+        onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)/plus'))}
+        hitSlop={8}
+        accessibilityRole="button"
+        accessibilityLabel="Retour"
+        style={styles.back}
+      >
+        <Feather name="chevron-left" size={28} color={c.coral} />
+      </Pressable>
+    </View>
+  );
+}
+
+/** Ligne « clé : valeur » ; ce qui manque propose « Ajouter ». */
+function InfoRow({
+  label,
+  value,
+  onAdd,
+  last,
+}: {
+  label: string;
+  value: string | null | undefined;
+  onAdd: () => void;
+  last?: boolean;
+}) {
+  return (
+    <View style={[styles.item, !last && styles.itemBorder]}>
+      <Text style={styles.key}>{label}</Text>
+      {value ? (
+        <Text style={styles.value} selectable>
+          {value}
+        </Text>
+      ) : (
+        <Pressable onPress={onAdd} hitSlop={8} accessibilityRole="button" accessibilityLabel={`Ajouter : ${label}`} style={styles.addBtn}>
+          <Text style={styles.addText}>Ajouter</Text>
+        </Pressable>
+      )}
+    </View>
+  );
+}
+
+function EditProfileSheet({
   profile,
   extra,
   onClose,
@@ -312,232 +343,98 @@ function EditProfileModal({
   }
 
   return (
-    <SafeAreaView style={styles.flex}>
-      <View style={styles.modalHeader}>
-        <Pressable onPress={onClose} hitSlop={10} style={styles.modalCloseBtn}>
-          <Ionicons name="close" size={24} color={theme.colors.text} />
-        </Pressable>
-        <Text style={styles.modalTitle}>Modifier mon profil</Text>
-        <View style={{ width: 36 }} />
-      </View>
-      <KeyboardAware>
-        <ScrollView contentContainerStyle={{ padding: theme.s(5) }} keyboardShouldPersistTaps="handled">
-          <FormField label="Prénom" value={prenom} onChangeText={setPrenom} />
-          <FormField label="Nom" value={nom} onChangeText={setNom} />
-          <FormField
-            label="Date de naissance (JJ/MM/AAAA)"
-            value={dob}
-            onChangeText={setDob}
-            placeholder="21/03/1995"
-            autoCapitalize="none"
-          />
-          <FormField
-            label="Téléphone"
-            value={tel}
-            onChangeText={setTel}
-            keyboardType="phone-pad"
-            placeholder="06 12 34 56 78"
-          />
+    <Sheet
+      visible
+      onClose={onClose}
+      title="Modifier mon profil"
+      footer={<Button label="Enregistrer" onPress={save} loading={saving} />}
+    >
+      <FormField label="Prénom" value={prenom} onChangeText={setPrenom} />
+      <FormField label="Nom" value={nom} onChangeText={setNom} />
+      <FormField
+        label="Date de naissance"
+        hint="JJ/MM/AAAA"
+        value={dob}
+        onChangeText={setDob}
+        placeholder="21/03/1995"
+        autoCapitalize="none"
+      />
+      <FormField
+        label="Téléphone"
+        value={tel}
+        onChangeText={setTel}
+        keyboardType="phone-pad"
+        placeholder="06 12 34 56 78"
+      />
 
-          <Text style={styles.label}>Adresses</Text>
-          {addresses.map((a, i) => (
-            <View key={i} style={styles.addrRow}>
-              <TextInput
-                value={a}
-                onChangeText={(v) => setAddrAt(i, v)}
-                placeholder={`Adresse ${i + 1}`}
-                placeholderTextColor="rgba(255,255,255,0.3)"
-                style={[styles.input, { flex: 1 }]}
-                multiline
-              />
-              <Pressable onPress={() => removeAddr(i)} hitSlop={6} style={styles.addrRemove}>
-                <Ionicons name="close" size={18} color={theme.colors.muted} />
-              </Pressable>
-            </View>
-          ))}
-          <Pressable onPress={addAddr} style={styles.addAddrBtn}>
-            <Ionicons name="add" size={16} color={theme.colors.teal} />
-            <Text style={styles.addAddrText}>Ajouter une adresse</Text>
-          </Pressable>
-
-          <FormField
-            label="RIB / IBAN"
-            value={rib}
-            onChangeText={setRib}
-            autoCapitalize="characters"
-            placeholder="FR76 ..."
+      <FieldLabel>Adresses</FieldLabel>
+      {addresses.map((a, i) => (
+        <View key={i} style={styles.addrRow}>
+          <Field
+            value={a}
+            onChangeText={(v) => setAddrAt(i, v)}
+            placeholder={`Adresse ${i + 1}`}
+            accessibilityLabel={`Adresse ${i + 1}`}
+            multiline
+            style={styles.addrInput}
+            onDark
           />
+          <IconButton name="x" label={`Retirer l'adresse ${i + 1}`} onPress={() => removeAddr(i)} bg={c.raised} color={c.muted} />
+        </View>
+      ))}
+      <Pressable onPress={addAddr} accessibilityRole="button" style={({ pressed }) => [styles.addAddrBtn, pressed && { opacity: 0.7 }]}>
+        <Feather name="plus" size={18} color={c.teal} />
+        <Text style={styles.addAddrText}>Ajouter une adresse</Text>
+      </Pressable>
 
-          <Pressable
-            onPress={save}
-            disabled={saving}
-            style={({ pressed }) => [styles.saveBtn, (pressed || saving) && { opacity: 0.7 }]}
-          >
-            {saving ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.saveText}>Enregistrer</Text>
-            )}
-          </Pressable>
-        </ScrollView>
-      </KeyboardAware>
-    </SafeAreaView>
+      <FormField
+        label="RIB / IBAN"
+        value={rib}
+        onChangeText={setRib}
+        autoCapitalize="characters"
+        placeholder="FR76 ..."
+      />
+    </Sheet>
   );
 }
 
-function FormField(props: React.ComponentProps<typeof TextInput> & { label: string }) {
-  const { label, style, ...rest } = props;
+function FormField({ label, hint, ...rest }: TextInputProps & { label: string; hint?: string }) {
   return (
-    <View style={{ marginBottom: theme.s(4) }}>
-      <Text style={styles.label}>{label}</Text>
-      <TextInput
-        placeholderTextColor="rgba(255,255,255,0.3)"
-        style={[styles.input, style]}
-        {...rest}
-      />
+    <View style={{ marginBottom: 16 }}>
+      <FieldLabel hint={hint}>{label}</FieldLabel>
+      <Field accessibilityLabel={label} onDark {...rest} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: theme.colors.deep },
-  center: { alignItems: 'center', justifyContent: 'center' },
-  scroll: { padding: theme.s(5), paddingTop: theme.s(6) },
-  avatarRow: { flexDirection: 'row', alignItems: 'center', marginBottom: theme.s(5) },
-  avatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: theme.colors.violet,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: { color: '#fff', fontFamily: theme.fonts.serifBlack, fontSize: 26 },
-  name: { color: theme.colors.text, fontFamily: theme.fonts.serifBlack, fontSize: 24 },
-  email: { color: theme.colors.muted, fontFamily: theme.fonts.body, marginTop: 2, fontSize: 13 },
-  editBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: theme.colors.surface2,
-    borderRadius: theme.radius.lg,
-    padding: theme.s(3),
-    marginBottom: theme.s(5),
-    minHeight: 50,
-  },
-  editBtnText: { color: theme.colors.text, fontFamily: theme.fonts.bodyBold, fontSize: 14 },
-  section: {
-    color: theme.colors.muted,
-    fontFamily: theme.fonts.bodyBold,
-    fontSize: 12,
-    letterSpacing: 1.5,
-    textTransform: 'uppercase',
-    marginBottom: theme.s(2),
-    marginTop: theme.s(2),
-  },
-  card: {
-    backgroundColor: theme.colors.cardBg,
-    borderRadius: theme.radius.lg,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    paddingHorizontal: theme.s(3),
-    marginBottom: theme.s(5),
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-  },
-  rowBorder: { borderBottomWidth: 1, borderBottomColor: theme.colors.border },
-  rowLabel: {
-    color: theme.colors.muted,
-    fontFamily: theme.fonts.bodyMedium,
-    fontSize: 11,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-    marginBottom: 2,
-  },
-  rowValue: { color: theme.colors.text, fontFamily: theme.fonts.body, fontSize: 15 },
-  logoutBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: 'rgba(255,107,107,0.10)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,107,107,0.35)',
-    borderRadius: theme.radius.md,
-    paddingVertical: 14,
-    marginTop: theme.s(2),
-    minHeight: 48,
-  },
-  logoutText: { color: theme.colors.coral, fontFamily: theme.fonts.bodyBold, fontSize: 15 },
-  deleteBtn: { marginTop: 14, paddingVertical: 12, alignItems: 'center' },
-  deleteText: { color: theme.colors.danger, fontFamily: theme.fonts.body, fontSize: 13, textDecorationLine: 'underline' },
-
-  modalHeader: {
+  flex: { flex: 1, backgroundColor: c.deep },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  back: { width: 44, height: 44, marginLeft: -10, alignItems: 'center', justifyContent: 'center' },
+  hero: { alignItems: 'center', paddingHorizontal: theme.gutter },
+  name: { color: c.text, fontFamily: f.serifBlack, fontSize: 28, lineHeight: 34, marginTop: 12, textAlign: 'center' },
+  email: { color: c.muted, fontFamily: f.body, fontSize: 14, marginTop: 4, textAlign: 'center' },
+  groupTitle: { color: c.muted, fontFamily: f.bodyBold, fontSize: 14, marginTop: 20, marginBottom: 8, marginLeft: 4 },
+  group: { backgroundColor: c.card, borderRadius: theme.radius.card, overflow: 'hidden' },
+  item: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: theme.s(3),
-    paddingTop: theme.s(2),
-    paddingBottom: theme.s(2),
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  modalCloseBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: theme.colors.surface,
-  },
-  modalTitle: {
-    flex: 1,
-    color: theme.colors.text,
-    fontFamily: theme.fonts.bodyBold,
-    fontSize: 15,
-    textAlign: 'center',
-  },
-  label: {
-    fontFamily: theme.fonts.bodyBold,
-    fontSize: 11,
-    color: theme.colors.muted,
-    marginBottom: 6,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-  },
-  input: {
-    backgroundColor: theme.colors.inputBg,
-    borderWidth: 1.5,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
-    color: theme.colors.text,
-    fontFamily: theme.fonts.body,
-    fontSize: 15,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-  addrRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: theme.s(2) },
-  addrRemove: { padding: 6 },
-  addAddrBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    alignSelf: 'flex-start',
-    paddingVertical: 6,
-    marginBottom: theme.s(4),
-  },
-  addAddrText: { color: theme.colors.teal, fontFamily: theme.fonts.bodyBold, fontSize: 13 },
-  saveBtn: {
-    backgroundColor: theme.colors.coral,
-    borderRadius: theme.radius.md,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: theme.s(4),
+    gap: 16,
     minHeight: 52,
-    justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
   },
-  saveText: { color: '#fff', fontFamily: theme.fonts.bodyBold, fontSize: 16 },
+  itemBorder: { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)' },
+  key: { color: c.muted, fontFamily: f.body, fontSize: 15 },
+  value: { flexShrink: 1, color: c.text, fontFamily: f.body, fontSize: 15, lineHeight: 21, textAlign: 'right' },
+  addBtn: { minHeight: 44, justifyContent: 'center' },
+  addText: { color: c.coralSoft, fontFamily: f.bodyBold, fontSize: 15 },
+  actionText: { color: c.text, fontFamily: f.bodyBold, fontSize: 15 },
+  version: { color: c.muted, fontFamily: f.body, fontSize: 12, textAlign: 'center', marginTop: 16 },
+
+  addrRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+  addrInput: { flex: 1, minHeight: 50, paddingTop: 14, paddingBottom: 14 },
+  addAddrBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', minHeight: 44, marginBottom: 12 },
+  addAddrText: { color: c.teal, fontFamily: f.bodyBold, fontSize: 15 },
 });

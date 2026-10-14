@@ -1,4 +1,5 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -12,9 +13,11 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AlcoolCard, CATEGORIES, SearchField, SocieteCardView, type SocieteCard } from '@/components/jeux/JeuCards';
+import { AlcoolDetail, SocieteDetail } from '@/components/jeux/JeuDetail';
 import { JeuForm } from '@/components/jeux/JeuForm';
+import { Chip, EmptyState, Pastille, ScreenHeader, Segmented } from '@/components/ui/kit';
 import {
   sb,
   type JeuAlcool,
@@ -24,21 +27,36 @@ import {
 import { theme } from '@/lib/theme';
 import { useRefreshOnFocus } from '@/lib/useRefresh';
 
+const c = theme.colors;
+
 type Tab = 'alcool' | 'societe';
-type SocieteCard = JeuSociete & {
-  votes: JeuSocieteVote[];
-  myVote: JeuSocieteVote | null;
-  avg: number;
-};
+// Tris et filtre des jeux de société, comme sur le site
+type SocSort = 'recent' | 'note' | 'joueurs' | 'acheter';
+const SOC_SORTS: { key: SocSort; label: string }[] = [
+  { key: 'recent', label: 'Récents' },
+  { key: 'note', label: 'Mieux notés' },
+  { key: 'joueurs', label: 'Plus de joueurs' },
+  { key: 'acheter', label: 'À acheter' },
+];
+
+/** Minuscules sans accents, pour chercher « des » et trouver « Dés ». */
+function plain(t: string | null | undefined) {
+  return (t ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
 
 export default function JeuxScreen() {
+  const router = useRouter();
   const [tab, setTab] = useState<Tab>('alcool');
   const [alcool, setAlcool] = useState<JeuAlcool[]>([]);
   const [societe, setSociete] = useState<SocieteCard[]>([]);
   const [profiles, setProfiles] = useState<Record<string, ProfileMini>>({});
+  const [me, setMe] = useState<ProfileMini | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
+  const [cat, setCat] = useState<string | null>(null);
+  const [socSort, setSocSort] = useState<SocSort>('recent');
   // On garde l'id : la fiche affichée est relue dans la liste après chaque rechargement
   const [openAlcId, setOpenAlcId] = useState<string | null>(null);
   const openAlc = openAlcId ? alcool.find((j) => j.id === openAlcId) ?? null : null;
@@ -53,10 +71,15 @@ export default function JeuxScreen() {
     const user = await sessionUser();
     setUserId(user?.id ?? null);
 
-    const [alcRes, socRes] = await Promise.all([
+    const [alcRes, socRes, meRes] = await Promise.all([
       sb.from('jeux_alcool').select('*').order('created_at', { ascending: false }),
       sb.from('jeux_societe').select('*').order('created_at', { ascending: false }),
+      // Pastille de l'en-tête
+      user
+        ? sb.from('profiles').select('id,prenom,nom,pseudo').eq('id', user.id).maybeSingle()
+        : Promise.resolve({ data: null }),
     ]);
+    setMe((meRes.data as ProfileMini | null) ?? null);
 
     const allUids = new Set<string>();
     (alcRes.data ?? []).forEach((j) => j.created_by && allUids.add(j.created_by));
@@ -167,49 +190,128 @@ export default function JeuxScreen() {
     ]);
   }
 
+  function changeTab(t: Tab) {
+    setTab(t);
+    setQuery('');
+    setCat(null);
+  }
+
+  // Recherche dans le nom, les règles et la catégorie (ou le détenteur), comme sur le site
+  const q = plain(query.trim());
+  const alcoolShown = alcool.filter(
+    (j) => (!cat || j.categorie === cat) && (!q || plain(j.nom).includes(q) || plain(j.regles).includes(q) || plain(j.categorie).includes(q)),
+  );
+  const societeFound = societe.filter(
+    (j) =>
+      (socSort !== 'acheter' || j.a_acheter === 'oui') &&
+      (!q || plain(j.nom).includes(q) || plain(j.regles).includes(q) || plain(j.detenteur).includes(q)),
+  );
+  const societeShown =
+    socSort === 'note'
+      ? [...societeFound].sort((a, b) => b.avg - a.avg)
+      : socSort === 'joueurs'
+        ? [...societeFound].sort((a, b) => (Number(b.joueurs_max) || 0) - (Number(a.joueurs_max) || 0))
+        : societeFound;
+  const filtered = tab === 'alcool' ? !!q || !!cat : !!q || socSort === 'acheter';
+  const tone = tab === 'alcool' ? c.coral : c.teal;
+
   if (loading) {
     return (
-      <SafeAreaView style={styles.center}>
-        <ActivityIndicator color={theme.colors.teal} />
-      </SafeAreaView>
+      <View style={styles.center}>
+        <ActivityIndicator color={c.coral} />
+      </View>
     );
   }
 
+  const refresh = <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={c.coral} colors={[c.coral]} />;
+  const empty = filtered ? (
+    <EmptyState icon="search" title="Aucun jeu trouvé" text="Essaie un autre mot, ou enlève le filtre." />
+  ) : (
+    <EmptyState
+      icon="package"
+      title={tab === 'alcool' ? 'Pas encore de jeu d’alcool' : 'Pas encore de jeu de société'}
+      text="Ajoute le premier avec le bouton Ajouter."
+    />
+  );
+
   return (
-    <SafeAreaView style={styles.flex}>
-      <View style={{ padding: theme.s(4), paddingBottom: 0 }}>
-        <Text style={styles.bigTitle}>Jeux</Text>
-        <Text style={styles.bigSub}>L&apos;atelier ludique du groupe.</Text>
+    <View style={styles.flex}>
+      <ScreenHeader
+        title="Jeux"
+        sub="L’atelier ludique du groupe"
+        right={
+          me || userId ? (
+            <Pressable
+              onPress={() => router.push('/profil')}
+              accessibilityRole="button"
+              accessibilityLabel="Mon profil"
+              hitSlop={4}
+              style={({ pressed }) => pressed && { opacity: 0.8 }}
+            >
+              <Pastille id={userId} name={me?.prenom || me?.pseudo} />
+            </Pressable>
+          ) : null
+        }
+      />
+      <View style={styles.controls}>
+        <Segmented
+          options={[
+            { key: 'alcool', label: 'Alcool', color: c.coral },
+            { key: 'societe', label: 'Société', color: c.teal, textColor: c.tealInk },
+          ]}
+          value={tab}
+          onChange={changeTab}
+        />
+        <View style={{ marginTop: 14 }}>
+          <SearchField value={query} onChangeText={setQuery} />
+        </View>
       </View>
-      <View style={styles.subTabs}>
-        <SubTab label="Alcool" active={tab === 'alcool'} onPress={() => setTab('alcool')} />
-        <SubTab label="Société" active={tab === 'societe'} onPress={() => setTab('societe')} />
+      {/* Marge sous les filtres : la liste qui défile s'arrête avant eux */}
+      <View style={styles.chipsBar}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={styles.chips}
+        >
+          {tab === 'alcool' ? (
+            <>
+              <Chip label="Tous" active={!cat} onPress={() => setCat(null)} />
+              {CATEGORIES.map((k) => (
+                <Chip key={k} label={k} active={cat === k} onPress={() => setCat((cur) => (cur === k ? null : k))} />
+              ))}
+            </>
+          ) : (
+            SOC_SORTS.map((o) => (
+              <Chip key={o.key} label={o.label} active={socSort === o.key} onPress={() => setSocSort(o.key)} />
+            ))
+          )}
+        </ScrollView>
       </View>
+
       {tab === 'alcool' ? (
         <FlatList
-          data={alcool}
+          data={alcoolShown}
           keyExtractor={(j) => j.id}
           contentContainerStyle={styles.list}
-          renderItem={({ item }) => (
-            <AlcoolCardView jeu={item} onPress={() => setOpenAlcId(item.id)} />
-          )}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.teal} />
-          }
-          ListEmptyComponent={<EmptyState text="Aucun jeu d'alcool pour l'instant." />}
+          renderItem={({ item }) => <AlcoolCard jeu={item} onPress={() => setOpenAlcId(item.id)} />}
+          ItemSeparatorComponent={Gap}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          refreshControl={refresh}
+          ListEmptyComponent={empty}
         />
       ) : (
         <FlatList
-          data={societe}
+          data={societeShown}
           keyExtractor={(j) => j.id}
           contentContainerStyle={styles.list}
-          renderItem={({ item }) => (
-            <SocieteCardView card={item} onPress={() => setOpenSocId(item.id)} />
-          )}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.teal} />
-          }
-          ListEmptyComponent={<EmptyState text="Aucun jeu de société pour l'instant." />}
+          renderItem={({ item }) => <SocieteCardView card={item} onPress={() => setOpenSocId(item.id)} />}
+          ItemSeparatorComponent={Gap}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          refreshControl={refresh}
+          ListEmptyComponent={empty}
         />
       )}
 
@@ -220,15 +322,18 @@ export default function JeuxScreen() {
           accessibilityLabel={tab === 'alcool' ? 'Ajouter un jeu d’alcool' : 'Ajouter un jeu de société'}
           style={({ pressed }) => [
             styles.fab,
-            tab === 'societe' && { backgroundColor: theme.colors.teal, shadowColor: theme.colors.teal },
-            pressed && { transform: [{ scale: 0.92 }] },
+            { backgroundColor: tone, shadowColor: tone },
+            pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] },
           ]}
         >
-          <Ionicons name="add" size={30} color="#fff" />
+          <Feather name="plus" size={22} color={tab === 'alcool' ? '#fff' : c.tealInk} />
+          <Text style={[styles.fabText, { color: tab === 'alcool' ? '#fff' : c.tealInk }]}>Ajouter</Text>
         </Pressable>
       )}
 
       <Modal
+        statusBarTranslucent
+        navigationBarTranslucent
         visible={!!openAlc || alcForm !== null}
         animationType="slide"
         presentationStyle="pageSheet"
@@ -261,6 +366,8 @@ export default function JeuxScreen() {
         )}
       </Modal>
       <Modal
+        statusBarTranslucent
+        navigationBarTranslucent
         visible={!!openSoc || socForm !== null}
         animationType="slide"
         presentationStyle="pageSheet"
@@ -292,8 +399,12 @@ export default function JeuxScreen() {
           )
         )}
       </Modal>
-    </SafeAreaView>
+    </View>
   );
+}
+
+function Gap() {
+  return <View style={{ height: 10 }} />;
 }
 
 function authorName(p: ProfileMini | null | undefined) {
@@ -301,391 +412,29 @@ function authorName(p: ProfileMini | null | undefined) {
   return p.pseudo || `${p.prenom ?? ''} ${p.nom ?? ''}`.trim() || '?';
 }
 
-function SubTab({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.subTab,
-        active && styles.subTabActive,
-        pressed && !active && { backgroundColor: theme.colors.surface2 },
-      ]}
-    >
-      <Text style={[styles.subTabText, active && styles.subTabTextActive]}>{label}</Text>
-    </Pressable>
-  );
-}
-
-function EmptyState({ text }: { text: string }) {
-  return (
-    <View style={styles.empty}>
-      <Text style={styles.emptyText}>{text}</Text>
-    </View>
-  );
-}
-
-function AlcoolCardView({ jeu, onPress }: { jeu: JeuAlcool; onPress: () => void }) {
-  return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.card, pressed && { opacity: 0.85 }]}>
-      <View style={styles.badge}>
-        <Text style={styles.badgeText}>{jeu.categorie}</Text>
-      </View>
-      <Text style={styles.cardTitle}>{jeu.nom}</Text>
-      <Text style={styles.cardExcerpt} numberOfLines={2}>{jeu.regles}</Text>
-      <View style={styles.cardMetaRow}>
-        {!!jeu.joueurs && <MetaChip icon="people-outline" text={jeu.joueurs} />}
-        {!!jeu.niveau && <MetaChip icon="flame-outline" text={jeu.niveau} />}
-      </View>
-    </Pressable>
-  );
-}
-
-type OwnerProps = { mine: boolean; onEdit: () => void; onDelete: () => void };
-
-function OwnerActions({ mine, onEdit, onDelete }: OwnerProps) {
-  if (!mine) return null;
-  return (
-    <View style={styles.ownerRow}>
-      <Pressable onPress={onEdit} accessibilityRole="button" style={({ pressed }) => [styles.ownerBtn, pressed && { opacity: 0.7 }]}>
-        <Ionicons name="create-outline" size={18} color={theme.colors.text} />
-        <Text style={styles.ownerBtnText}>Modifier</Text>
-      </Pressable>
-      <Pressable onPress={onDelete} accessibilityRole="button" style={({ pressed }) => [styles.ownerBtn, pressed && { opacity: 0.7 }]}>
-        <Ionicons name="trash-outline" size={18} color={theme.colors.danger} />
-        <Text style={[styles.ownerBtnText, { color: theme.colors.danger }]}>Supprimer</Text>
-      </Pressable>
-    </View>
-  );
-}
-
-function AlcoolDetail({
-  jeu,
-  authorName,
-  onClose,
-  ...owner
-}: {
-  jeu: JeuAlcool;
-  authorName: string;
-  onClose: () => void;
-} & OwnerProps) {
-  return (
-    <SafeAreaView style={styles.flex}>
-      <View style={styles.modalTopBar}>
-        <Pressable onPress={onClose} hitSlop={10} style={styles.modalCloseBtn}>
-          <Ionicons name="close" size={24} color={theme.colors.text} />
-        </Pressable>
-        <Text style={styles.modalTopTitle} numberOfLines={1}>
-          {jeu.nom}
-        </Text>
-        <View style={{ width: 36 }} />
-      </View>
-      <ScrollView contentContainerStyle={{ padding: theme.s(5) }}>
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>{jeu.categorie}</Text>
-        </View>
-        <Text style={styles.detailTitle}>{jeu.nom}</Text>
-        <Text style={styles.detailMeta}>Ajouté par {authorName}</Text>
-        <Text style={styles.detailSection}>Règles</Text>
-        <Text style={styles.detailContent}>{jeu.regles}</Text>
-        {!!jeu.joueurs && <DetailRow label="Joueurs" value={jeu.joueurs} />}
-        {!!jeu.niveau && <DetailRow label="Niveau" value={jeu.niveau} />}
-        {!!jeu.materiel && <DetailRow label="Matériel" value={jeu.materiel} />}
-        <OwnerActions {...owner} />
-      </ScrollView>
-    </SafeAreaView>
-  );
-}
-
-function SocieteCardView({ card, onPress }: { card: SocieteCard; onPress: () => void }) {
-  return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.card, pressed && { opacity: 0.85 }]}>
-      <Text style={styles.cardTitle}>{card.nom}</Text>
-      <Text style={styles.cardExcerpt} numberOfLines={2}>{card.regles}</Text>
-      <View style={styles.cardMetaRow}>
-        <Stars value={card.avg} small />
-        <Text style={styles.metaTextSmall}>
-          {card.avg ? card.avg.toFixed(1) : '—'} ({card.votes.length} avis)
-        </Text>
-      </View>
-      <View style={styles.cardMetaRow}>
-        {!!card.joueurs_max && <MetaChip icon="people-outline" text={`max ${card.joueurs_max}`} />}
-        {!!card.duree && <MetaChip icon="time-outline" text={card.duree} />}
-        {!!card.detenteur && <MetaChip icon="person-outline" text={card.detenteur} />}
-      </View>
-    </Pressable>
-  );
-}
-
-function SocieteDetail({
-  card,
-  authorName,
-  onClose,
-  onRate,
-  ...owner
-}: {
-  card: SocieteCard;
-  authorName: string;
-  onClose: () => void;
-  onRate: (n: number) => void;
-} & OwnerProps) {
-  return (
-    <SafeAreaView style={styles.flex}>
-      <View style={styles.modalTopBar}>
-        <Pressable onPress={onClose} hitSlop={10} style={styles.modalCloseBtn}>
-          <Ionicons name="close" size={24} color={theme.colors.text} />
-        </Pressable>
-        <Text style={styles.modalTopTitle} numberOfLines={1}>
-          {card.nom}
-        </Text>
-        <View style={{ width: 36 }} />
-      </View>
-      <ScrollView contentContainerStyle={{ padding: theme.s(5) }}>
-        <Text style={styles.detailTitle}>{card.nom}</Text>
-        <Text style={styles.detailMeta}>Ajouté par {authorName}</Text>
-
-        <Text style={styles.detailSection}>Note moyenne</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <Stars value={card.avg} />
-          <Text style={styles.metaTextSmall}>
-            {card.avg ? card.avg.toFixed(1) : '—'} ({card.votes.length})
-          </Text>
-        </View>
-
-        <Text style={styles.detailSection}>Ta note</Text>
-        <Stars value={card.myVote?.note ?? 0} interactive onPress={onRate} />
-
-        <Text style={styles.detailSection}>Règles</Text>
-        <Text style={styles.detailContent}>{card.regles}</Text>
-        {!!card.joueurs_max && <DetailRow label="Joueurs max" value={card.joueurs_max} />}
-        {!!card.duree && <DetailRow label="Durée" value={card.duree} />}
-        {!!card.detenteur && <DetailRow label="Détenteur" value={card.detenteur} />}
-        {card.a_acheter === 'oui' && <DetailRow label="À acheter" value="oui" />}
-        {!!card.avis && (
-          <>
-            <Text style={styles.detailSection}>Avis</Text>
-            <Text style={styles.detailContent}>{card.avis}</Text>
-          </>
-        )}
-        <OwnerActions {...owner} />
-      </ScrollView>
-    </SafeAreaView>
-  );
-}
-
-function DetailRow({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.detailRow}>
-      <Text style={styles.detailRowLabel}>{label}</Text>
-      <Text style={styles.detailRowValue}>{value}</Text>
-    </View>
-  );
-}
-
-
-
-function MetaChip({ icon, text }: { icon: React.ComponentProps<typeof Ionicons>['name']; text: string }) {
-  return (
-    <View style={styles.chip}>
-      <Ionicons name={icon} size={12} color={theme.colors.muted} />
-      <Text style={styles.chipText}>{text}</Text>
-    </View>
-  );
-}
-
-function Stars({
-  value,
-  interactive,
-  onPress,
-  small,
-}: {
-  value: number;
-  interactive?: boolean;
-  onPress?: (n: number) => void;
-  small?: boolean;
-}) {
-  const size = small ? 16 : 26;
-  return (
-    <View style={{ flexDirection: 'row', gap: 2 }}>
-      {[1, 2, 3, 4, 5].map((n) => {
-        const filled = value >= n - 0.4;
-        const star = (
-          <Ionicons
-            key={n}
-            name={filled ? 'star' : 'star-outline'}
-            size={size}
-            color={filled ? theme.colors.yellow : theme.colors.muted}
-          />
-        );
-        if (!interactive) return star;
-        return (
-          <Pressable key={n} onPress={() => onPress?.(n)} hitSlop={6}>
-            {star}
-          </Pressable>
-        );
-      })}
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: theme.colors.deep },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.deep },
-  bigTitle: { color: theme.colors.text, fontFamily: theme.fonts.title, fontSize: 32, fontWeight: '800' },
-  bigSub: { color: theme.colors.muted, marginTop: 2 },
-  subTabs: {
-    flexDirection: 'row',
-    paddingHorizontal: theme.s(4),
-    paddingVertical: theme.s(3),
-    gap: 8,
-  },
-  subTab: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: theme.radius.pill,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1.5,
-    borderColor: theme.colors.border,
-    alignItems: 'center',
-    minHeight: 44,
-    justifyContent: 'center',
-  },
-  subTabActive: { backgroundColor: theme.colors.coral, borderColor: theme.colors.coral },
-  subTabText: { color: theme.colors.muted, fontFamily: theme.fonts.bodyBold, fontSize: 14 },
-  subTabTextActive: { color: '#fff' },
-  // Le bas de la liste reste dégagé du bouton « + »
-  list: { padding: theme.s(4), paddingBottom: 100 },
+  flex: { flex: 1, backgroundColor: c.deep },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.deep },
+  controls: { paddingHorizontal: theme.gutter, marginTop: 20 },
+  chips: { paddingHorizontal: theme.gutter, paddingTop: 12, gap: 8 },
+  chipsBar: { marginBottom: 14 },
+  // Le bas de la liste reste dégagé du bouton « Ajouter »
+  list: { paddingHorizontal: theme.gutter, paddingTop: 2, paddingBottom: 100, flexGrow: 1 },
   fab: {
     position: 'absolute',
-    right: 20,
-    bottom: 24,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: theme.colors.coral,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: theme.colors.coral,
-    shadowOpacity: 0.5,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 6,
-  },
-  ownerRow: { flexDirection: 'row', gap: 10, marginTop: theme.s(8) },
-  ownerBtn: {
-    flex: 1,
+    right: theme.gutter,
+    bottom: 16,
+    height: 56,
+    paddingLeft: 18,
+    paddingRight: 22,
+    borderRadius: 28,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    minHeight: 48,
-    borderRadius: theme.radius.md,
-    borderWidth: 1.5,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
+    gap: 8,
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 8,
   },
-  ownerBtnText: { color: theme.colors.text, fontFamily: theme.fonts.bodyBold, fontSize: 15 },
-  card: {
-    backgroundColor: theme.colors.cardBg,
-    borderRadius: theme.radius.lg,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    padding: theme.s(3),
-    marginBottom: theme.s(3),
-  },
-  badge: {
-    alignSelf: 'flex-start',
-    backgroundColor: theme.colors.surface2,
-    borderRadius: theme.radius.pill,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    marginBottom: 6,
-  },
-  badgeText: { color: theme.colors.coral, fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
-  cardTitle: { color: theme.colors.text, fontSize: 16, fontWeight: '700', marginBottom: 4 },
-  cardExcerpt: { color: theme.colors.muted, fontSize: 13, lineHeight: 18 },
-  cardMetaRow: { flexDirection: 'row', gap: 6, marginTop: 8, flexWrap: 'wrap', alignItems: 'center' },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: theme.colors.surface,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: theme.radius.pill,
-  },
-  chipText: { color: theme.colors.muted, fontSize: 11 },
-  metaTextSmall: { color: theme.colors.muted, fontSize: 12 },
-  detailHeader: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    paddingHorizontal: theme.s(4),
-    paddingTop: theme.s(2),
-  },
-  detailTitle: {
-    color: theme.colors.text,
-    fontFamily: theme.fonts.title,
-    fontSize: 28,
-    fontWeight: '800',
-    marginTop: 8,
-  },
-  detailMeta: { color: theme.colors.muted, fontSize: 13, marginTop: 4 },
-  detailSection: {
-    color: theme.colors.muted,
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-    marginTop: theme.s(6),
-    marginBottom: theme.s(2),
-  },
-  detailContent: { color: theme.colors.text, fontSize: 15, lineHeight: 22 },
-  detailRow: {
-    paddingVertical: theme.s(3),
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  detailRowLabel: {
-    color: theme.colors.muted,
-    fontFamily: theme.fonts.bodyBold,
-    fontSize: 11,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    marginBottom: 4,
-  },
-  detailRowValue: {
-    color: theme.colors.text,
-    fontFamily: theme.fonts.body,
-    fontSize: 15,
-    lineHeight: 21,
-  },
-  modalTopBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: theme.s(3),
-    paddingTop: theme.s(2),
-    paddingBottom: theme.s(2),
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    backgroundColor: theme.colors.deep,
-  },
-  modalCloseBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: theme.colors.surface,
-  },
-  modalTopTitle: {
-    flex: 1,
-    color: theme.colors.text,
-    fontFamily: theme.fonts.bodyBold,
-    fontSize: 15,
-    textAlign: 'center',
-    marginHorizontal: theme.s(2),
-  },
-  empty: { padding: theme.s(8), alignItems: 'center' },
-  emptyText: { color: theme.colors.muted, fontSize: 14 },
+  fabText: { fontFamily: theme.fonts.bodyBold, fontSize: 16 },
 });

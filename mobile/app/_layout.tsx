@@ -122,11 +122,11 @@ export default function RootLayout() {
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="profil" options={{ title: 'Profil' }} />
-        <Stack.Screen name="notes" options={{ title: 'Notes' }} />
-        <Stack.Screen name="photos" options={{ title: 'Photos' }} />
-        <Stack.Screen name="annuaire" options={{ title: 'Annuaire' }} />
-        <Stack.Screen name="shop" options={{ title: 'Boutique' }} />
+        <Stack.Screen name="profil" options={{ title: 'Profil', headerShown: false }} />
+        <Stack.Screen name="notes" options={{ title: 'Notes', headerShown: false }} />
+        <Stack.Screen name="photos" options={{ title: 'Photos', headerShown: false }} />
+        <Stack.Screen name="annuaire" options={{ title: 'Annuaire', headerShown: false }} />
+        <Stack.Screen name="shop" options={{ title: 'Boutique', headerShown: false }} />
         <Stack.Screen name="olympiades" options={{ title: 'Olympiades' }} />
       </Stack>
       <StatusBar style="light" />
