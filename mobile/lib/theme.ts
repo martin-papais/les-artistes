@@ -55,6 +55,13 @@ const MEMBER = [
   { bg: theme.colors.coral, fg: '#fff' },
 ] as const;
 
+const BY_NAME = { teal: MEMBER[0], yellow: MEMBER[1], pink: MEMBER[2], violet: MEMBER[3], coral: MEMBER[4] } as const;
+
+/** Couleur choisie par le membre (profiles.avatar_color) */
+export function memberColorByName(name: keyof typeof BY_NAME) {
+  return BY_NAME[name];
+}
+
 export function memberColor(id: string | null | undefined) {
   if (!id) return { bg: theme.colors.rail, fg: theme.colors.text };
   let h = 0;

@@ -3,6 +3,7 @@
  * même en-tête, mêmes boutons, mêmes pastilles, mêmes feuilles du bas.
  */
 import { Feather } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { forwardRef, useEffect, useState, type ComponentProps, type ReactNode } from 'react';
@@ -35,8 +36,9 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useAvatar } from '@/lib/avatars';
 import { KeyboardAware } from '@/lib/keyboard';
-import { memberColor, theme } from '@/lib/theme';
+import { memberColor, memberColorByName, theme } from '@/lib/theme';
 
 const c = theme.colors;
 const f = theme.fonts;
@@ -151,7 +153,7 @@ export function initialOf(name: string | null | undefined) {
   return t ? t[0].toUpperCase() : '?';
 }
 
-/** Pastille d'un membre : sa couleur et son initiale, la même partout. */
+/** Pastille d'un membre : sa photo, sinon sa couleur et son initiale, la même partout. */
 export function Pastille({
   id,
   name,
@@ -168,7 +170,27 @@ export function Pastille({
   style?: StyleProp<ViewStyle>;
   serif?: boolean;
 }) {
-  const col = memberColor(id);
+  const avatar = useAvatar(id);
+  const col = avatar?.color ? memberColorByName(avatar.color) : memberColor(id);
+  const [broken, setBroken] = useState<string | null>(null);
+  const url = avatar?.url && avatar.url !== broken ? avatar.url : null;
+  if (url) {
+    return (
+      <Image
+        source={{ uri: url }}
+        accessible={false}
+        contentFit="cover"
+        transition={150}
+        cachePolicy="memory-disk"
+        onError={() => setBroken(url)}
+        style={[
+          { width: size, height: size, borderRadius: size / 2, backgroundColor: col.bg },
+          ring ? { borderWidth: 2, borderColor: ring } : null,
+          style as object,
+        ]}
+      />
+    );
+  }
   return (
     <View
       accessible={false}

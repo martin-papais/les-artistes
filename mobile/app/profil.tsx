@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AvatarSheet } from '@/components/profil/AvatarSheet';
 import { Button, Field, FieldLabel, IconButton, Pastille, Sheet } from '@/components/ui/kit';
 import { signOutAndUnregister, unregisterPushToken } from '@/lib/notifications';
 import { parseDobInput, sb, type AnnuaireExtra, type Profile, sessionUser } from '@/lib/supabase';
@@ -61,6 +62,7 @@ export default function ProfilScreen() {
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
+  const [avatarOpen, setAvatarOpen] = useState(false);
 
   const loadAll = useCallback(async () => {
     const user = await sessionUser();
@@ -109,7 +111,7 @@ export default function ProfilScreen() {
     if (!user) return;
     setDeleting(true);
     try {
-      for (const folder of [user.id, `${user.id}/covers`, `${user.id}/agenda`]) {
+      for (const folder of [user.id, `${user.id}/covers`, `${user.id}/agenda`, `${user.id}/avatar`]) {
         const { data: files } = await sb.storage.from('media').list(folder, { limit: 1000 });
         const paths = (files ?? []).filter((x) => x.id).map((x) => `${folder}/${x.name}`);
         if (paths.length) await sb.storage.from('media').remove(paths);
@@ -157,7 +159,18 @@ export default function ProfilScreen() {
         <BackRow />
 
         <View style={styles.hero}>
-          <Pastille id={profile?.id ?? null} name={displayName} size={88} serif />
+          <Pressable
+            onPress={() => profile && setAvatarOpen(true)}
+            disabled={!profile}
+            accessibilityRole="button"
+            accessibilityLabel="Changer ma photo ou ma couleur"
+            style={({ pressed }) => pressed && { opacity: 0.85 }}
+          >
+            <Pastille id={profile?.id ?? null} name={displayName} size={88} serif />
+            <View style={styles.camBadge}>
+              <Feather name="camera" size={16} color="#fff" />
+            </View>
+          </Pressable>
           <Text style={styles.name} accessibilityRole="header">
             {displayName}
           </Text>
@@ -210,6 +223,9 @@ export default function ProfilScreen() {
           <Text style={styles.version}>{versionLabel()}</Text>
         </View>
       </ScrollView>
+      {!!profile && (
+        <AvatarSheet visible={avatarOpen} onClose={() => setAvatarOpen(false)} userId={profile.id} name={displayName} />
+      )}
 
       {editing && !!profile && (
         <EditProfileSheet
@@ -408,6 +424,19 @@ function FormField({ label, hint, ...rest }: TextInputProps & { label: string; h
 }
 
 const styles = StyleSheet.create({
+  camBadge: {
+    position: 'absolute',
+    right: -2,
+    bottom: -2,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: theme.colors.coral,
+    borderWidth: 3,
+    borderColor: theme.colors.deep,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   flex: { flex: 1, backgroundColor: c.deep },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   back: { width: 44, height: 44, marginLeft: -10, alignItems: 'center', justifyContent: 'center' },

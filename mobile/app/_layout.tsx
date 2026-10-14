@@ -15,9 +15,10 @@ import { Stack, useRouter, type Href } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef } from 'react';
-import { Pressable } from 'react-native';
+import { AppState, Pressable } from 'react-native';
 import 'react-native-reanimated';
 
+import { loadAvatars, resetAvatars } from '@/lib/avatars';
 import { resetBlocked } from '@/lib/moderation';
 import { registerPushToken, takeNotificationRoute } from '@/lib/notifications';
 import { sb } from '@/lib/supabase';
@@ -46,10 +47,16 @@ export default function RootLayout() {
     const { data: sub } = sb.auth.onAuthStateChange(async (event, session) => {
       if (!initialized.current) {
         initialized.current = true;
-        if (session?.user) registerPushToken(session.user.id);
+        if (session?.user) {
+          registerPushToken(session.user.id);
+          loadAvatars();
+        }
         return;
       }
-      if (event === 'SIGNED_OUT' || event === 'SIGNED_IN') resetBlocked();
+      if (event === 'SIGNED_OUT' || event === 'SIGNED_IN') {
+        resetBlocked();
+        resetAvatars();
+      }
       if (event === 'SIGNED_OUT' || !session) {
         // Le token push est retiré avant signOut (signOutAndUnregister), plus ici :
         // à ce stade la session est déjà effacée et la RLS refuserait le delete.
@@ -58,11 +65,20 @@ export default function RootLayout() {
         router.replace('/(auth)/login');
       } else if (event === 'SIGNED_IN') {
         if (session.user) registerPushToken(session.user.id);
+        loadAvatars();
         router.replace('/(tabs)/events');
       }
     });
     return () => sub.subscription.unsubscribe();
   }, [router]);
+
+  // Photos et couleurs des membres : rechargées au retour dans l'appli
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (st) => {
+      if (st === 'active') loadAvatars();
+    });
+    return () => sub.remove();
+  }, []);
 
   // Notification tap → deeplink. Couvre 2 cas :
   //   1. App ouverte (foreground/background) : le listener ci-dessous
