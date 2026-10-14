@@ -174,12 +174,6 @@ export function profileName(p: ProfileMini | undefined) {
   return p.pseudo || `${p.prenom ?? ''} ${p.nom ?? ''}`.trim() || '?';
 }
 
-// « Marie, Paul, Léa +4 » : les premiers noms, le reste en nombre
-export function namesPreview(names: string[], max = 3) {
-  if (names.length <= max) return names.join(', ');
-  return `${names.slice(0, max).join(', ')} +${names.length - max}`;
-}
-
 /** « 12 viennent, 2 non » */
 export function countsLabel(yes: number, no: number) {
   const y = yes === 0 ? 'Personne ne vient' : `${yes} ${yes > 1 ? 'viennent' : 'vient'}`;

@@ -15,7 +15,6 @@ import {
   countsLabel,
   dateParts,
   heureLabel,
-  namesPreview,
   profileName,
   type Birthday,
   type EventCard,
@@ -224,11 +223,6 @@ export function FeaturedTicket({
             {absents > 0 && <Text style={{ color: c.muted }}>, {absents} non</Text>}
           </Text>
         </View>
-        {presentPeople.length > 0 && (
-          <Text style={styles.names} numberOfLines={1}>
-            {namesPreview(presentPeople.map((x) => x.name), 4)}
-          </Text>
-        )}
         <RsvpButtons mine={myVote?.present ?? null} onVote={onVote} />
       </View>
     </View>
@@ -332,9 +326,8 @@ const styles = StyleSheet.create({
   ticketMeta: { color: c.muted, fontFamily: f.body, fontSize: 14, lineHeight: 19, marginTop: 6 },
   ticketNote: { color: c.text, fontFamily: f.body, fontSize: 14, lineHeight: 20, marginTop: 6 },
   ticketFoot: { paddingHorizontal: 14, paddingTop: 12, paddingBottom: 14 },
-  countRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  countRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
   countText: { flex: 1, fontFamily: f.body, fontSize: 14, color: c.text },
-  names: { color: c.muted, fontFamily: f.body, fontSize: 13, marginTop: 4 },
 
   row: { flexDirection: 'row', alignItems: 'center', marginHorizontal: theme.gutter, marginBottom: 10, borderRadius: theme.radius.card, backgroundColor: c.card, overflow: 'hidden', minHeight: 64 },
   rowDate: { width: 64, alignSelf: 'stretch', paddingVertical: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: c.raised },
