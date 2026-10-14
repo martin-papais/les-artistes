@@ -3,9 +3,10 @@
  * fondu sous la photo, dates lisibles.
  */
 import { Feather } from '@expo/vector-icons';
+import { useState } from 'react';
 import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
-import { openModerationMenu, type ReportKind } from '@/lib/moderation';
+import { ModerationSheet, type ReportKind } from '@/lib/moderation';
 import { theme } from '@/lib/theme';
 
 const c = theme.colors;
@@ -36,21 +37,34 @@ export function MoreButton({
   size?: number;
   style?: StyleProp<ViewStyle>;
 }) {
+  const [open, setOpen] = useState(false);
   if (!authorId || authorId === currentUserId) return null;
   return (
-    <Pressable
-      onPress={() => openModerationMenu({ kind, itemId, authorId, authorName, excerpt, onBlocked })}
-      hitSlop={size < 44 ? (44 - size) / 2 : 0}
-      accessibilityRole="button"
-      accessibilityLabel="Signaler ou bloquer"
-      style={({ pressed }) => [
-        { width: size, height: size, borderRadius: size / 2, backgroundColor: bg, alignItems: 'center', justifyContent: 'center' },
-        pressed && { opacity: 0.6 },
-        style,
-      ]}
-    >
-      <Feather name="more-horizontal" size={20} color={color} />
-    </Pressable>
+    <>
+      <Pressable
+        onPress={() => setOpen(true)}
+        hitSlop={size < 44 ? (44 - size) / 2 : 0}
+        accessibilityRole="button"
+        accessibilityLabel="Signaler ou bloquer"
+        style={({ pressed }) => [
+          { width: size, height: size, borderRadius: size / 2, backgroundColor: bg, alignItems: 'center', justifyContent: 'center' },
+          pressed && { opacity: 0.6 },
+          style,
+        ]}
+      >
+        <Feather name="more-horizontal" size={20} color={color} />
+      </Pressable>
+      <ModerationSheet
+        visible={open}
+        onClose={() => setOpen(false)}
+        kind={kind}
+        itemId={itemId}
+        authorId={authorId}
+        authorName={authorName}
+        excerpt={excerpt}
+        onBlocked={onBlocked}
+      />
+    </>
   );
 }
 
