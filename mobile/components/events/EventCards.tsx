@@ -166,12 +166,15 @@ export function FeaturedTicket({
   profiles,
   onPress,
   onVote,
+  onWho,
 }: {
   event: EventCard;
   currentUserId: string | null;
   profiles: Record<string, ProfileMini>;
   onPress: () => void;
   onVote: (v: 'oui' | 'non') => void;
+  /** Ouvre « Qui vient ? » */
+  onWho: () => void;
 }) {
   const presents = event.votes.filter((v) => v.present === 'oui');
   const absents = event.votes.filter((v) => v.present === 'non').length;
@@ -214,7 +217,13 @@ export function FeaturedTicket({
       </Pressable>
       <Dashes />
       <View style={styles.ticketFoot}>
-        <View style={styles.countRow}>
+        <Pressable
+          onPress={onWho}
+          hitSlop={{ top: 8, bottom: 4 }}
+          accessibilityRole="button"
+          accessibilityLabel={`${countsLabel(presents.length, absents)}. Voir qui vient`}
+          style={({ pressed }) => [styles.countRow, pressed && { opacity: 0.7 }]}
+        >
           {presentPeople.length > 0 && <PastilleStack people={presentPeople} max={3} size={26} ring={c.card} />}
           <Text style={styles.countText} numberOfLines={1}>
             <Text style={{ color: presents.length ? c.teal : c.muted, fontFamily: f.bodyBold }}>
@@ -222,7 +231,8 @@ export function FeaturedTicket({
             </Text>
             {absents > 0 && <Text style={{ color: c.muted }}>, {absents} non</Text>}
           </Text>
-        </View>
+          <Feather name="chevron-right" size={18} color={c.muted} />
+        </Pressable>
         <RsvpButtons mine={myVote?.present ?? null} onVote={onVote} />
       </View>
     </View>
@@ -326,7 +336,7 @@ const styles = StyleSheet.create({
   ticketMeta: { color: c.muted, fontFamily: f.body, fontSize: 14, lineHeight: 19, marginTop: 6 },
   ticketNote: { color: c.text, fontFamily: f.body, fontSize: 14, lineHeight: 20, marginTop: 6 },
   ticketFoot: { paddingHorizontal: 14, paddingTop: 12, paddingBottom: 14 },
-  countRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
+  countRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12, minHeight: 44 },
   countText: { flex: 1, fontFamily: f.body, fontSize: 14, color: c.text },
 
   row: { flexDirection: 'row', alignItems: 'center', marginHorizontal: theme.gutter, marginBottom: 10, borderRadius: theme.radius.card, backgroundColor: c.card, overflow: 'hidden', minHeight: 64 },

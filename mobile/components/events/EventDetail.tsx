@@ -186,20 +186,7 @@ export function EventDetail({
     return profileName(profiles[uid]);
   }
 
-  const byName = (a: Person, b: Person) => a.name.localeCompare(b.name, 'fr');
-  const presents: Person[] = event.votes
-    .filter((v) => v.present === 'oui')
-    .map((v) => ({ id: v.user_id, name: nameOf(v.user_id) }))
-    .sort(byName);
-  const absents: Person[] = event.votes
-    .filter((v) => v.present === 'non')
-    .map((v) => ({ id: v.user_id, name: nameOf(v.user_id) }))
-    .sort(byName);
-  const voterIds = new Set(event.votes.map((v) => v.user_id));
-  const missing: Person[] = Object.keys(profiles)
-    .filter((id) => !voterIds.has(id) && !blockedIds.has(id))
-    .map((id) => ({ id, name: nameOf(id) }))
-    .sort(byName);
+  const { presents, absents, missing } = whoLists(event, profiles, blockedIds);
 
   const yearSuffix = p.year !== new Date().getFullYear() ? ` ${p.year}` : '';
   const heure = heureLabel(event.heure);
@@ -399,6 +386,56 @@ export function EventDetail({
 }
 
 type Tab = 'oui' | 'non' | 'rien';
+
+/** Viennent, ne viennent pas, sans réponse (membres bloqués exclus), triés par nom */
+function whoLists(event: EventCard, profiles: Record<string, ProfileMini>, blockedIds: Set<string>) {
+  const nameOf = (uid: string) => profileName(profiles[uid]);
+  const byName = (a: Person, b: Person) => a.name.localeCompare(b.name, 'fr');
+  const presents: Person[] = event.votes
+    .filter((v) => v.present === 'oui')
+    .map((v) => ({ id: v.user_id, name: nameOf(v.user_id) }))
+    .sort(byName);
+  const absents: Person[] = event.votes
+    .filter((v) => v.present === 'non')
+    .map((v) => ({ id: v.user_id, name: nameOf(v.user_id) }))
+    .sort(byName);
+  const voterIds = new Set(event.votes.map((v) => v.user_id));
+  const missing: Person[] = Object.keys(profiles)
+    .filter((id) => !voterIds.has(id) && !blockedIds.has(id))
+    .map((id) => ({ id, name: nameOf(id) }))
+    .sort(byName);
+  return { presents, absents, missing };
+}
+
+/** « Qui vient ? » ouvert directement depuis la liste (billet À la une) */
+export function EventWhoSheet({
+  event,
+  profiles,
+  visible,
+  onClose,
+}: {
+  event: EventCard | null;
+  profiles: Record<string, ProfileMini>;
+  visible: boolean;
+  onClose: () => void;
+}) {
+  const [blockedIds, setBlockedIds] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    if (visible) getBlocked().then(setBlockedIds).catch(() => {});
+  }, [visible]);
+  if (!event) return null;
+  const { presents, absents, missing } = whoLists(event, profiles, blockedIds);
+  return (
+    <WhoComesSheet
+      visible={visible}
+      onClose={onClose}
+      sub={`${buildEventTitle(event)}, ${shortDate(event.date_event)}`}
+      presents={presents}
+      absents={absents}
+      missing={missing}
+    />
+  );
+}
 
 function WhoComesSheet({
   visible,

@@ -7,7 +7,7 @@ import { ActivityIndicator, Alert, Modal, Platform, Pressable, RefreshControl, S
 import { CreateSheet } from '@/components/events/CreateSheet';
 import { DateSondagesSection, loadOpenSondages, type SondageFull } from '@/components/events/DateSondages';
 import { BirthdayBubbles, BirthdaysSheet, EventTicket, FeaturedBadge, FeaturedTicket } from '@/components/events/EventCards';
-import { EventDetail } from '@/components/events/EventDetail';
+import { EventDetail, EventWhoSheet } from '@/components/events/EventDetail';
 import { EventForm } from '@/components/events/EventForm';
 import {
   CATEGORIES,
@@ -46,6 +46,9 @@ export default function EventsScreen() {
   const [sondages, setSondages] = useState<SondageFull[]>([]);
   const [newSondage, setNewSondage] = useState(false);
   const [createSheet, setCreateSheet] = useState(false);
+  // « Qui vient ? » depuis le billet : l'id reste pendant l'animation de fermeture
+  const [whoId, setWhoId] = useState<string | null>(null);
+  const [whoOpen, setWhoOpen] = useState(false);
   const [showPast, setShowPast] = useState(false);
   const [showBirthdays, setShowBirthdays] = useState(false);
   const voting = useRef(false);
@@ -301,6 +304,11 @@ export default function EventsScreen() {
                 setOpenId(featured.id);
               }}
               onVote={(v) => quickVote(featured, v)}
+              onWho={() => {
+                tap();
+                setWhoId(featured.id);
+                setWhoOpen(true);
+              }}
             />
           </>
         )}
@@ -380,6 +388,13 @@ export default function EventsScreen() {
         onClose={() => setCreateSheet(false)}
         onDismiss={flushPendingCreate}
         onPick={pickCreate}
+      />
+
+      <EventWhoSheet
+        event={events.find((e) => e.id === whoId) ?? null}
+        profiles={profiles}
+        visible={whoOpen}
+        onClose={() => setWhoOpen(false)}
       />
 
       <BirthdaysSheet visible={showBirthdays} onClose={() => setShowBirthdays(false)} birthdays={birthdays} />
