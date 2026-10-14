@@ -69,9 +69,19 @@ function wedgeColor(i: number, n: number) {
   return PALETTE[i % PALETTE.length];
 }
 
+const WHEEL_MARGIN = theme.s(5); // = styles.wheelZone.marginTop
+const WHEEL_EXTRA = 28; // place du pointeur au-dessus de la roue
+const ACTIONS_MARGIN = theme.s(6); // = styles.actions.marginTop
+
 export default function RouletteScreen() {
   const { width } = useWindowDimensions();
-  const size = Math.min(width - theme.s(10), 360);
+  // Hauteurs mesurées : la roue rétrécit pour que l'écran tienne sans défiler
+  const [viewH, setViewH] = useState(0);
+  const [topH, setTopH] = useState(0);
+  const [actionsH, setActionsH] = useState(0);
+  const fit =
+    viewH && topH && actionsH ? viewH - topH - actionsH - WHEEL_MARGIN - WHEEL_EXTRA - theme.s(4) /* paddingBottom du ScrollView */ : Infinity;
+  const size = Math.round(Math.max(220, Math.min(width - theme.s(10), 360, fit)));
   const radius = size / 2;
 
   const [all, setAll] = useState<Entry[]>([]);
@@ -300,7 +310,8 @@ export default function RouletteScreen() {
     <SafeAreaView style={styles.flex} edges={['top']}>
       <ScrollView
         ref={scrollRef}
-        contentContainerStyle={{ paddingBottom: theme.s(16) }}
+        onLayout={(e) => setViewH(e.nativeEvent.layout.height)}
+        contentContainerStyle={{ paddingBottom: theme.s(4) }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -311,6 +322,7 @@ export default function RouletteScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
+        <View onLayout={(e) => setTopH(e.nativeEvent.layout.height)}>
         <View style={styles.heroBlock}>
           <Text style={styles.heroLabel}>Les Artistes</Text>
           <Text style={styles.heroTitle}>Roulette</Text>
@@ -354,8 +366,10 @@ export default function RouletteScreen() {
           </View>
           <Ionicons name="chevron-forward" size={18} color={theme.colors.muted} />
         </Pressable>
+        </View>
 
-        <View style={[styles.wheelZone, { height: size + 28 }]}>
+        {/* Cachée jusqu'aux mesures : sinon elle s'affiche à 360 puis rétrécit */}
+        <View style={[styles.wheelZone, { height: size + WHEEL_EXTRA, opacity: fit === Infinity ? 0 : 1 }]}>
           <View
             style={[
               styles.wheelShadow,
@@ -473,7 +487,7 @@ export default function RouletteScreen() {
           </Animated.View>
         </View>
 
-        <View style={styles.actions}>
+        <View style={styles.actions} onLayout={(e) => setActionsH(e.nativeEvent.layout.height + ACTIONS_MARGIN)}>
           <Pressable
             onPress={spin}
             disabled={spinning || n < 2}
@@ -485,7 +499,11 @@ export default function RouletteScreen() {
           >
             <Text style={styles.spinText}>{spinning ? 'Ça tourne…' : 'Lancer la roue'}</Text>
           </Pressable>
-          {n < 2 && <Text style={styles.hint}>Il faut au moins deux choix dans la roue.</Text>}
+          {/* Place toujours réservée : la roue ne change pas de taille quand l'indice apparaît */}
+          <Text style={[styles.hint, n >= 2 && { opacity: 0 }]} accessibilityElementsHidden={n >= 2}
+            importantForAccessibility={n >= 2 ? 'no-hide-descendants' : 'auto'}>
+            Il faut au moins deux choix dans la roue.
+          </Text>
         </View>
 
         {!!winner && (
@@ -562,7 +580,7 @@ export default function RouletteScreen() {
               </Pressable>
             )}
           </View>
-          {/* Modal bord à bord sur Android : le clavier ne redimensionne plus la fenêtre */}
+          {/* Android : la fenêtre de la Modal se rétrécit sous le clavier, KeyboardAware n'ajoute que le reste */}
           <KeyboardAware style={styles.flex}>
             <ScrollView
               keyboardShouldPersistTaps="handled"
@@ -696,7 +714,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   chipTextOn: { color: theme.colors.deep },
-  wheelZone: { marginTop: theme.s(5), alignItems: 'center' },
+  wheelZone: { marginTop: WHEEL_MARGIN, alignItems: 'center' },
   wheelShadow: {
     position: 'absolute',
     shadowColor: theme.colors.violet,
@@ -752,7 +770,7 @@ const styles = StyleSheet.create({
   },
   actions: {
     alignItems: 'center',
-    marginTop: theme.s(6),
+    marginTop: ACTIONS_MARGIN,
     paddingHorizontal: theme.s(5),
   },
   spinBtn: {

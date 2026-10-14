@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   Keyboard,
   LayoutAnimation,
@@ -16,8 +16,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
  * Le KeyboardAvoidingView de React Native calcule la position du champ par
  * rapport à la fiche (pageSheet) au lieu de l'écran : il remontait trop peu
  * et le clavier cachait le champ de commentaire. Ici, pas de calcul de
- * position : le bas du conteneur est le bas de l'écran (fiche, écran sans
- * onglets), moins la marge du bas de la SafeAreaView quand il est dedans.
+ * position sur iOS : le bas du conteneur est le bas de l'écran (fiche, écran
+ * sans onglets), moins la marge du bas de la SafeAreaView quand il est dedans.
+ *
+ * Android : la fenêtre d'une Modal se rétrécit déjà sous le clavier, celle
+ * des écrans en edge-to-edge non. On ne compte donc que la partie du
+ * conteneur réellement couverte (bas du conteneur moins haut du clavier),
+ * sinon la hauteur du clavier était retirée deux fois dans les Modal.
+ * Limite : Android 11+ ne prévient pas quand le clavier change de hauteur
+ * (emojis, suggestions) sans se fermer.
  */
 export function KeyboardAware({
   children,
@@ -31,6 +38,11 @@ export function KeyboardAware({
 }) {
   const insets = useSafeAreaInsets();
   const [keyboard, setKeyboard] = useState(0);
+  // Android : haut du clavier et bas du conteneur, en coordonnées de l'écran
+  const ref = useRef<View>(null);
+  const [kbTop, setKbTop] = useState<number | null>(null);
+  const [bottom, setBottom] = useState<number | null>(null);
+  const measure = () => ref.current?.measureInWindow((_x, y, _w, h) => setBottom(y + h));
 
   useEffect(() => {
     const ios = Platform.OS === 'ios';
@@ -45,10 +57,15 @@ export function KeyboardAware({
     const show = Keyboard.addListener(ios ? 'keyboardWillShow' : 'keyboardDidShow', (e) => {
       animate(e);
       setKeyboard(e.endCoordinates.height);
+      if (!ios) {
+        setKbTop(e.endCoordinates.screenY);
+        ref.current?.measureInWindow((_x, y, _w, h) => setBottom(y + h));
+      }
     });
     const hide = Keyboard.addListener(ios ? 'keyboardWillHide' : 'keyboardDidHide', (e) => {
       animate(e);
       setKeyboard(0);
+      setKbTop(null);
     });
     return () => {
       show.remove();
@@ -57,8 +74,15 @@ export function KeyboardAware({
   }, []);
 
   const bottomGap = insideSafeArea ? insets.bottom : 0;
+  const pad =
+    Platform.OS === 'ios'
+      ? Math.max(0, keyboard - bottomGap)
+      : kbTop !== null && bottom !== null
+        ? Math.max(0, bottom - kbTop)
+        : 0;
   return (
-    <View style={[{ flex: 1, paddingBottom: Math.max(0, keyboard - bottomGap) }, style]}>
+    // Le padding ne change pas le cadre du conteneur : pas de boucle avec onLayout
+    <View ref={ref} onLayout={Platform.OS === 'android' ? measure : undefined} style={[{ flex: 1, paddingBottom: pad }, style]}>
       {children}
     </View>
   );

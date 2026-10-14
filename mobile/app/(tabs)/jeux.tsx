@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { JeuForm } from '@/components/jeux/JeuForm';
 import {
   sb,
   type JeuAlcool,
@@ -38,10 +39,14 @@ export default function JeuxScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
-  const [openAlc, setOpenAlc] = useState<JeuAlcool | null>(null);
-  // On garde l'id : la carte affichée est relue dans `societe` après chaque rechargement
+  // On garde l'id : la fiche affichée est relue dans la liste après chaque rechargement
+  const [openAlcId, setOpenAlcId] = useState<string | null>(null);
+  const openAlc = openAlcId ? alcool.find((j) => j.id === openAlcId) ?? null : null;
   const [openSocId, setOpenSocId] = useState<string | null>(null);
   const openSoc = openSocId ? societe.find((s) => s.id === openSocId) ?? null : null;
+  // Formulaire affiché dans la même fiche que le détail : pas d'enchaînement de deux Modal
+  const [alcForm, setAlcForm] = useState<'new' | JeuAlcool | null>(null);
+  const [socForm, setSocForm] = useState<'new' | JeuSociete | null>(null);
   const rating = useRef(false);
 
   const loadAll = useCallback(async () => {
@@ -125,6 +130,43 @@ export default function JeuxScreen() {
     }
   }
 
+  function closeAlc() {
+    setOpenAlcId(null);
+    setAlcForm(null);
+  }
+  function closeSoc() {
+    setOpenSocId(null);
+    setSocForm(null);
+  }
+
+  function deleteJeu(kind: Tab, id: string) {
+    Alert.alert('Supprimer ce jeu ?', undefined, [
+      { text: 'Annuler', style: 'cancel' },
+      {
+        text: 'Supprimer',
+        style: 'destructive',
+        onPress: async () => {
+          const { data, error } = await sb
+            .from(kind === 'alcool' ? 'jeux_alcool' : 'jeux_societe')
+            .delete()
+            .eq('id', id)
+            .select('id');
+          if (error || !data?.length) {
+            Alert.alert(
+              'Suppression impossible',
+              error ? 'Réessaie dans un moment.' : 'Ce jeu a déjà été supprimé, ou tu n’en es pas l’auteur.',
+            );
+            loadAll();
+            return;
+          }
+          if (kind === 'alcool') closeAlc();
+          else closeSoc();
+          loadAll();
+        },
+      },
+    ]);
+  }
+
   if (loading) {
     return (
       <SafeAreaView style={styles.center}>
@@ -149,7 +191,7 @@ export default function JeuxScreen() {
           keyExtractor={(j) => j.id}
           contentContainerStyle={styles.list}
           renderItem={({ item }) => (
-            <AlcoolCardView jeu={item} onPress={() => setOpenAlc(item)} />
+            <AlcoolCardView jeu={item} onPress={() => setOpenAlcId(item.id)} />
           )}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.teal} />
@@ -171,29 +213,83 @@ export default function JeuxScreen() {
         />
       )}
 
+      {!!userId && (
+        <Pressable
+          onPress={() => (tab === 'alcool' ? setAlcForm('new') : setSocForm('new'))}
+          accessibilityRole="button"
+          accessibilityLabel={tab === 'alcool' ? 'Ajouter un jeu d’alcool' : 'Ajouter un jeu de société'}
+          style={({ pressed }) => [
+            styles.fab,
+            tab === 'societe' && { backgroundColor: theme.colors.teal, shadowColor: theme.colors.teal },
+            pressed && { transform: [{ scale: 0.92 }] },
+          ]}
+        >
+          <Ionicons name="add" size={30} color="#fff" />
+        </Pressable>
+      )}
+
       <Modal
-        visible={!!openAlc}
+        visible={!!openAlc || alcForm !== null}
         animationType="slide"
         presentationStyle="pageSheet"
-        onRequestClose={() => setOpenAlc(null)}
+        onRequestClose={() => (alcForm !== null && openAlc ? setAlcForm(null) : closeAlc())}
       >
-        {!!openAlc && (
-          <AlcoolDetail jeu={openAlc} onClose={() => setOpenAlc(null)} authorName={authorName(profiles[openAlc.created_by])} />
+        {alcForm !== null && userId ? (
+          <JeuForm
+            kind="alcool"
+            initial={alcForm === 'new' ? null : alcForm}
+            userId={userId}
+            // Depuis une fiche, fermer le formulaire ramène à la fiche
+            onClose={() => (openAlc ? setAlcForm(null) : closeAlc())}
+            onSaved={() => {
+              if (alcForm === 'new') closeAlc();
+              else setAlcForm(null);
+              loadAll();
+            }}
+          />
+        ) : (
+          !!openAlc && (
+            <AlcoolDetail
+              jeu={openAlc}
+              onClose={closeAlc}
+              authorName={authorName(profiles[openAlc.created_by])}
+              mine={openAlc.created_by === userId}
+              onEdit={() => setAlcForm(openAlc)}
+              onDelete={() => deleteJeu('alcool', openAlc.id)}
+            />
+          )
         )}
       </Modal>
       <Modal
-        visible={!!openSoc}
+        visible={!!openSoc || socForm !== null}
         animationType="slide"
         presentationStyle="pageSheet"
-        onRequestClose={() => setOpenSocId(null)}
+        onRequestClose={() => (socForm !== null && openSoc ? setSocForm(null) : closeSoc())}
       >
-        {!!openSoc && (
-          <SocieteDetail
-            card={openSoc}
-            onClose={() => setOpenSocId(null)}
-            authorName={authorName(profiles[openSoc.created_by])}
-            onRate={(n) => rateSociete(openSoc, n)}
+        {socForm !== null && userId ? (
+          <JeuForm
+            kind="societe"
+            initial={socForm === 'new' ? null : socForm}
+            userId={userId}
+            onClose={() => (openSoc ? setSocForm(null) : closeSoc())}
+            onSaved={() => {
+              if (socForm === 'new') closeSoc();
+              else setSocForm(null);
+              loadAll();
+            }}
           />
+        ) : (
+          !!openSoc && (
+            <SocieteDetail
+              card={openSoc}
+              onClose={closeSoc}
+              authorName={authorName(profiles[openSoc.created_by])}
+              onRate={(n) => rateSociete(openSoc, n)}
+              mine={openSoc.created_by === userId}
+              onEdit={() => setSocForm(openSoc)}
+              onDelete={() => deleteJeu('societe', openSoc.id)}
+            />
+          )
         )}
       </Modal>
     </SafeAreaView>
@@ -244,15 +340,34 @@ function AlcoolCardView({ jeu, onPress }: { jeu: JeuAlcool; onPress: () => void 
   );
 }
 
+type OwnerProps = { mine: boolean; onEdit: () => void; onDelete: () => void };
+
+function OwnerActions({ mine, onEdit, onDelete }: OwnerProps) {
+  if (!mine) return null;
+  return (
+    <View style={styles.ownerRow}>
+      <Pressable onPress={onEdit} accessibilityRole="button" style={({ pressed }) => [styles.ownerBtn, pressed && { opacity: 0.7 }]}>
+        <Ionicons name="create-outline" size={18} color={theme.colors.text} />
+        <Text style={styles.ownerBtnText}>Modifier</Text>
+      </Pressable>
+      <Pressable onPress={onDelete} accessibilityRole="button" style={({ pressed }) => [styles.ownerBtn, pressed && { opacity: 0.7 }]}>
+        <Ionicons name="trash-outline" size={18} color={theme.colors.danger} />
+        <Text style={[styles.ownerBtnText, { color: theme.colors.danger }]}>Supprimer</Text>
+      </Pressable>
+    </View>
+  );
+}
+
 function AlcoolDetail({
   jeu,
   authorName,
   onClose,
+  ...owner
 }: {
   jeu: JeuAlcool;
   authorName: string;
   onClose: () => void;
-}) {
+} & OwnerProps) {
   return (
     <SafeAreaView style={styles.flex}>
       <View style={styles.modalTopBar}>
@@ -275,6 +390,7 @@ function AlcoolDetail({
         {!!jeu.joueurs && <DetailRow label="Joueurs" value={jeu.joueurs} />}
         {!!jeu.niveau && <DetailRow label="Niveau" value={jeu.niveau} />}
         {!!jeu.materiel && <DetailRow label="Matériel" value={jeu.materiel} />}
+        <OwnerActions {...owner} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -305,12 +421,13 @@ function SocieteDetail({
   authorName,
   onClose,
   onRate,
+  ...owner
 }: {
   card: SocieteCard;
   authorName: string;
   onClose: () => void;
   onRate: (n: number) => void;
-}) {
+} & OwnerProps) {
   return (
     <SafeAreaView style={styles.flex}>
       <View style={styles.modalTopBar}>
@@ -349,6 +466,7 @@ function SocieteDetail({
             <Text style={styles.detailContent}>{card.avis}</Text>
           </>
         )}
+        <OwnerActions {...owner} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -435,7 +553,38 @@ const styles = StyleSheet.create({
   subTabActive: { backgroundColor: theme.colors.coral, borderColor: theme.colors.coral },
   subTabText: { color: theme.colors.muted, fontFamily: theme.fonts.bodyBold, fontSize: 14 },
   subTabTextActive: { color: '#fff' },
-  list: { padding: theme.s(4), paddingBottom: theme.s(10) },
+  // Le bas de la liste reste dégagé du bouton « + »
+  list: { padding: theme.s(4), paddingBottom: 100 },
+  fab: {
+    position: 'absolute',
+    right: 20,
+    bottom: 24,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: theme.colors.coral,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: theme.colors.coral,
+    shadowOpacity: 0.5,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
+  },
+  ownerRow: { flexDirection: 'row', gap: 10, marginTop: theme.s(8) },
+  ownerBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    minHeight: 48,
+    borderRadius: theme.radius.md,
+    borderWidth: 1.5,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+  },
+  ownerBtnText: { color: theme.colors.text, fontFamily: theme.fonts.bodyBold, fontSize: 15 },
   card: {
     backgroundColor: theme.colors.cardBg,
     borderRadius: theme.radius.lg,
