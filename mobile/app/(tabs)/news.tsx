@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -15,7 +15,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   sb,
@@ -36,6 +36,29 @@ type NewsLite = Omit<NewsRow, 'contenu'> & {
   iLiked: boolean;
   commentCount: number;
 };
+
+// Images insérées dans le texte depuis le site (bouton « image » de l'éditeur)
+// Le site insère l'adresse tapée telle quelle : on la rend absolue et en https
+// (iOS et Android bloquent le http en clair), le reste est ignoré
+function imagesOf(html: string) {
+  const urls: string[] = [];
+  const re = /<img[^>]+src=["']([^"']+)["']/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html))) {
+    let url = m[1].replace(/&amp;/g, '&').trim();
+    if (url.startsWith('data:')) {
+      if (url.startsWith('data:image/')) urls.push(url);
+      continue;
+    }
+    try {
+      url = new URL(url, 'https://les--artistes.fr/').href.replace(/^http:/, 'https:');
+    } catch {
+      continue;
+    }
+    if (url.startsWith('https://')) urls.push(url);
+  }
+  return urls;
+}
 
 function stripHtml(html: string) {
   return html
@@ -66,6 +89,7 @@ export default function NewsScreen() {
   const [hasMore, setHasMore] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
+  const lastOpen = useRef<NewsLite | null>(null);
   const liking = useRef(new Set<string>());
   // Lignes déjà lues côté serveur, news masquées comprises (items.length les ignore)
   const offset = useRef(0);
@@ -220,7 +244,11 @@ export default function NewsScreen() {
     );
   }
 
-  const open = items.find((n) => n.id === openId) ?? null;
+  // Un rechargement au retour dans l'appli ne garde que la 1re page : la fiche
+  // ouverte (et son plein écran) ne doit pas se fermer pour autant
+  const found = items.find((n) => n.id === openId);
+  if (found) lastOpen.current = found;
+  const open = openId ? (found ?? lastOpen.current) : null;
 
   return (
     <SafeAreaView style={styles.flex}>
@@ -404,10 +432,19 @@ function NewsDetail({
   onCommentPosted: () => void;
 }) {
   const [contenu, setContenu] = useState<string | null>(null);
+  // Calculé une fois : une image collée en base64 pèse plusieurs Mo
+  const body = useMemo(
+    () => (contenu ? { text: stripHtml(contenu), images: imagesOf(contenu) } : { text: '', images: [] }),
+    [contenu],
+  );
   const [comments, setComments] = useState<NewsComment[]>([]);
   const [text, setText] = useState('');
   const [posting, setPosting] = useState(false);
   const [loadingDetail, setLoadingDetail] = useState(true);
+  const [viewerUrl, setViewerUrl] = useState<string | null>(null);
+  // Images en échec (lien mort, page web collée à la place d'une image) : masquées
+  const [brokenImages, setBrokenImages] = useState<Set<number>>(new Set());
+  const insets = useSafeAreaInsets();
   // Profils des commentateurs qui n'ont écrit aucune news chargée
   const [commenters, setCommenters] = useState<Record<string, ProfileMini>>({});
 
@@ -472,7 +509,13 @@ function NewsDetail({
       <KeyboardAware>
         <ScrollView contentContainerStyle={{ padding: theme.s(5) }}>
           {!!news.cover_url && (
-            <Image source={{ uri: news.cover_url }} style={styles.detailCover} contentFit="cover" />
+            <Pressable
+              onPress={() => setViewerUrl(news.cover_url)}
+              accessibilityRole="imagebutton"
+              accessibilityLabel="Agrandir la photo"
+            >
+              <Image source={{ uri: news.cover_url }} style={styles.detailCover} contentFit="cover" />
+            </Pressable>
           )}
           <Text style={styles.detailTitle}>{news.titre}</Text>
           <View style={styles.commentHead}>
@@ -501,7 +544,26 @@ function NewsDetail({
               <View style={[styles.skeletonLine, { width: '72%', marginTop: 8 }]} />
             </View>
           ) : (
-            <Text style={styles.detailContent}>{contenu ? stripHtml(contenu) : ''}</Text>
+            <>
+              <Text style={styles.detailContent}>{body.text}</Text>
+              {body.images.map((url, i) =>
+                brokenImages.has(i) ? null : (
+                  <Pressable
+                    key={i}
+                    onPress={() => setViewerUrl(url)}
+                    accessibilityRole="imagebutton"
+                    accessibilityLabel="Agrandir l’image"
+                  >
+                    <Image
+                      source={{ uri: url }}
+                      style={styles.inlineImage}
+                      contentFit="cover"
+                      onError={() => setBrokenImages((prev) => new Set(prev).add(i))}
+                    />
+                  </Pressable>
+                ),
+              )}
+            </>
           )}
 
           <Text style={styles.detailSection}>Commentaires ({comments.length})</Text>
@@ -551,6 +613,27 @@ function NewsDetail({
           </Pressable>
         </View>
       </KeyboardAware>
+      <Modal
+        visible={!!viewerUrl}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setViewerUrl(null)}
+      >
+        {!!viewerUrl && (
+          <View style={styles.viewer}>
+            <Image source={{ uri: viewerUrl }} style={StyleSheet.absoluteFill} contentFit="contain" />
+            <Pressable
+              onPress={() => setViewerUrl(null)}
+              style={[styles.viewerClose, { top: insets.top + 8 }]}
+              hitSlop={20}
+              accessibilityRole="button"
+              accessibilityLabel="Fermer"
+            >
+              <Ionicons name="close" size={32} color="#fff" />
+            </Pressable>
+          </View>
+        )}
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -655,6 +738,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: theme.colors.surface,
   },
+  inlineImage: {
+    width: '100%',
+    height: 220,
+    borderRadius: theme.radius.lg,
+    marginTop: theme.s(3),
+  },
+  viewer: { flex: 1, backgroundColor: '#000' },
+  viewerClose: { position: 'absolute', right: 20, zIndex: 10 },
   detailCover: {
     width: '100%',
     height: 200,

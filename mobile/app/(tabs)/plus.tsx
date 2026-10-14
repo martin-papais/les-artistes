@@ -9,6 +9,7 @@ type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 type Item = { label: string; icon: IoniconName; route: Href; sub: string };
 
 const ITEMS: Item[] = [
+  { label: 'Photos', icon: 'images', route: '/photos', sub: 'Les souvenirs partagés' },
   { label: 'Notes', icon: 'create', route: '/notes', sub: 'Mur des pensées du groupe' },
   { label: 'Boutique', icon: 'bag', route: '/shop', sub: 'Articles à commander & sondage' },
   { label: 'Annuaire', icon: 'people', route: '/annuaire', sub: 'Contacts du groupe' },

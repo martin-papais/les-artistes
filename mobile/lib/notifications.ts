@@ -131,6 +131,8 @@ export function takeNotificationRoute(
   const route = extractPayload(response)?.route;
   if (typeof route !== 'string' || !route) return null;
   handledNotificationId = id;
+  // Photos a quitté les onglets pour « Plus » ; les triggers envoient encore l'ancienne route
+  if (route === '/(tabs)/photos') return '/photos';
   return route;
 }
 

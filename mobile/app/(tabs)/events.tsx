@@ -5,6 +5,7 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -13,7 +14,8 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   sb,
@@ -21,6 +23,14 @@ import {
   type EventRow,
   type EventVote,
   type ProfileMini, sessionUser } from '@/lib/supabase';
+import {
+  DateSondagesSection,
+  loadOpenSondages,
+  type SondageFull,
+} from '@/components/events/DateSondages';
+import { EventInfos, EventPolls } from '@/components/events/EventPolls';
+import { addToAgenda } from '@/lib/agenda';
+import { CalendarPicker, dayLabel } from '@/components/ui/CalendarPicker';
 import { getBlocked, ModerationButton } from '@/lib/moderation';
 import { KeyboardAware } from '@/lib/keyboard';
 import { theme } from '@/lib/theme';
@@ -32,7 +42,12 @@ type EventCard = EventRow & {
   isPast: boolean;
 };
 
-type Compose = 'new' | EventCard | null;
+type Compose =
+  | 'new'
+  | EventCard
+  // Événement créé depuis un sondage de date : le sondage est clos à l'enregistrement
+  | { prefill: Partial<EventRow>; sondageId: string }
+  | null;
 
 type Birthday = {
   id: string;
@@ -42,7 +57,28 @@ type Birthday = {
   age: number;
 };
 
-const CATEGORIES = ['Anniversaire', 'Vacances', 'Féria', 'Sport', 'Barathon', 'Soirée', 'Restaurant', 'Autre'];
+// Mêmes catégories que le site (+ Restaurant, propre à l'appli)
+const CATEGORIES = [
+  'Soirée',
+  'Anniversaire',
+  'Barbecue',
+  'Soirée jeux de société',
+  'Nouvel an',
+  'Olympiade',
+  'Barathon',
+  'Sport',
+  'Féria',
+  'Vacances',
+  'Restaurant',
+  'Autre',
+];
+const WITH_ALCOOL = ['Olympiade', 'Nouvel an', 'Anniversaire', 'Soirée'];
+const WITH_DORMIR = ['Olympiade', 'Nouvel an', 'Anniversaire', 'Soirée'];
+const YES_NO_NSP = [
+  { v: 'oui', l: 'Oui' },
+  { v: 'non', l: 'Non' },
+  { v: 'nsp', l: 'Je ne sais pas' },
+];
 
 const MONTHS_SHORT = ['Janv', 'Févr', 'Mars', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sept', 'Oct', 'Nov', 'Déc'];
 
@@ -72,6 +108,24 @@ function buildEventTitle(e: EventRow): string {
   }
 }
 
+const CHEZ_QUI_REQUIS = ['Olympiade', 'Anniversaire', 'Soirée', 'Barbecue', 'Soirée jeux de société', 'Autre', 'Nouvel an'];
+
+function capFirst(t: string) {
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+
+/** '20h30', '20:30', '20:30:00', '20h', '9:05' → 'HH:MM' ; '' → null ; illisible → undefined */
+function normalizeTime(raw: string): string | null | undefined {
+  const t = raw.trim();
+  if (!t) return null;
+  const m = /^(\d{1,2})(?:\s*[:hH]\s*(\d{2})?(?::\d{2})?)?$/.exec(t);
+  if (!m) return undefined;
+  const hh = Number(m[1]);
+  const mm = Number(m[2] ?? '0');
+  if (hh > 23 || mm > 59) return undefined;
+  return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+}
+
 function nextBirthday(dob: string) {
   const d = new Date(dob);
   if (Number.isNaN(d.getTime())) return null;
@@ -99,19 +153,52 @@ export default function EventsScreen() {
   const [userId, setUserId] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const [compose, setCompose] = useState<Compose>(null);
+  const [sondages, setSondages] = useState<SondageFull[]>([]);
+  const [newSondage, setNewSondage] = useState(false);
+  const [createSheet, setCreateSheet] = useState(false);
+  // Choix fait dans la feuille : ouvert une fois la feuille fermée (iOS refuse d'empiler)
+  const pendingCreate = useRef<'event' | 'sondage' | null>(null);
+  function flushPendingCreate() {
+    const p = pendingCreate.current;
+    pendingCreate.current = null;
+    if (p === 'event') setCompose('new');
+    if (p === 'sondage') setNewSondage(true);
+  }
+  function pickCreate(kind: 'event' | 'sondage') {
+    tap();
+    pendingCreate.current = kind;
+    setCreateSheet(false);
+    if (Platform.OS !== 'ios') setTimeout(flushPendingCreate, 250);
+  }
+  const insets = useSafeAreaInsets();
+  // Tap sur une notification : « Quelle date ? » → ?sondage=<id>, rappel de la veille → ?event=<id>
+  const { sondage: sondageParam, event: eventParam } = useLocalSearchParams<{
+    sondage?: string;
+    event?: string;
+  }>();
   // iOS refuse d'ouvrir une fiche pendant qu'une autre se ferme : le formulaire
   // d'édition attend la fin de la fermeture du détail (onDismiss)
   const pendingEdit = useRef<Compose>(null);
+  function flushPendingEdit() {
+    if (pendingEdit.current) {
+      setCompose(pendingEdit.current);
+      pendingEdit.current = null;
+    }
+  }
 
   const loadAll = useCallback(async () => {
     const user = await sessionUser();
     setUserId(user?.id ?? null);
 
-    const [eventsRes, allProfilesRes] = await Promise.all([
+    const [eventsRes, allProfilesRes, sondagesRes] = await Promise.all([
       sb.from('events').select('*').order('date_event', { ascending: true }),
       sb.from('profiles').select('id,prenom,nom,pseudo,dob'),
+      loadOpenSondages(),
     ]);
-    if (eventsRes.error) {
+    // null = erreur (table absente, réseau) : on garde les sondages déjà affichés
+    if (sondagesRes) setSondages(sondagesRes);
+    // Sans profils, « Qui vient ? » afficherait des « ? » et personne en attente de réponse
+    if (eventsRes.error || allProfilesRes.error) {
       // Sans ça, une erreur réseau ressemble à « aucun événement »
       setLoading(false);
       Alert.alert('Chargement impossible', 'Vérifie ta connexion puis tire vers le bas pour réessayer.');
@@ -172,6 +259,33 @@ export default function EventsScreen() {
 
   useRefreshOnFocus(loadAll);
 
+  // Sondage de la notification absent de la liste (créé après le dernier chargement,
+  // rechargement bridé à une fois par minute) : on recharge les sondages, une fois par id
+  const fetchedSondage = useRef<string | null>(null);
+  useEffect(() => {
+    if (typeof sondageParam !== 'string' || loading) return;
+    if (sondages.some((s) => s.id === sondageParam) || fetchedSondage.current === sondageParam) return;
+    fetchedSondage.current = sondageParam;
+    loadOpenSondages().then((res) => {
+      if (!res) return;
+      setSondages(res);
+      if (!res.some((s) => s.id === sondageParam)) {
+        Alert.alert('Sondage terminé', 'Ce sondage est clos ou toutes ses dates sont passées.');
+      }
+    });
+  }, [sondageParam, sondages, loading]);
+
+  // Rappel de la veille : ouvre l'événement, puis efface le paramètre pour qu'un
+  // nouveau tap sur la même notification le rouvre. Une seule fiche à la fois sur iOS.
+  const router = useRouter();
+  useEffect(() => {
+    if (typeof eventParam !== 'string' || loading) return;
+    if (openId || compose || createSheet || newSondage) return;
+    if (!events.some((e) => e.id === eventParam)) return;
+    setOpenId(eventParam);
+    router.setParams({ event: undefined });
+  }, [eventParam, events, loading, openId, compose, createSheet, newSondage, router]);
+
   async function onRefresh() {
     setRefreshing(true);
     try {
@@ -215,6 +329,39 @@ export default function EventsScreen() {
           </Text>
         </View>
 
+        {!!userId && (
+          <DateSondagesSection
+            sondages={sondages}
+            currentUserId={userId}
+            profiles={profiles}
+            categories={CATEGORIES}
+            onChanged={async () => {
+              const res = await loadOpenSondages();
+              if (res) setSondages(res);
+            }}
+            onCreateEvent={(sd, date) => {
+              const cat = sd.categorie ?? 'Autre';
+              setCompose({
+                sondageId: sd.id,
+                prefill: {
+                  categorie: cat,
+                  date_event: date,
+                  note: sd.note,
+                  raison: cat === 'Autre' ? sd.titre : null,
+                },
+              });
+            }}
+            openNew={newSondage}
+            // Une seule fiche à la fois sur iOS : on attend que les autres soient fermées
+            focusId={
+              typeof sondageParam === 'string' && !openId && !compose && !createSheet && !newSondage
+                ? sondageParam
+                : null
+            }
+            onNewClosed={() => setNewSondage(false)}
+          />
+        )}
+
         {birthdays.length > 0 && (
           <View style={styles.section}>
             <SectionHeader label="Prochains anniversaires" />
@@ -236,6 +383,7 @@ export default function EventsScreen() {
             <FeaturedEventCard
               event={featured}
               currentUserId={userId}
+              profiles={profiles}
               onPress={() => {
                 tap();
                 setOpenId(featured.id);
@@ -252,6 +400,7 @@ export default function EventsScreen() {
                 key={e.id}
                 event={e}
                 currentUserId={userId}
+                profiles={profiles}
                 onPress={() => {
                   tap();
                   setOpenId(e.id);
@@ -277,6 +426,7 @@ export default function EventsScreen() {
                 key={e.id}
                 event={e}
                 currentUserId={userId}
+                profiles={profiles}
                 onPress={() => {
                   tap();
                   setOpenId(e.id);
@@ -291,7 +441,7 @@ export default function EventsScreen() {
       <Pressable
         onPress={() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-          setCompose('new');
+          setCreateSheet(true);
         }}
         style={({ pressed }) => [styles.fab, pressed && { transform: [{ scale: 0.92 }] }]}
       >
@@ -299,16 +449,44 @@ export default function EventsScreen() {
       </Pressable>
 
       <Modal
+        visible={createSheet}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setCreateSheet(false)}
+        onDismiss={flushPendingCreate}
+      >
+        <Pressable style={styles.sheetBackdrop} onPress={() => setCreateSheet(false)}>
+          {/* Le toucher sur la feuille ne doit pas la fermer */}
+          <Pressable style={[styles.sheet, { paddingBottom: theme.s(5) + insets.bottom }]} onPress={() => {}}>
+            <View style={styles.sheetGrip} />
+            <Text style={styles.sheetTitle}>Créer</Text>
+            <CreateOption
+              icon="calendar"
+              color={theme.colors.coral}
+              title="Un événement"
+              sub="La date est fixée : chacun dit s’il vient"
+              onPress={() => pickCreate('event')}
+            />
+            <CreateOption
+              icon="calendar-number"
+              color={theme.colors.yellow}
+              title="Un sondage de date"
+              sub="Tu proposes des dates, le groupe dit quand il est dispo"
+              onPress={() => pickCreate('sondage')}
+            />
+            <Pressable onPress={() => setCreateSheet(false)} style={styles.sheetCancel}>
+              <Text style={styles.sheetCancelText}>Annuler</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      <Modal
         visible={!!openEvent}
         animationType="slide"
         presentationStyle="pageSheet"
         onRequestClose={() => setOpenId(null)}
-        onDismiss={() => {
-          if (pendingEdit.current) {
-            setCompose(pendingEdit.current);
-            pendingEdit.current = null;
-          }
-        }}
+        onDismiss={flushPendingEdit}
       >
         {openEvent && userId && (
           <EventDetail
@@ -320,6 +498,8 @@ export default function EventsScreen() {
             onEdit={() => {
               pendingEdit.current = openEvent;
               setOpenId(null);
+              // onDismiss n'existe que sur iOS (RN 0.81) : sans ça, « Modifier » ne faisait rien sur Android
+              if (Platform.OS !== 'ios') setTimeout(flushPendingEdit, 300);
             }}
             onDeleted={() => {
               setOpenId(null);
@@ -336,10 +516,24 @@ export default function EventsScreen() {
       >
         {compose !== null && userId && (
           <EventForm
-            initial={compose === 'new' ? null : compose}
+            initial={compose === 'new' || 'prefill' in compose ? null : compose}
+            prefill={compose !== 'new' && 'prefill' in compose ? compose.prefill : null}
             currentUserId={userId}
             onClose={() => setCompose(null)}
-            onSaved={() => {
+            onSaved={async (eventId) => {
+              if (compose !== 'new' && 'sondageId' in compose) {
+                const { error } = await sb
+                  .from('date_sondages')
+                  .update({ closed: true, event_id: eventId })
+                  .eq('id', compose.sondageId);
+                // Resté ouvert, le sondage proposerait encore « Créer l'événement » : doublon
+                if (error) {
+                  Alert.alert(
+                    'Événement créé',
+                    'Mais le sondage n’a pas pu être fermé. Supprime-le depuis sa fiche pour éviter un doublon.',
+                  );
+                }
+              }
               setCompose(null);
               loadAll();
             }}
@@ -347,6 +541,48 @@ export default function EventsScreen() {
         )}
       </Modal>
     </SafeAreaView>
+  );
+}
+
+function profileName(p: ProfileMini | undefined) {
+  if (!p) return '?';
+  return p.pseudo || `${p.prenom ?? ''} ${p.nom ?? ''}`.trim() || '?';
+}
+
+// « Marie, Paul, Léa +4 » : les premiers noms, le reste en nombre
+function namesPreview(names: string[], max = 3) {
+  if (names.length <= max) return names.join(', ');
+  return `${names.slice(0, max).join(', ')} +${names.length - max}`;
+}
+
+function CreateOption({
+  icon,
+  color,
+  title,
+  sub,
+  onPress,
+}: {
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  color: string;
+  title: string;
+  sub: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      style={({ pressed }) => [styles.createOption, pressed && { backgroundColor: theme.colors.surface2 }]}
+    >
+      <View style={[styles.createIcon, { backgroundColor: color }]}>
+        <Ionicons name={icon} size={22} color={theme.colors.deep} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.createTitle}>{title}</Text>
+        <Text style={styles.createSub}>{sub}</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={18} color={theme.colors.muted} />
+    </Pressable>
   );
 }
 
@@ -391,13 +627,18 @@ function BirthdayCard({ birthday }: { birthday: Birthday }) {
 function FeaturedEventCard({
   event,
   currentUserId,
+  profiles,
   onPress,
 }: {
   event: EventCard;
   currentUserId: string | null;
+  profiles: Record<string, ProfileMini>;
   onPress: () => void;
 }) {
-  const presents = event.votes.filter((v) => v.present === 'oui').length;
+  const presentNames = event.votes
+    .filter((v) => v.present === 'oui')
+    .map((v) => profileName(profiles[v.user_id]));
+  const presents = presentNames.length;
   const absents = event.votes.filter((v) => v.present === 'non').length;
   const date = new Date(event.date_event);
   const title = buildEventTitle(event);
@@ -482,6 +723,11 @@ function FeaturedEventCard({
         <View style={{ flex: 1 }} />
         <Ionicons name="chevron-forward" size={20} color={theme.colors.muted} />
       </View>
+      {presents > 0 && (
+        <Text style={styles.featuredNames} numberOfLines={1}>
+          {namesPreview(presentNames, 4)}
+        </Text>
+      )}
     </Pressable>
   );
 }
@@ -489,15 +735,20 @@ function FeaturedEventCard({
 function EventCardView({
   event,
   currentUserId,
+  profiles,
   onPress,
   muted,
 }: {
   event: EventCard;
   currentUserId: string | null;
+  profiles: Record<string, ProfileMini>;
   onPress: () => void;
   muted?: boolean;
 }) {
-  const presents = event.votes.filter((v) => v.present === 'oui').length;
+  const presentNames = event.votes
+    .filter((v) => v.present === 'oui')
+    .map((v) => profileName(profiles[v.user_id]));
+  const presents = presentNames.length;
   const date = new Date(event.date_event);
   const title = buildEventTitle(event);
   const myVote = currentUserId ? event.votes.find((v) => v.user_id === currentUserId) : undefined;
@@ -535,7 +786,11 @@ function EventCardView({
         )}
         <View style={styles.metaRow}>
           <Ionicons name="people-outline" size={12} color={theme.colors.muted} />
-          <Text style={styles.metaText}>{presents} présent·e·s</Text>
+          <Text style={styles.metaText} numberOfLines={1}>
+            {presents === 0
+              ? '0 présent·e'
+              : `${presents} présent·e${presents > 1 ? 's' : ''} : ${namesPreview(presentNames)}`}
+          </Text>
         </View>
       </View>
       {myVote ? (
@@ -579,6 +834,8 @@ function EventDetail({
   const [text, setText] = useState('');
   const [posting, setPosting] = useState(false);
   const voting = useRef(false);
+  const [showAttendees, setShowAttendees] = useState(false);
+  const [blockedIds, setBlockedIds] = useState<Set<string>>(new Set());
   const myVote = event.votes.find((v) => v.user_id === currentUserId);
   const isOwner = event.created_by === currentUserId;
   const title = buildEventTitle(event);
@@ -592,6 +849,7 @@ function EventDetail({
         .order('created_at', { ascending: true }),
       getBlocked(),
     ]);
+    setBlockedIds(blocked);
     setComments(((data as EventComment[] | null) ?? []).filter((c) => !blocked.has(c.user_id)));
   }, [event.id]);
 
@@ -671,13 +929,26 @@ function EventDetail({
   }
 
   function nameOf(uid: string) {
-    const p = profiles[uid];
-    if (!p) return '?';
-    return p.pseudo || `${p.prenom ?? ''} ${p.nom ?? ''}`.trim() || '?';
+    return profileName(profiles[uid]);
   }
 
   const presents = event.votes.filter((v) => v.present === 'oui');
   const absents = event.votes.filter((v) => v.present === 'non');
+  const sortNames = (names: string[]) => names.sort((a, b) => a.localeCompare(b, 'fr'));
+  const voterIds = new Set(event.votes.map((v) => v.user_id));
+  const attendeeGroups = [
+    { label: 'Présent·e·s', color: theme.colors.teal, names: sortNames(presents.map((v) => nameOf(v.user_id))) },
+    { label: 'Absent·e·s', color: theme.colors.coral, names: sortNames(absents.map((v) => nameOf(v.user_id))) },
+    {
+      label: 'Pas encore répondu',
+      color: theme.colors.muted,
+      names: sortNames(
+        Object.keys(profiles)
+          .filter((id) => !voterIds.has(id) && !blockedIds.has(id))
+          .map(nameOf),
+      ),
+    },
+  ];
 
   return (
     <SafeAreaView style={styles.flex}>
@@ -728,7 +999,21 @@ function EventDetail({
               <Text style={styles.detailMetaText}>chez {event.chez_qui}</Text>
             </View>
           )}
+          {!event.isPast && (
+            <Pressable
+              onPress={() => {
+                tap();
+                addToAgenda(event, title, currentUserId);
+              }}
+              accessibilityRole="button"
+              style={({ pressed }) => [styles.agendaBtn, pressed && { opacity: 0.7 }]}
+            >
+              <Ionicons name="calendar-number-outline" size={16} color={theme.colors.teal} />
+              <Text style={styles.agendaText}>Ajouter à mon agenda</Text>
+            </Pressable>
+          )}
           {!!event.note && <Text style={styles.detailDescription}>{event.note}</Text>}
+          <EventInfos event={event} />
 
           <Text style={styles.detailSection}>Tu seras là ?</Text>
           <View style={styles.voteRow}>
@@ -754,8 +1039,15 @@ function EventDetail({
             </Pressable>
           )}
 
-          {(presents.length > 0 || absents.length > 0) && (
-            <View style={styles.attendeesBox}>
+          <Pressable
+              onPress={() => setShowAttendees(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Voir qui vient"
+              style={({ pressed }) => [styles.attendeesBox, pressed && { opacity: 0.8 }]}
+            >
+              {presents.length === 0 && absents.length === 0 && (
+                <Text style={styles.attendeesNames}>Personne n’a encore répondu.</Text>
+              )}
               {presents.length > 0 && (
                 <View style={styles.attendeesGroup}>
                   <Text style={styles.attendeesLabel}>{presents.length} présent·e·s</Text>
@@ -774,8 +1066,13 @@ function EventDetail({
                   </Text>
                 </View>
               )}
-            </View>
-          )}
+              <View style={styles.attendeesMore}>
+                <Text style={styles.attendeesMoreText}>Voir tout le monde</Text>
+                <Ionicons name="chevron-forward" size={14} color={theme.colors.teal} />
+              </View>
+            </Pressable>
+
+          <EventPolls event={event} currentUserId={currentUserId} nameOf={nameOf} />
 
           <Text style={styles.detailSection}>Commentaires ({comments.length})</Text>
           {comments.length === 0 && (
@@ -824,53 +1121,124 @@ function EventDetail({
           </Pressable>
         </View>
       </KeyboardAware>
+      <Modal
+        visible={showAttendees}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowAttendees(false)}
+      >
+        <SafeAreaView style={styles.flex}>
+          <View style={styles.modalHeader}>
+            <Pressable
+              onPress={() => setShowAttendees(false)}
+              hitSlop={10}
+              style={styles.detailHeaderBtn}
+              accessibilityRole="button"
+              accessibilityLabel="Fermer"
+            >
+              <Ionicons name="close" size={26} color={theme.colors.text} />
+            </Pressable>
+            <Text style={styles.modalTitle}>Qui vient ?</Text>
+            <View style={{ width: 32 }} />
+          </View>
+          <ScrollView contentContainerStyle={{ padding: theme.s(5) }}>
+            {attendeeGroups.map((g) => (
+              <View key={g.label} style={{ marginBottom: theme.s(5) }}>
+                <Text style={[styles.attendeesLabel, { color: g.color }]}>
+                  {g.label} ({g.names.length})
+                </Text>
+                {g.names.length === 0 ? (
+                  <Text style={styles.emptyText}>Personne</Text>
+                ) : (
+                  g.names.map((n, i) => (
+                    <Text key={`${n}-${i}`} style={styles.attendeeRow}>
+                      {n}
+                    </Text>
+                  ))
+                )}
+              </View>
+            ))}
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
 
-function EventForm({
+export function EventForm({
   initial,
+  prefill,
   currentUserId,
   onClose,
   onSaved,
 }: {
   initial: EventCard | null;
+  /** Création pré-remplie (ex. depuis un sondage de date) */
+  prefill?: Partial<EventRow> | null;
   currentUserId: string;
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (eventId: string | null) => void;
 }) {
   const isEdit = !!initial;
-  const [categorie, setCategorie] = useState(initial?.categorie ?? CATEGORIES[0]);
-  const [date, setDate] = useState(initial?.date_event ?? '');
-  const [heure, setHeure] = useState(initial?.heure ?? '');
-  const [lieu, setLieu] = useState(initial?.lieu ?? '');
-  const [chezQui, setChezQui] = useState(initial?.chez_qui ?? '');
-  const [annivQui, setAnnivQui] = useState(initial?.anniversaire_qui ?? '');
-  const [feriaVille, setFeriaVille] = useState(initial?.feria_ville ?? '');
-  const [sportType, setSportType] = useState(initial?.sport_type ?? '');
-  const [raison, setRaison] = useState(initial?.raison ?? '');
-  const [note, setNote] = useState(initial?.note ?? '');
+  const init: Partial<EventRow> = initial ?? prefill ?? {};
+  const [categorie, setCategorie] = useState(init.categorie ?? CATEGORIES[0]);
+  // date_event peut revenir en timestamp : on garde AAAA-MM-JJ
+  const [date, setDate] = useState((init.date_event ?? '').slice(0, 10));
+  const [calendarOpen, setCalendarOpen] = useState(!init.date_event);
+  const [heure, setHeure] = useState(init.heure ?? '');
+  const [lieu, setLieu] = useState(init.lieu ?? '');
+  const [chezQui, setChezQui] = useState(init.chez_qui ?? '');
+  const [annivQui, setAnnivQui] = useState(init.anniversaire_qui ?? '');
+  const [feriaVille, setFeriaVille] = useState(init.feria_ville ?? '');
+  const [sportType, setSportType] = useState(init.sport_type ?? '');
+  const [raison, setRaison] = useState(init.raison ?? '');
+  const [note, setNote] = useState(init.note ?? '');
+  // Champs du site qui déclenchent les sondages repas / courses
+  const [manger, setManger] = useState(init.manger ?? 'nsp');
+  const [mangerSoir, setMangerSoir] = useState(init.manger_soir ?? 'nsp');
+  const [courses, setCourses] = useState(init.courses ?? 'non');
+  const [heureCourses, setHeureCourses] = useState(init.heure_courses ?? '');
+  const [lieuCourses, setLieuCourses] = useState(init.lieu_courses ?? '');
+  const [dormir, setDormir] = useState(init.dormir ?? 'nsp');
+  const [alcool, setAlcool] = useState(init.alcool ?? '');
+  const [jeuxListe, setJeuxListe] = useState(init.jeux_liste ?? '');
+  const [budget, setBudget] = useState(init.budget ?? '');
   const [saving, setSaving] = useState(false);
 
   async function save() {
-    if (!date.trim()) {
-      Alert.alert('Date requise', 'Indique la date au format AAAA-MM-JJ.');
+    if (!date) {
+      Alert.alert('Date requise', 'Choisis le jour dans le calendrier.');
+      setCalendarOpen(true);
       return;
     }
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date.trim())) {
-      Alert.alert('Format date', 'Utilise le format AAAA-MM-JJ (ex: 2026-08-15).');
+    // Mêmes champs obligatoires que le site, sinon il refuse ensuite d'enregistrer une modification
+    if (CHEZ_QUI_REQUIS.includes(categorie) && !chezQui.trim()) {
+      Alert.alert('Champ requis', 'Indique chez qui ça se passe.');
+      return;
+    }
+    if (categorie === 'Sport' && !sportType.trim()) {
+      Alert.alert('Champ requis', 'Indique le sport.');
       return;
     }
     if (categorie === 'Anniversaire' && !annivQui.trim()) {
       Alert.alert('Champ requis', 'Indique de qui c’est l’anniversaire.');
       return;
     }
+    // Le site lit ces heures avec un champ <input type="time"> : HH:MM uniquement
+    // Une heure déjà en base et non retouchée passe telle quelle (anciennes saisies libres)
+    const h = heure === (init.heure ?? '') && heure ? heure : normalizeTime(heure);
+    const hc =
+      heureCourses === (init.heure_courses ?? '') && heureCourses ? heureCourses : normalizeTime(heureCourses);
+    if (h === undefined || (categorie === 'Barbecue' && courses === 'oui' && hc === undefined)) {
+      Alert.alert('Format heure', 'Écris l’heure comme 20:30 ou 20h30.');
+      return;
+    }
     setSaving(true);
     try {
       const payload = {
         categorie,
-        date_event: date.trim(),
-        heure: heure.trim() || null,
+        date_event: date,
+        heure: h,
         lieu: lieu.trim() || null,
         chez_qui: chezQui.trim() || null,
         anniversaire_qui: annivQui.trim() || null,
@@ -878,12 +1246,37 @@ function EventForm({
         sport_type: sportType.trim() || null,
         raison: raison.trim() || null,
         note: note.trim() || null,
+        // Comme le site : un champ hors de la catégorie choisie est remis à null
+        manger:
+          categorie === 'Soirée jeux de société'
+            ? manger === 'oui'
+              ? 'oui'
+              : 'non'
+            : ['Anniversaire', 'Soirée'].includes(categorie)
+              ? manger
+              : null,
+        manger_soir: categorie === 'Nouvel an' ? mangerSoir : null,
+        courses: categorie === 'Barbecue' ? courses : null,
+        heure_courses: categorie === 'Barbecue' && courses === 'oui' ? (hc ?? null) : null,
+        lieu_courses: categorie === 'Barbecue' && courses === 'oui' ? lieuCourses.trim() || null : null,
+        dormir: WITH_DORMIR.includes(categorie) ? dormir : null,
+        alcool: WITH_ALCOOL.includes(categorie) ? alcool.trim() || null : null,
+        jeux_liste: categorie === 'Soirée jeux de société' ? jeuxListe.trim() || null : null,
+        budget: categorie === 'Vacances' ? budget.trim() || null : null,
       };
-      const r = isEdit
-        ? await sb.from('events').update(payload).eq('id', initial!.id)
-        : await sb.from('events').insert({ ...payload, created_by: currentUserId });
-      if (r.error) throw r.error;
-      onSaved();
+      if (isEdit) {
+        const r = await sb.from('events').update(payload).eq('id', initial!.id);
+        if (r.error) throw r.error;
+        onSaved(initial!.id);
+      } else {
+        const r = await sb
+          .from('events')
+          .insert({ ...payload, created_by: currentUserId })
+          .select('id')
+          .single();
+        if (r.error) throw r.error;
+        onSaved((r.data as { id: string } | null)?.id ?? null);
+      }
     } catch (e) {
       Alert.alert('Erreur', e instanceof Error ? e.message : 'Réessaie.');
     } finally {
@@ -912,6 +1305,9 @@ function EventForm({
                 key={c}
                 onPress={() => {
                   tap();
+                  // « Oui » ne veut pas dire la même chose d'une catégorie à l'autre
+                  // (manger avant / manger ensemble) : on repart de « je ne sais pas »
+                  if (c !== categorie) setManger(c === 'Soirée jeux de société' ? 'non' : 'nsp');
                   setCategorie(c);
                 }}
                 style={[styles.catChip, categorie === c && styles.catChipActive]}
@@ -923,18 +1319,37 @@ function EventForm({
             ))}
           </View>
 
-          <FormField
-            label="Date (AAAA-MM-JJ)"
-            value={date}
-            onChangeText={setDate}
-            placeholder="2026-08-15"
-            autoCapitalize="none"
-          />
+          <Text style={styles.label}>Date</Text>
+          <Pressable
+            onPress={() => {
+              tap();
+              setCalendarOpen((o) => !o);
+            }}
+            accessibilityRole="button"
+            style={[styles.input, styles.dateField, calendarOpen && { borderColor: theme.colors.coral }]}
+          >
+            <Ionicons name="calendar-outline" size={18} color={date ? theme.colors.text : theme.colors.muted} />
+            <Text style={[styles.dateFieldText, !date && { color: 'rgba(255,255,255,0.3)' }]}>
+              {date ? capFirst(dayLabel(date, true)) : 'Choisir le jour'}
+            </Text>
+            <Ionicons name={calendarOpen ? 'chevron-up' : 'chevron-down'} size={18} color={theme.colors.muted} />
+          </Pressable>
+          {calendarOpen && (
+            <View style={{ marginBottom: theme.s(4) }}>
+              <CalendarPicker
+                selected={date ? [date] : []}
+                onToggle={(d) => {
+                  setDate(d);
+                  setCalendarOpen(false);
+                }}
+              />
+            </View>
+          )}
           <FormField
             label="Heure"
             value={heure}
             onChangeText={setHeure}
-            placeholder="20:30"
+            placeholder="20h30"
             autoCapitalize="none"
           />
 
@@ -971,9 +1386,107 @@ function EventForm({
             />
           )}
 
+          {(categorie === 'Anniversaire' || categorie === 'Soirée') && (
+            <ChoiceField
+              label="Faut-il manger avant ?"
+              hint={manger === 'non' ? 'Sondage « Qui mange ensemble » ajouté' : undefined}
+              value={manger}
+              onChange={setManger}
+              options={[
+                { v: 'oui', l: 'Oui' },
+                { v: 'non', l: 'On mange là-bas' },
+                { v: 'nsp', l: 'Je ne sais pas' },
+              ]}
+            />
+          )}
+          {categorie === 'Soirée jeux de société' && (
+            <>
+              <ChoiceField
+                label="On mange ensemble ?"
+                hint={manger === 'oui' ? 'Sondage « Qui mange ensemble » ajouté' : undefined}
+                value={manger === 'oui' ? 'oui' : 'non'}
+                onChange={setManger}
+                options={[
+                  { v: 'oui', l: 'Oui' },
+                  { v: 'non', l: 'Non' },
+                ]}
+              />
+              <FormField
+                label="Jeux déjà sur place"
+                value={jeuxListe}
+                onChangeText={setJeuxListe}
+                placeholder="Catan, Uno, Codenames…"
+              />
+            </>
+          )}
+          {categorie === 'Nouvel an' && (
+            <ChoiceField
+              label="On mange ensemble le soir ?"
+              hint={mangerSoir === 'oui' ? 'Sondage « Qui mange le soir » ajouté' : undefined}
+              value={mangerSoir}
+              onChange={setMangerSoir}
+              options={[
+                { v: 'oui', l: 'Oui, ensemble' },
+                { v: 'non', l: 'Non, mangez avant' },
+                { v: 'nsp', l: 'Je ne sais pas' },
+              ]}
+            />
+          )}
+          {categorie === 'Olympiade' && (
+            <Text style={styles.formHint}>Sondages « Qui mange le midi » et « le soir » ajoutés.</Text>
+          )}
+          {categorie === 'Barathon' && (
+            <Text style={styles.formHint}>Sondages « Présent vendredi » et « samedi » ajoutés.</Text>
+          )}
+          {categorie === 'Barbecue' && (
+            <>
+              <ChoiceField
+                label="Besoin d’aller faire les courses ?"
+                hint="Sondage « Qui mange au barbecue » ajouté"
+                value={courses === 'oui' ? 'oui' : 'non'}
+                onChange={setCourses}
+                options={[
+                  { v: 'oui', l: 'Oui' },
+                  { v: 'non', l: 'Non' },
+                ]}
+              />
+              {courses === 'oui' && (
+                <>
+                  <FormField
+                    label="Heure des courses"
+                    value={heureCourses}
+                    onChangeText={setHeureCourses}
+                    placeholder="15:00"
+                    autoCapitalize="none"
+                  />
+                  <FormField
+                    label="Magasin"
+                    value={lieuCourses}
+                    onChangeText={setLieuCourses}
+                    placeholder="Leclerc, Intermarché…"
+                  />
+                </>
+              )}
+            </>
+          )}
+          {WITH_DORMIR.includes(categorie) && (
+            <ChoiceField label="Peut-on dormir sur place ?" value={dormir} onChange={setDormir} options={YES_NO_NSP} />
+          )}
+          {WITH_ALCOOL.includes(categorie) && (
+            <FormField
+              label="Alcool déjà sur place (optionnel)"
+              value={alcool}
+              onChangeText={setAlcool}
+              placeholder="6 bières, 1 bouteille de rhum…"
+            />
+          )}
+          {categorie === 'Vacances' && (
+            <FormField label="Budget à prévoir" value={budget} onChangeText={setBudget} placeholder="~300 € / personne" />
+          )}
+
           <FormField label="Lieu" value={lieu} onChangeText={setLieu} placeholder="Adresse, ville" />
           <FormField
-            label="Chez qui ?"
+            label={CHEZ_QUI_REQUIS.includes(categorie) ? 'Chez qui ?' : 'Chez qui ? (optionnel)'}
             value={chezQui}
             onChangeText={setChezQui}
             placeholder="Marie"
@@ -1031,6 +1544,43 @@ function VoteChoice({
         {label}
       </Text>
     </Pressable>
+  );
+}
+
+function ChoiceField({
+  label,
+  hint,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  hint?: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: { v: string; l: string }[];
+}) {
+  return (
+    <View style={{ marginBottom: theme.s(4) }}>
+      <Text style={styles.label}>{label}</Text>
+      <View style={[styles.catRow, { marginBottom: 0 }]}>
+        {options.map((o) => (
+          <Pressable
+            key={o.v}
+            onPress={() => {
+              tap();
+              onChange(o.v);
+            }}
+            accessibilityRole="radio"
+            accessibilityState={{ selected: value === o.v }}
+            style={[styles.catChip, value === o.v && styles.catChipActive]}
+          >
+            <Text style={[styles.catChipText, value === o.v && styles.catChipTextActive]}>{o.l}</Text>
+          </Pressable>
+        ))}
+      </View>
+      {!!hint && <Text style={[styles.formHint, { marginTop: 8, marginBottom: 0 }]}>{hint}</Text>}
+    </View>
   );
 }
 
@@ -1178,6 +1728,12 @@ const styles = StyleSheet.create({
     marginTop: theme.s(3),
   },
   featuredFooter: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: theme.s(4) },
+  featuredNames: {
+    color: theme.colors.muted,
+    fontFamily: theme.fonts.body,
+    fontSize: 13,
+    marginTop: theme.s(2),
+  },
   statPill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1311,6 +1867,71 @@ const styles = StyleSheet.create({
     gap: theme.s(2),
   },
   attendeesGroup: {},
+  dateField: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: theme.s(3) },
+  dateFieldText: { flex: 1, color: theme.colors.text, fontFamily: theme.fonts.body, fontSize: 16 },
+  agendaBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 6,
+    marginTop: theme.s(3),
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: theme.radius.pill,
+    borderWidth: 1,
+    borderColor: theme.colors.teal + '66',
+  },
+  agendaText: { color: theme.colors.teal, fontFamily: theme.fonts.bodyBold, fontSize: 13 },
+  sheetBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.55)' },
+  sheet: {
+    backgroundColor: '#241833',
+    borderTopLeftRadius: theme.radius.xl,
+    borderTopRightRadius: theme.radius.xl,
+    padding: theme.s(5),
+    paddingBottom: theme.s(10),
+    gap: theme.s(3),
+  },
+  sheetGrip: {
+    alignSelf: 'center',
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: theme.colors.border,
+    marginBottom: theme.s(1),
+  },
+  sheetTitle: { color: theme.colors.text, fontFamily: theme.fonts.serif, fontSize: 22, marginBottom: theme.s(1) },
+  createOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    padding: theme.s(4),
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+  },
+  createIcon: { width: 44, height: 44, borderRadius: theme.radius.md, alignItems: 'center', justifyContent: 'center' },
+  createTitle: { color: theme.colors.text, fontFamily: theme.fonts.bodyBold, fontSize: 16 },
+  createSub: { color: theme.colors.muted, fontFamily: theme.fonts.body, fontSize: 13, marginTop: 2, lineHeight: 18 },
+  sheetCancel: { alignItems: 'center', paddingVertical: theme.s(3) },
+  sheetCancelText: { color: theme.colors.muted, fontFamily: theme.fonts.bodyBold, fontSize: 15 },
+  formHint: {
+    color: theme.colors.teal,
+    fontFamily: theme.fonts.body,
+    fontSize: 12,
+    marginTop: -theme.s(2),
+    marginBottom: theme.s(4),
+  },
+  attendeesMore: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-end' },
+  attendeesMoreText: { color: theme.colors.teal, fontFamily: theme.fonts.bodyBold, fontSize: 13 },
+  attendeeRow: {
+    color: theme.colors.text,
+    fontFamily: theme.fonts.body,
+    fontSize: 15,
+    paddingVertical: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: theme.colors.border,
+  },
   attendeesLabel: {
     color: theme.colors.teal,
     fontFamily: theme.fonts.bodyBold,

@@ -70,6 +70,12 @@ export default function PhotosScreen() {
   // iOS refuse d'ouvrir la fiche d'édition tant que la visionneuse est affichée :
   // on ferme d'abord, puis on ouvre l'édition dans onDismiss
   const pendingEdit = useRef<PhotoRow | null>(null);
+  function flushPendingEdit() {
+    if (pendingEdit.current) {
+      setEditing(pendingEdit.current);
+      pendingEdit.current = null;
+    }
+  }
 
   const loadPhotos = useCallback(async () => {
     const user = await sessionUser();
@@ -231,9 +237,9 @@ export default function PhotosScreen() {
   const isOwner = !!opened && opened.created_by === userId;
 
   return (
-    <SafeAreaView style={styles.flex}>
+    // L'en-tête de la pile occupe déjà le haut de l'écran
+    <SafeAreaView style={styles.flex} edges={['bottom']}>
       <View style={styles.titleBlock}>
-        <Text style={styles.bigTitle}>Photos</Text>
         <Text style={styles.bigSub}>{photos.length} souvenirs partagés</Text>
       </View>
       <FlatList
@@ -267,6 +273,8 @@ export default function PhotosScreen() {
         disabled={uploading}
         style={({ pressed }) => [
           styles.fab,
+          // Écran de pile bord à bord : plus de barre d'onglets pour protéger le bas
+          { bottom: 24 + insets.bottom },
           pressed && { transform: [{ scale: 0.96 }] },
           uploading && { opacity: 0.7 },
         ]}
@@ -278,12 +286,7 @@ export default function PhotosScreen() {
         transparent
         animationType="fade"
         onRequestClose={() => setOpenId(null)}
-        onDismiss={() => {
-          if (pendingEdit.current) {
-            setEditing(pendingEdit.current);
-            pendingEdit.current = null;
-          }
-        }}
+        onDismiss={flushPendingEdit}
       >
         {!!opened && (
           <View style={styles.viewer}>
@@ -299,6 +302,8 @@ export default function PhotosScreen() {
                 onPress={() => {
                   pendingEdit.current = opened;
                   setOpenId(null);
+                  // onDismiss n'existe que sur iOS (RN 0.81)
+                  if (Platform.OS !== 'ios') setTimeout(flushPendingEdit, 300);
                 }}
                 style={[styles.viewerEdit, { top: insets.top + 8 }]}
                 hitSlop={20}
@@ -494,13 +499,7 @@ function PhotoEdit({
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: theme.colors.deep },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.deep },
-  titleBlock: { padding: theme.s(4) },
-  bigTitle: {
-    color: theme.colors.text,
-    fontFamily: theme.fonts.title,
-    fontSize: 32,
-    fontWeight: '800',
-  },
+  titleBlock: { paddingHorizontal: theme.s(4), paddingTop: theme.s(3), paddingBottom: theme.s(1) },
   bigSub: { color: theme.colors.muted, marginTop: 2 },
   tile: {
     margin: GUTTER / 2,

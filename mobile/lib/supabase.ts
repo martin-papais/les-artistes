@@ -47,7 +47,49 @@ export type EventRow = {
   note: string | null;
   created_by: string;
   created_at: string;
+  // Champs remplis par le formulaire du site (et désormais de l'appli) selon la catégorie
+  alcool?: string | null;
+  jeux_liste?: string | null;
+  budget?: string | null;
+  manger?: string | null; // Soirée/Anniversaire : 'non' = on mange là-bas → sondage
+  manger_soir?: string | null; // Nouvel an : 'oui' → sondage
+  courses?: string | null; // Barbecue : 'oui' → sondage courses
+  heure_courses?: string | null;
+  lieu_courses?: string | null;
+  dormir?: string | null;
 };
+
+/** Sondage repas d'un événement (meal = midi, soir, ensemble, barbecue, vendredi, samedi). */
+export type EventFoodVote = {
+  id: string;
+  event_id: string;
+  user_id: string;
+  meal: string | null;
+  repas: string | null;
+  mange: string | null;
+};
+
+export type EventCoursesVote = {
+  id: string;
+  event_id: string;
+  user_id: string;
+  vient: 'oui' | 'non';
+};
+
+export type DateSondage = {
+  id: string;
+  titre: string;
+  categorie: string | null;
+  note: string | null;
+  created_by: string;
+  created_at: string;
+  closed: boolean;
+  event_id: string | null;
+};
+
+export type DateSondageOption = { id: string; sondage_id: string; date_option: string };
+
+export type DateSondageVote = { option_id: string; user_id: string; dispo: boolean };
 
 export type VotePresent = 'oui' | 'non';
 

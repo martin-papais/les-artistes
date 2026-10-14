@@ -87,7 +87,7 @@ create trigger trg_photos_notify
   after insert on public.photos
   for each row execute function public.tg_photos_notify();
 
--- ─── COMMENTAIRES EVENT (cibles : créateur + autres commentateurs + voteurs) ─
+-- ─── COMMENTAIRES EVENT (cibles : créateur + commentateurs + voteurs, sauf absents) ─
 
 create or replace function public.tg_event_comments_notify()
 returns trigger language plpgsql security definer set search_path = public as $$
@@ -98,7 +98,7 @@ declare
 begin
   select created_by into ev_creator from public.events where id = new.event_id;
 
-  -- Tous ceux qui ont participé : voté ou commenté avant
+  -- Tous ceux qui ont participé : voté ou commenté avant, sauf les absents
   select array_agg(distinct uid) into participant_ids
   from (
     select user_id as uid from public.event_votes where event_id = new.event_id
@@ -106,7 +106,12 @@ begin
     select user_id from public.event_comments where event_id = new.event_id
     union select ev_creator
   ) s
-  where uid is not null;
+  where uid is not null
+    -- Les absents ne reçoivent pas les notifs de l'événement (10_notif_absents.sql)
+    and not exists (
+      select 1 from public.event_votes v
+      where v.event_id = new.event_id and v.user_id = s.uid and v.present = 'non'
+    );
 
   if participant_ids is null or array_length(participant_ids, 1) is null then
     return new;

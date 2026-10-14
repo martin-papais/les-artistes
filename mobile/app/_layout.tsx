@@ -79,7 +79,12 @@ export default function RootLayout() {
       if (!route) return;
       // Déconnecté : on reste sur le login au lieu d'empiler un écran vide par-dessus
       sb.auth.getSession().then(({ data }) => {
-        if (data.session) router.push(route as Href);
+        // navigate : déjà sur l'écran visé (ex. Photos), on n'en empile pas un second
+        if (!data.session) return;
+        // Depuis un écran de pile (Photos, Profil…), navigate empilerait un second jeu
+        // d'onglets : on revient d'abord aux onglets existants
+        if (route.startsWith('/(tabs)') && router.canDismiss()) router.dismissAll();
+        router.navigate(route as Href);
       });
     });
     return () => sub.remove();
@@ -119,8 +124,10 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="profil" options={{ title: 'Profil' }} />
         <Stack.Screen name="notes" options={{ title: 'Notes' }} />
+        <Stack.Screen name="photos" options={{ title: 'Photos' }} />
         <Stack.Screen name="annuaire" options={{ title: 'Annuaire' }} />
         <Stack.Screen name="shop" options={{ title: 'Boutique' }} />
+        <Stack.Screen name="olympiades" options={{ title: 'Olympiades' }} />
       </Stack>
       <StatusBar style="light" />
     </ThemeProvider>

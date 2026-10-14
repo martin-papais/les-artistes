@@ -33,10 +33,10 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="photos"
+        name="roulette"
         options={{
-          title: 'Photos',
-          tabBarIcon: ({ color, size }) => <Ionicons name="images" size={size} color={color} />,
+          title: 'Roulette',
+          tabBarIcon: ({ color, size }) => <Ionicons name="disc" size={size} color={color} />,
         }}
       />
       <Tabs.Screen

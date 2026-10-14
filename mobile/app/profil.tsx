@@ -79,7 +79,7 @@ export default function ProfilScreen() {
     if (!user) return;
     setDeleting(true);
     try {
-      for (const folder of [user.id, `${user.id}/covers`]) {
+      for (const folder of [user.id, `${user.id}/covers`, `${user.id}/agenda`]) {
         const { data: files } = await sb.storage.from('media').list(folder, { limit: 1000 });
         const paths = (files ?? []).filter((f) => f.id).map((f) => `${folder}/${f.name}`);
         if (paths.length) await sb.storage.from('media').remove(paths);
