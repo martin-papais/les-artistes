@@ -4,27 +4,35 @@ import { StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle, type SharedValue } from 'react-native-reanimated';
 
 // Verre en 3D sans moteur 3D (pas de module natif, part en mise à jour à distance) :
-// le décor, à plat, est découpé en bandes verticales posées sur un cylindre.
-// Chaque bande est placée, rétrécie et ombrée selon son angle ; les bandes du dos
-// restent visibles en transparence, à l'envers, comme sur un vrai gobelet.
+// le décor, à plat, est découpé en bandes verticales posées sur un tronc de cône.
+// Chaque bande est placée, inclinée, rétrécie et ombrée selon son angle ; les bandes
+// du dos restent visibles en transparence, à l'envers, comme sur un vrai gobelet.
 
 type Props = {
+  /** Largeur du bord, en haut */
   width: number;
   height: number;
   /** Angle en degrés (0 = milieu du décor face à soi) */
   rotation: SharedValue<number>;
-  /** Décor déroulé : image (largeur = π × diamètre) ou rendu fourni */
-  art?: string;
+  /** Décor déroulé : adresse ou image embarquée (largeur = π × diamètre à mi-hauteur), ou rendu fourni */
+  art?: string | number;
   children?: ReactNode;
   strips?: number;
   /** Bandes du dos, vu en transparence (0 = pas de transparence) */
   backStrips?: number;
+  /** Largeur du fond / largeur du bord (1 = cylindre) */
+  taper?: number;
   tint?: string;
 };
 
-type Geo = { R: number; e: number; n: number; height: number };
+type Geo = { cx: number; R: number; dR: number; e: number; n: number; height: number };
 
 const LIGHT = (-38 * Math.PI) / 180; // lumière venant de l'avant gauche
+
+/** Largeur du décor déroulé pour un verre de bord `width` */
+export function decorWidth(width: number, taper = 1) {
+  return (Math.PI * width * (1 + taper)) / 2;
+}
 
 export function Verre3D({
   width,
@@ -34,23 +42,32 @@ export function Verre3D({
   children,
   strips = 32,
   backStrips = 0,
+  taper = 1,
   tint = 'rgba(255,255,255,0.07)',
 }: Props) {
-  const R = width / 2;
-  const T = Math.PI * width;
+  const Rt = width / 2;
+  const Rb = Rt * taper;
+  const R = (Rt + Rb) / 2;
+  const T = decorWidth(width, taper);
   const e = width * 0.13; // demi-hauteur de l'ellipse du bord (vu d'un peu au-dessus)
   const flat = (2 * e) / width;
+  const geo = { cx: Rt, R, dR: Rt - Rb, e: e * (R / Rt), height };
 
   const texture = art ? (
-    <Image source={{ uri: art }} style={{ width: T, height }} contentFit="cover" />
+    <Image
+      source={typeof art === 'string' ? { uri: art } : art}
+      style={{ width: T, height }}
+      contentFit="fill"
+    />
   ) : (
     <View style={{ width: T, height }}>{children}</View>
   );
 
-  const ellipse = (top: number) => ({
-    width,
-    height: width,
-    borderRadius: width / 2,
+  const ellipse = (w: number, top: number) => ({
+    width: w,
+    height: w,
+    borderRadius: w / 2,
+    left: Rt - w / 2,
     top,
     transform: [{ scaleY: flat }],
   });
@@ -67,22 +84,37 @@ export function Verre3D({
         style={[
           styles.abs,
           {
-            width: width * 1.1,
-            height: width * 1.1,
+            width: 2 * Rb * 1.2,
+            height: 2 * Rb * 1.2,
             borderRadius: width,
-            left: -width * 0.05,
-            top: e + height - width * 0.55,
+            left: Rt - Rb * 1.2,
+            top: e + height - Rb * 1.2,
             backgroundColor: 'rgba(0,0,0,0.45)',
-            transform: [{ scaleY: (2 * e) / (width * 1.1) }],
+            transform: [{ scaleY: (2 * e) / (2 * Rb * 1.2) }],
           },
         ]}
       />
       <View style={{ width, height }}>
-        <View style={[styles.abs, { width, height, backgroundColor: tint }]} />
-        <View style={[styles.abs, ellipse(height - width / 2), { backgroundColor: tint }]} />
+        {/* Corps : un trapèze tracé par les bordures (le haut plus large que le fond) */}
+        <View
+          style={[
+            styles.abs,
+            {
+              width,
+              height: 0,
+              borderTopWidth: height,
+              borderTopColor: tint,
+              borderLeftWidth: Rt - Rb,
+              borderRightWidth: Rt - Rb,
+              borderLeftColor: 'transparent',
+              borderRightColor: 'transparent',
+            },
+          ]}
+        />
+        <View style={[styles.abs, ellipse(2 * Rb, height - Rb), { backgroundColor: tint }]} />
         {backStrips > 0 &&
           Array.from({ length: backStrips }, (_, k) => (
-            <BackStrip key={k} k={k} geo={{ R, e, n: backStrips, height }} rotation={rotation}>
+            <BackStrip key={k} k={k} geo={{ ...geo, n: backStrips }} rotation={rotation}>
               {texture}
             </BackStrip>
           ))}
@@ -90,12 +122,12 @@ export function Verre3D({
         <View
           style={[
             styles.abs,
-            ellipse(-width / 2),
+            ellipse(width, -width / 2),
             { borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.35)', backgroundColor: 'rgba(255,255,255,0.04)' },
           ]}
         />
         {Array.from({ length: strips }, (_, k) => (
-          <FrontStrip key={k} k={k} geo={{ R, e, n: strips, height }} rotation={rotation}>
+          <FrontStrip key={k} k={k} geo={{ ...geo, n: strips }} rotation={rotation}>
             {texture}
           </FrontStrip>
         ))}
@@ -104,7 +136,7 @@ export function Verre3D({
           pointerEvents="none"
           style={[
             styles.abs,
-            ellipse(-width / 2),
+            ellipse(width, -width / 2),
             { borderWidth: 2, borderColor: 'transparent', borderBottomColor: 'rgba(255,255,255,0.7)' },
           ]}
         />
@@ -116,17 +148,20 @@ export function Verre3D({
 const angleOf = (k: number, n: number) => ((k + 0.5) / n - 0.5) * 360;
 
 function useStripStyle(k: number, geo: Geo, rotation: SharedValue<number>, back: boolean) {
-  const { R, e, n } = geo;
+  const { R, dR, e, n, height } = geo;
   const base = angleOf(k, n);
   return useAnimatedStyle(() => {
     const a = ((base + rotation.get()) * Math.PI) / 180;
     const c = Math.cos(a);
+    const s = Math.sin(a);
     const visible = back ? c < 0 : c > 0;
     return {
       opacity: visible ? (back ? 0.32 : 1) : 0,
       transform: [
-        { translateX: R * Math.sin(a) },
+        { translateX: R * s },
         { translateY: e * c },
+        // Cône : le haut de la bande s'écarte du milieu plus que le bas
+        { skewX: `${(Math.atan((-dR * s) / height) * 180) / Math.PI}deg` },
         // Négatif au dos : la bande apparaît à l'envers, comme vue à travers le plastique
         { scaleX: Math.abs(c) < 0.001 ? 0.001 : c },
       ],
@@ -156,7 +191,7 @@ function StripBox({
       style={[
         styles.strip,
         // Léger recouvrement, sinon de fines lignes apparaissent entre les bandes
-        { left: geo.R - sw / 2, width: sw + 0.6, height: geo.height },
+        { left: geo.cx - sw / 2, width: sw + 0.6, height: geo.height },
         style,
       ]}
     >

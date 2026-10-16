@@ -17,6 +17,7 @@ const TILES: Tile[] = [
   { label: 'Notes', icon: 'edit-3', route: '/notes', bg: c.yellow, fg: c.ink },
   { label: 'Boutique', icon: 'shopping-bag', route: '/shop', bg: c.coral, fg: '#fff' },
   { label: 'Annuaire', icon: 'users', route: '/annuaire', bg: c.teal, fg: c.tealInk },
+  { label: 'Olympiades', icon: 'award', route: '/olympiades', bg: c.pink, fg: c.ink },
 ];
 
 /** État de la boutique d'après la date limite (shop_config.deadline). */
@@ -67,6 +68,7 @@ export default function PlusScreen() {
     Notes: 'Le mur des pensées',
     Boutique: shop ?? 'Articles et sondage',
     Annuaire: members != null ? `${members} membre${members > 1 ? 's' : ''}` : 'Les contacts du groupe',
+    Olympiades: 'Les verres et les palmarès',
   };
 
   return (

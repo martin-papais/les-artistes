@@ -1,6 +1,6 @@
-import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
+import { requireOptionalNativeModule } from 'expo-modules-core';
 import type { ErrorBoundaryProps } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -19,11 +19,30 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { useFrameCallback, useReducedMotion, useSharedValue } from 'react-native-reanimated';
+import Animated, {
+  useAnimatedStyle,
+  useFrameCallback,
+  useReducedMotion,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Verre3D } from '@/components/olympiades/Verre3D';
+import { decorWidth, Verre3D } from '@/components/olympiades/Verre3D';
 import { VerreDecor, yearColor } from '@/components/olympiades/VerreDecor';
+import {
+  Badge,
+  Button,
+  Card,
+  Chip,
+  EmptyState,
+  Icon,
+  IconButton,
+  ListRow,
+  ScreenHeader,
+  SectionTitle,
+  type FeatherName,
+} from '@/components/ui/kit';
 import {
   championOf,
   colorHex,
@@ -33,24 +52,39 @@ import {
   type Edition,
   type Olympiades,
   type RankedTeam,
+  verreArt,
 } from '@/lib/olympiades';
 import { theme } from '@/lib/theme';
 
-type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 type Tab = 'classement' | 'epreuves' | 'equipes' | 'journee' | 'photos';
 
 const SPIN = 28; // degrés par seconde, au repos
-const C = theme.colors;
-const F = theme.fonts;
+// Ecocup « Eco 30 » : bord Ø 7,4 cm, fond Ø 4,8, hauteur 11,8
+const TAPER = 0.65;
+const TALL = 1.59;
+// Le vrai verre 3D demande le moteur OpenGL de l'appli : une version installée avant
+// son arrivée garde le verre en bandes (la mise à jour à distance ne l'ajoute pas)
+const VerreGL: typeof import('@/components/olympiades/VerreGL').VerreGL | null = requireOptionalNativeModule(
+  'ExponentGLObjectManager',
+)
+  ? // eslint-disable-next-line @typescript-eslint/no-require-imports
+    require('@/components/olympiades/VerreGL').VerreGL
+  : null;
+// Plastique dépoli : on voit l'encre noire, comme sur le vrai verre
+const FROST = 'rgba(226,228,240,0.38)';
+const c = theme.colors;
+const f = theme.fonts;
 
 // Une donnée inattendue sur le site ne doit pas fermer l'appli
 export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
   return (
-    <View style={styles.center}>
-      <Text style={styles.muted}>Les Olympiades n’ont pas pu s’afficher.</Text>
-      <Pressable onPress={retry} style={styles.retry}>
-        <Text style={styles.retryText}>Réessayer</Text>
-      </Pressable>
+    <View style={styles.flex}>
+      <ScreenHeader back title="Olympiades" />
+      <EmptyState
+        icon="alert-triangle"
+        title="Les Olympiades n’ont pas pu s’afficher"
+        action={<Button label="Réessayer" onPress={retry} height={48} />}
+      />
     </View>
   );
 }
@@ -132,56 +166,61 @@ export default function OlympiadesScreen() {
 
   if (!data || !current || !edition) {
     return (
-      <View style={styles.center}>
+      <View style={styles.flex}>
+        <ScreenHeader back title="Olympiades" />
         {failed ? (
-          <>
-            <Text style={styles.muted}>Impossible de charger les Olympiades. Vérifie ta connexion.</Text>
-            <Pressable onPress={load} style={styles.retry}>
-              <Text style={styles.retryText}>Réessayer</Text>
-            </Pressable>
-          </>
+          <EmptyState
+            icon="wifi-off"
+            title="Impossible de charger les Olympiades"
+            text="Vérifie ta connexion, puis réessaie."
+            action={<Button label="Réessayer" onPress={load} height={48} />}
+          />
         ) : (
-          <ActivityIndicator color={C.coral} />
+          <View style={styles.center}>
+            <ActivityIndicator color={c.teal} />
+          </View>
         )}
       </View>
     );
   }
 
+  const n = years.length;
   return (
-    <View style={styles.flex}>
+    // Bande sombre sous la barre d'état : les onglets collés s'arrêtent dessous
+    <View style={[styles.flex, { paddingTop: insets.top }]}>
       <ScrollView
         ref={scrollRef}
         stickyHeaderIndices={[1]}
-        contentContainerStyle={{ paddingBottom: theme.s(10) + insets.bottom }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}
         onScroll={onScroll}
         scrollEventThrottle={64}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.coral} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={c.teal} />}
       >
         {/* La hauteur de ce bloc donne la position des onglets (une vue collante mesure 0 elle-même) */}
         <View onLayout={(e: LayoutChangeEvent) => setTabsY(e.nativeEvent.layout.height)}>
-          {failed && <Text style={styles.offline}>Hors connexion : dernières données enregistrées.</Text>}
+          <ScreenHeader
+            back
+            title="Olympiades"
+            sub={`${n} édition${n > 1 ? 's' : ''} depuis ${years[0]}`}
+            // La marge de l'encoche est déjà prise par la vue parente
+            style={{ paddingTop: 4 }}
+          />
+          {failed && (
+            <View style={styles.offline}>
+              <Icon name="wifi-off" size={18} color={c.muted} />
+              <Text style={styles.offlineText}>Hors connexion : dernières données enregistrées.</Text>
+            </View>
+          )}
           <Hero year={current} edition={edition} active={heroVisible && viewer === null} />
           <Shelf years={years} data={data} current={current} onPick={pick} />
         </View>
 
         <View style={styles.tabsBar} accessibilityRole="tablist">
-          {tabs.map((t) => {
-            const on = t.key === activeTab;
-            return (
-              <Pressable
-                key={t.key}
-                onPress={() => chooseTab(t.key)}
-                style={styles.tab}
-                accessibilityRole="tab"
-                accessibilityState={{ selected: on }}
-              >
-                <Text style={[styles.tabText, on && styles.tabTextOn]} numberOfLines={1}>
-                  {t.label}
-                </Text>
-                <View style={[styles.tabMark, on && { backgroundColor: yearColor(current) }]} />
-              </Pressable>
-            );
-          })}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabs}>
+            {tabs.map((t) => (
+              <Chip key={t.key} label={t.label} active={t.key === activeTab} onPress={() => chooseTab(t.key)} style={styles.tab} />
+            ))}
+          </ScrollView>
         </View>
 
         {/* Hauteur minimale : un onglet court ne fait pas remonter la page */}
@@ -212,20 +251,20 @@ export default function OlympiadesScreen() {
 function Hero({ year, edition, active }: { year: string; edition: Edition; active: boolean }) {
   const { width: screenW } = useWindowDimensions();
   const W = Math.min(180, screenW * 0.42);
-  const H = W * 1.28;
-  const T = Math.PI * W;
+  const H = W * TALL;
+  const T = decorWidth(W, TAPER);
   const rotation = useSharedValue(0);
   const velocity = useSharedValue(SPIN);
   const dragging = useSharedValue(false);
   const reduced = useReducedMotion();
   const rest = reduced ? 0 : SPIN;
 
-  const frame = useFrameCallback((f) => {
+  const frame = useFrameCallback((fr) => {
     if (dragging.get()) return;
     const v = velocity.get();
     // Animations réduites : rien à écrire une fois le verre arrêté
     if (rest === 0 && Math.abs(v) < 0.5) return;
-    const dt = Math.min(0.05, (f.timeSincePreviousFrame ?? 16) / 1000);
+    const dt = Math.min(0.05, (fr.timeSincePreviousFrame ?? 16) / 1000);
     // La vitesse revient doucement à la rotation de repos
     const next = v + (rest - v) * Math.min(1, dt * 1.8);
     velocity.set(next);
@@ -245,6 +284,8 @@ function Hero({ year, edition, active }: { year: string; edition: Edition; activ
 
   // Valeur partagée plutôt qu'une ref : le React Compiler refuse une ref lue dans useMemo
   const lastDx = useSharedValue(0);
+  const hint = useSharedValue(1);
+  const hintStyle = useAnimatedStyle(() => ({ opacity: hint.get() * 0.8 }));
   const pan = useMemo(
     () =>
       PanResponder.create({
@@ -253,6 +294,8 @@ function Hero({ year, edition, active }: { year: string; edition: Edition; activ
         onPanResponderGrant: () => {
           dragging.set(true);
           lastDx.set(0);
+          // Le geste est compris : la consigne s'efface
+          hint.set(withTiming(0, { duration: 400 }));
         },
         onPanResponderMove: (_, g) => {
           // La surface suit le doigt : 1 px de glissé = 1 px de décor
@@ -267,7 +310,7 @@ function Hero({ year, edition, active }: { year: string; edition: Edition; activ
           dragging.set(false);
         },
       }),
-    [T, dragging, lastDx, rotation, velocity],
+    [T, dragging, hint, lastDx, rotation, velocity],
   );
 
   // Lecteur d'écran : glisser vers le haut ou le bas fait tourner le verre
@@ -277,19 +320,31 @@ function Hero({ year, edition, active }: { year: string; edition: Edition; activ
   }
 
   const accent = yearColor(year);
+  const art = verreArt(year, edition);
   const champion = edition.legacy ? null : computeYear(edition).ranked[0];
   return (
-    <View style={styles.hero}>
-      {/* Halo de la couleur de l'année derrière le verre */}
-      {[2.3, 1.7, 1.2].map((f) => (
-        <View
-          key={f}
-          style={[
-            styles.halo,
-            { backgroundColor: accent, width: W * f, height: W * f, borderRadius: W * f, top: theme.s(4) + H / 2 - (W * f) / 2 },
-          ]}
+    <Card style={styles.hero}>
+      {/* Vitrine : lueur de la couleur de l'année, faisceau venu d'en haut, socle éclairé */}
+      <View style={StyleSheet.absoluteFill} pointerEvents="none">
+        <Image
+          source={HALO}
+          contentFit="fill"
+          tintColor={accent}
+          style={[styles.backdrop, { width: W * 2.8, height: W * 2.8, top: HERO_TOP + H * 0.5 - W * 1.4, opacity: 0.32 }]}
         />
-      ))}
+        <Image source={FAISCEAU} contentFit="fill" style={[styles.backdrop, { width: W * 1.9, height: HERO_TOP + H + W * 0.1, top: 0, opacity: 0.16 }]} />
+        <Image
+          source={HALO}
+          contentFit="fill"
+          tintColor={accent}
+          style={[styles.backdrop, { width: W * 1.9, height: W * 0.5, top: HERO_TOP + H + FOOT - W * 0.25, opacity: 0.55 }]}
+        />
+        <Image
+          source={SOCLE}
+          contentFit="fill"
+          style={[styles.backdrop, { width: W * 1.2, height: W * 0.36, top: HERO_TOP + H + FOOT - W * 0.18, opacity: 0.9 }]}
+        />
+      </View>
       <View
         {...pan.panHandlers}
         style={styles.stage}
@@ -300,18 +355,46 @@ function Hero({ year, edition, active }: { year: string; edition: Edition; activ
         accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
         onAccessibilityAction={onA11y}
       >
-        <Verre3D width={W} height={H} rotation={rotation} art={edition.verre} strips={48} backStrips={24}>
-          <VerreDecor year={year} edition={edition} width={W} />
-        </Verre3D>
+        {art !== undefined && VerreGL ? (
+          // Vue plus large que le verre : la perspective déborde un peu
+          <View style={{ marginHorizontal: -W * 0.25, marginVertical: -H * 0.165 }}>
+            <VerreGL key={year} width={W * 1.5} height={H * 1.33} rotation={rotation} art={art} active={active} />
+          </View>
+        ) : (
+          <Verre3D
+            width={W}
+            height={H}
+            rotation={rotation}
+            art={art}
+            strips={48}
+            backStrips={24}
+            taper={TAPER}
+            tint={FROST}
+          >
+            <VerreDecor year={year} edition={edition} width={T / Math.PI} />
+          </Verre3D>
+        )}
       </View>
 
-      <Text style={styles.heroYear}>{year}</Text>
+      {/* La place reste réservée quand la consigne s'efface : rien ne saute dessous */}
+      <Animated.View
+        style={[styles.hint, { marginTop: FOOT + W * 0.18 + 10 }, hintStyle]}
+        importantForAccessibility="no-hide-descendants"
+        accessibilityElementsHidden
+      >
+        <Icon name="rotate-cw" size={12} color={c.muted} />
+        <Text style={styles.hintText}>Glisse pour tourner</Text>
+      </Animated.View>
+      <Text style={[styles.heroKicker, { color: accent }]}>Édition</Text>
+      <Text style={styles.heroYear} accessibilityRole="header">
+        {year}
+      </Text>
       <Text style={styles.heroPlace}>
         {edition.date}, {edition.lieu.charAt(0).toLowerCase() + edition.lieu.slice(1)}
       </Text>
 
       <View style={styles.winner}>
-        <Ionicons name="trophy" size={16} color={C.yellow} />
+        <Icon name="award" size={18} color={c.yellow} />
         {champion ? (
           <>
             <View style={[styles.dot, { backgroundColor: colorHex(champion.couleur) }]} />
@@ -326,7 +409,7 @@ function Hero({ year, edition, active }: { year: string; edition: Edition; activ
           </Text>
         )}
       </View>
-    </View>
+    </Card>
   );
 }
 
@@ -346,40 +429,47 @@ function Shelf({
   const still = useSharedValue(-24);
   const W = 46;
   return (
-    <View style={styles.shelfWrap}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.shelf}>
-        {years.map((y) => {
-          const on = y === current;
-          return (
-            <Pressable
-              key={y}
-              onPress={() => onPick(y)}
-              hitSlop={6}
-              style={({ pressed }) => [styles.shelfItem, pressed && { opacity: 0.7 }]}
-              accessibilityRole="button"
-              accessibilityState={{ selected: on }}
-              accessibilityLabel={`Olympiades ${y}`}
-            >
-              <View style={{ opacity: on ? 1 : 0.45 }}>
-                <Verre3D width={W} height={W * 1.28} rotation={still} art={data[y].verre} strips={12}>
-                  <VerreDecor year={y} edition={data[y]} width={W} />
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.shelf}>
+      {years.map((y) => {
+        const on = y === current;
+        const art = verreArt(y, data[y]);
+        return (
+          <Pressable
+            key={y}
+            onPress={() => onPick(y)}
+            style={({ pressed }) => [styles.shelfItem, on && { backgroundColor: c.card }, pressed && { opacity: 0.7 }]}
+            accessibilityRole="button"
+            accessibilityState={{ selected: on }}
+            accessibilityLabel={`Olympiades ${y}`}
+          >
+            <View style={{ opacity: on ? 1 : 0.45 }}>
+              {art !== undefined && VerreGL ? (
+                // Même rendu que la vitrine, figé : une seule image, pas d'animation
+                <View style={{ marginHorizontal: -W * 0.25, marginVertical: -W * TALL * 0.165 }}>
+                  <VerreGL width={W * 1.5} height={W * TALL * 1.33} rotation={still} art={art} active={false} />
+                </View>
+              ) : (
+                <Verre3D width={W} height={W * TALL} rotation={still} art={art} strips={12} taper={TAPER} tint={FROST}>
+                  <VerreDecor year={y} edition={data[y]} width={decorWidth(W, TAPER) / Math.PI} />
                 </Verre3D>
-              </View>
-              <Text style={[styles.shelfYear, on && { color: C.text }]}>{y}</Text>
-              <View style={[styles.shelfMark, on && { backgroundColor: yearColor(y) }]} />
-            </Pressable>
-          );
-        })}
-      </ScrollView>
-      <View style={styles.plank} />
-    </View>
+              )}
+            </View>
+            <Text style={[styles.shelfYear, on && { color: c.text }]}>{y}</Text>
+          </Pressable>
+        );
+      })}
+    </ScrollView>
   );
 }
 
 // ─── Briques de mise en page ───
 
-function Heading({ children }: { children: string }) {
-  return <Text style={styles.heading}>{children}</Text>;
+function Heading({ children, count }: { children: string; count?: number }) {
+  return (
+    <SectionTitle count={count} style={styles.heading}>
+      {children}
+    </SectionTitle>
+  );
 }
 
 /** Long texte replié sur quelques lignes */
@@ -392,7 +482,7 @@ function Reading({ text, lines = 5 }: { text: string; lines?: number }) {
         {text}
       </Text>
       {long && (
-        <Pressable onPress={() => setOpen(!open)} hitSlop={8} style={styles.more}>
+        <Pressable onPress={() => setOpen(!open)} accessibilityRole="button" style={styles.more}>
           <Text style={styles.moreText}>{open ? 'Réduire' : 'Lire la suite'}</Text>
         </Pressable>
       )}
@@ -412,10 +502,12 @@ function TeamName({ t, style }: { t?: RankedTeam; style?: object }) {
   );
 }
 
-function IconLine({ icon, children }: { icon: IoniconName; children: React.ReactNode }) {
+function IconLine({ icon, children }: { icon: FeatherName; children: React.ReactNode }) {
   return (
     <View style={styles.iconLine}>
-      <Ionicons name={icon} size={17} color={C.muted} style={{ marginTop: 2 }} />
+      <View style={styles.iconBox}>
+        <Icon name={icon} size={20} color={c.text} />
+      </View>
       <Text style={[styles.body, { flex: 1 }]}>{children}</Text>
     </View>
   );
@@ -432,9 +524,9 @@ function Classement({ d }: { d: Edition }) {
       {ranked.map((t) => {
         const first = t.classement === 1;
         return (
-          <View key={t.id} style={styles.rankRow}>
-            <Text style={[styles.rankPos, first && { color: C.yellow }]}>{t.classement}</Text>
-            <View style={{ flex: 1 }}>
+          <Card key={t.id} style={styles.rankCard}>
+            <Text style={[styles.rankPos, first && { color: c.yellow }]}>{t.classement}</Text>
+            <View style={{ flex: 1, minWidth: 0 }}>
               <View style={styles.rankHead}>
                 <Text style={[styles.rankName, first && { fontSize: 18 }]} numberOfLines={1}>
                   {t.nom}
@@ -451,25 +543,27 @@ function Classement({ d }: { d: Edition }) {
               </View>
               {!!t.capitaine && <Text style={styles.small}>Capitaine : {t.capitaine}</Text>}
             </View>
-          </View>
+          </Card>
         );
       })}
 
       {!!d.extras?.length && (
         <>
-          <Heading>Bonus et malus</Heading>
-          {d.extras.map((ex, i) => (
-            <View key={i} style={styles.adjRow}>
-              <Text style={[styles.adjPts, { color: ex.points > 0 ? '#A8E063' : C.coral }]}>
-                {ex.points > 0 ? '+' : '−'}
-                {Math.abs(ex.points)}
-              </Text>
-              <View style={{ flex: 1 }}>
-                <TeamName t={byId[ex.equipeId]} />
-                <Text style={styles.small}>{ex.motif}</Text>
+          <Heading count={d.extras.length}>Bonus et malus</Heading>
+          <Card style={styles.listCard}>
+            {d.extras.map((ex, i) => (
+              <View key={i} style={[styles.adjRow, i > 0 && styles.divider]}>
+                <Text style={[styles.adjPts, { color: ex.points > 0 ? c.teal : c.danger }]}>
+                  {ex.points > 0 ? '+' : '−'}
+                  {Math.abs(ex.points)}
+                </Text>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <TeamName t={byId[ex.equipeId]} />
+                  <Text style={styles.small}>{ex.motif}</Text>
+                </View>
               </View>
-            </View>
-          ))}
+            ))}
+          </Card>
         </>
       )}
     </View>
@@ -494,12 +588,12 @@ function Epreuves({ d }: { d: Edition }) {
       )}
       {d.epreuves.map((ep, i) => {
         const expanded = open === i;
-        const total = ranked.reduce((n, t) => n + Math.max(0, ep.scores?.[t.id ?? ''] ?? 0), 0);
+        const total = ranked.reduce((sum, t) => sum + Math.max(0, ep.scores?.[t.id ?? ''] ?? 0), 0);
         return (
           <Pressable
             key={i}
             onPress={() => setOpen(expanded ? null : i)}
-            style={styles.epRow}
+            style={({ pressed }) => [styles.epCard, pressed && { opacity: 0.85 }]}
             accessibilityRole="button"
             accessibilityState={{ expanded }}
             accessibilityHint={expanded ? 'Masquer les règles' : 'Afficher les règles'}
@@ -507,7 +601,7 @@ function Epreuves({ d }: { d: Edition }) {
             <View style={styles.epHead}>
               <Text style={styles.epNum}>{ep.num ?? i + 1}</Text>
               <Text style={styles.epName}>{ep.nom}</Text>
-              {!!ep.desc && <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={18} color={C.muted} />}
+              {!!ep.desc && <Icon name={expanded ? 'chevron-up' : 'chevron-down'} size={20} color={c.muted} />}
             </View>
 
             {!d.legacy && total > 0 && (
@@ -531,7 +625,7 @@ function Epreuves({ d }: { d: Edition }) {
                 )}
               </>
             )}
-            {expanded && !!ep.desc && <Text style={[styles.body, { marginTop: theme.s(3) }]}>{ep.desc}</Text>}
+            {expanded && !!ep.desc && <Text style={[styles.body, { marginTop: 12 }]}>{ep.desc}</Text>}
           </Pressable>
         );
       })}
@@ -548,42 +642,43 @@ function Equipes({ d }: { d: Edition }) {
 
   return (
     <View>
-      {teams.map((t, i) => {
-        const color = d.legacy ? (t.vainqueur ? C.yellow : C.border) : colorHex(t.couleur);
-        return (
-          <View key={t.id ?? i} style={[styles.teamBlock, { borderLeftColor: color }]}>
-            <View style={styles.teamHead}>
-              <Text style={styles.teamName}>{d.legacy ? `Équipe ${i + 1}` : t.nom}</Text>
-              {d.legacy
-                ? t.vainqueur && <Ionicons name="trophy" size={16} color={C.yellow} accessibilityLabel="Équipe gagnante" />
-                : <Text style={[styles.teamRank, { color }]}>{t.classement === 1 ? '1er' : `${t.classement}e`}</Text>}
-            </View>
-            {!!t.capitaine && <Text style={styles.small}>Capitaine : {t.capitaine}</Text>}
-            <Text style={[styles.body, { marginTop: theme.s(2) }]}>{t.membres.join(', ')}</Text>
+      {teams.map((t, i) => (
+        <Card key={t.id ?? i} style={styles.teamCard}>
+          <View style={styles.teamHead}>
+            {!d.legacy && <View style={[styles.teamDot, { backgroundColor: colorHex(t.couleur) }]} />}
+            <Text style={styles.teamName}>{d.legacy ? `Équipe ${i + 1}` : t.nom}</Text>
+            {d.legacy
+              ? t.vainqueur && <Badge label="Gagnante" style={{ alignSelf: 'center' }} />
+              : <Text style={[styles.teamRank, t.classement === 1 && { color: c.yellow }]}>{t.classement === 1 ? '1er' : `${t.classement}e`}</Text>}
           </View>
-        );
-      })}
+          {!!t.capitaine && <Text style={[styles.small, { marginTop: 2 }]}>Capitaine : {t.capitaine}</Text>}
+          <Text style={[styles.body, { marginTop: 8 }]}>{t.membres.join(', ')}</Text>
+        </Card>
+      ))}
 
       {!!d.absents?.length && (
         <>
-          <Heading>Absents et blessés</Heading>
-          {d.absents.map((a, i) => (
-            <View key={i} style={styles.adjRow}>
-              <Ionicons
-                name={a.type === 'blessure' ? 'bandage-outline' : 'airplane-outline'}
-                size={20}
-                color={a.type === 'blessure' ? C.coral : C.muted}
-                style={{ width: 34, marginTop: 1 }}
-              />
-              <View style={{ flex: 1 }}>
-                <View style={styles.absHead}>
-                  <Text style={styles.smallStrong}>{a.nom}</Text>
-                  {a.equipeId && byId[a.equipeId] && <TeamName t={byId[a.equipeId]} style={styles.small} />}
+          <Heading count={d.absents.length}>Absents et blessés</Heading>
+          <Card style={styles.listCard}>
+            {d.absents.map((a, i) => (
+              <View key={i} style={[styles.adjRow, i > 0 && styles.divider]}>
+                <View style={[styles.iconBox, { backgroundColor: c.raised }]}>
+                  <Icon
+                    name={a.type === 'blessure' ? 'activity' : 'user-x'}
+                    size={20}
+                    color={a.type === 'blessure' ? c.danger : c.muted}
+                  />
                 </View>
-                <Text style={styles.small}>{a.raison}</Text>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <View style={styles.absHead}>
+                    <Text style={styles.smallStrong}>{a.nom}</Text>
+                    {a.equipeId && byId[a.equipeId] && <TeamName t={byId[a.equipeId]} style={styles.small} />}
+                  </View>
+                  <Text style={styles.small}>{a.raison}</Text>
+                </View>
               </View>
-            </View>
-          ))}
+            ))}
+          </Card>
         </>
       )}
     </View>
@@ -593,13 +688,15 @@ function Equipes({ d }: { d: Edition }) {
 // ─── Onglet La journée ───
 
 function Journee({ d }: { d: Edition }) {
-  const participants = d.teams.reduce((n, t) => n + t.membres.length, 0);
+  const participants = d.teams.reduce((sum, t) => sum + t.membres.length, 0);
   return (
     <View>
-      {!!d.meteo?.desc && <IconLine icon="partly-sunny-outline">{d.meteo.desc}</IconLine>}
-      <IconLine icon="people-outline">
-        {participants} participants, {d.teams.length} équipes, {d.epreuves.length} épreuves
-      </IconLine>
+      <Card style={styles.factsCard}>
+        {!!d.meteo?.desc && <IconLine icon="thermometer">{d.meteo.desc}</IconLine>}
+        <IconLine icon="users">
+          {participants} participants, {d.teams.length} équipes, {d.epreuves.length} épreuves
+        </IconLine>
+      </Card>
 
       {!!d.resume && (
         <>
@@ -608,12 +705,12 @@ function Journee({ d }: { d: Edition }) {
         </>
       )}
 
-      {(d.citations ?? []).filter((c) => !!c.text).map((c, i) => (
-        <View key={i} style={styles.quote}>
+      {(d.citations ?? []).filter((q) => !!q.text).map((q, i) => (
+        <Card key={i} style={styles.quote}>
           <Text style={styles.quoteMark}>“</Text>
-          <Text style={styles.quoteText}>{c.text.replace(/^"|"$/g, '')}</Text>
-          {!!c.auteur && <Text style={styles.small}>{c.auteur.replace(/^[—–-]\s*/, '')}</Text>}
-        </View>
+          <Text style={styles.quoteText}>{q.text.replace(/^"|"$/g, '')}</Text>
+          {!!q.auteur && <Text style={styles.small}>{q.auteur.replace(/^[—–-]\s*/, '')}</Text>}
+        </Card>
       ))}
 
       {!!d.loto?.quines.length && (
@@ -621,11 +718,11 @@ function Journee({ d }: { d: Edition }) {
           <Heading>Le loto</Heading>
           {!!d.loto.intro && <Reading text={d.loto.intro} lines={3} />}
           {d.loto.quines.map((q, qi) => (
-            <View key={qi} style={styles.quine}>
+            <Card key={qi} style={styles.quine}>
               <Text style={styles.quineTitle}>{q.titre}</Text>
               {q.lignes.map((l, i) => (
-                <View key={i} style={styles.quineRow}>
-                  <View style={{ flex: 1 }}>
+                <View key={i} style={[styles.quineRow, i > 0 && styles.divider]}>
+                  <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={styles.small}>{l.type}</Text>
                     <Text style={styles.smallStrong}>{l.nom}</Text>
                     {!!l.contenu && <Text style={styles.small}>{l.contenu}</Text>}
@@ -633,16 +730,16 @@ function Journee({ d }: { d: Edition }) {
                   <Text style={styles.quineWinner}>{l.gagnant}</Text>
                 </View>
               ))}
-            </View>
+            </Card>
           ))}
           {!!d.superQuine && (
-            <View style={[styles.quine, { borderColor: C.yellow }]}>
-              <Text style={[styles.quineTitle, { color: C.yellow }]}>Super Quine</Text>
+            <Card style={styles.quine}>
+              <Badge label="Super Quine" style={{ marginBottom: 6 }} />
               <View style={styles.quineRow}>
                 <Text style={[styles.smallStrong, { flex: 1 }]}>{d.superQuine.lot}</Text>
                 <Text style={styles.quineWinner}>{d.superQuine.gagnant}</Text>
               </View>
-            </View>
+            </Card>
           )}
         </>
       )}
@@ -671,16 +768,23 @@ function Journee({ d }: { d: Edition }) {
 
 // ─── Onglet Photos ───
 
+const GAP = 4;
+
 function Photos({ d, onPhoto }: { d: Edition; onPhoto: (i: number) => void }) {
   const { width } = useWindowDimensions();
-  const gap = 3;
   // Arrondi : une largeur fractionnaire renvoie la 3e vignette à la ligne sur Android
-  const size = Math.floor((width - theme.s(8) - gap * 2) / 3);
+  const size = Math.floor((width - theme.gutter * 2 - GAP * 2) / 3);
   return (
-    <View style={[styles.grid, { gap }]}>
+    <View style={styles.grid}>
       {(d.photos ?? []).map((p, i) => (
-        <Pressable key={`${i}-${p.url}`} onPress={() => onPhoto(i)} accessibilityRole="imagebutton" accessibilityLabel={`Photo ${i + 1}`}>
-          <Image source={{ uri: p.url }} style={{ width: size, height: size, borderRadius: 4 }} contentFit="cover" transition={150} />
+        <Pressable
+          key={`${i}-${p.url}`}
+          onPress={() => onPhoto(i)}
+          accessibilityRole="imagebutton"
+          accessibilityLabel={p.caption ? `Ouvrir la photo ${p.caption}` : `Photo ${i + 1}`}
+          style={({ pressed }) => [styles.tile, pressed && { opacity: 0.8 }]}
+        >
+          <Image source={{ uri: p.url }} style={{ width: size, height: size }} contentFit="cover" transition={150} />
         </Pressable>
       ))}
     </View>
@@ -701,35 +805,21 @@ function Palmares({
   onPick: (y: string) => void;
 }) {
   return (
-    <View style={styles.palma}>
+    <View>
       <Heading>Palmarès</Heading>
       {[...years].reverse().map((y) => {
         const d = data[y];
-        const champ = d.legacy ? null : computeYear(d).ranked[0];
         const on = y === current;
         return (
-          <Pressable
+          <ListRow
             key={y}
             onPress={() => onPick(y)}
-            accessibilityRole="button"
-            accessibilityLabel={`Olympiades ${y}`}
-            style={({ pressed }) => [styles.palmaRow, pressed && { opacity: 0.6 }]}
-          >
-            <Text style={[styles.palmaYear, { color: on ? yearColor(y) : C.text }]}>{y}</Text>
-            <View style={{ flex: 1 }}>
-              {champ ? (
-                <TeamName t={champ} style={styles.smallStrong} />
-              ) : (
-                <Text style={styles.smallStrong} numberOfLines={1}>
-                  {championOf(d, 'palmares')}
-                </Text>
-              )}
-              <Text style={styles.small} numberOfLines={1}>
-                {d.lieu}
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={C.muted} />
-          </Pressable>
+            left={<Text style={[styles.palmaYear, { color: on ? yearColor(y) : c.text }]}>{y}</Text>}
+            title={championOf(d, 'palmares')}
+            sub={d.lieu}
+            right={on ? <Badge label="Affichée" color={c.rail} textColor={c.text} /> : undefined}
+            style={styles.palmaRow}
+          />
         );
       })}
     </View>
@@ -738,153 +828,210 @@ function Palmares({
 
 // ─── Photos en plein écran, on passe de l'une à l'autre en glissant ───
 
+const DARK = 'rgba(0,0,0,0.45)';
+
 function PhotoViewer({
   photos,
   index,
   onClose,
 }: {
-  photos: { url: string }[];
+  photos: { url: string; caption?: string }[];
   index: number | null;
   onClose: () => void;
 }) {
-  const { width, height } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
   return (
-    <Modal visible={index !== null} transparent animationType="fade" onRequestClose={onClose} supportedOrientations={['portrait']}>
-      {index !== null && (
-        <View style={styles.viewer}>
-          <FlatList
-            // Filet de sécurité : initialScrollIndex est ignoré sur le web
-            ref={(list) => list?.scrollToOffset({ offset: index * width, animated: false })}
-            data={photos}
-            horizontal
-            pagingEnabled
-            initialScrollIndex={index}
-            // Sans ça, la photo 0 s'affiche une frame avant le saut
-            contentOffset={{ x: index * width, y: 0 }}
-            getItemLayout={(_, i) => ({ length: width, offset: width * i, index: i })}
-            keyExtractor={(p, i) => `${i}-${p.url}`}
-            showsHorizontalScrollIndicator={false}
-            renderItem={({ item }) => <Image source={{ uri: item.url }} style={{ width, height }} contentFit="contain" />}
-          />
-          <Pressable
-            onPress={onClose}
-            style={[styles.viewerClose, { top: insets.top + 8 }]}
-            hitSlop={20}
-            accessibilityRole="button"
-            accessibilityLabel="Fermer"
-          >
-            <Ionicons name="close" size={32} color="#fff" />
-          </Pressable>
-        </View>
-      )}
+    <Modal
+      visible={index !== null}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+      supportedOrientations={['portrait']}
+      statusBarTranslucent
+      navigationBarTranslucent
+    >
+      {index !== null && <ViewerBody photos={photos} start={index} onClose={onClose} />}
     </Modal>
   );
 }
 
-const PAD = theme.s(4);
+function ViewerBody({ photos, start, onClose }: { photos: { url: string; caption?: string }[]; start: number; onClose: () => void }) {
+  const { width, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const [shown, setShown] = useState(start);
+  const caption = photos[shown]?.caption;
+  return (
+    <View style={styles.viewer}>
+      <FlatList
+        // Filet de sécurité : initialScrollIndex est ignoré sur le web
+        ref={(list) => list?.scrollToOffset({ offset: start * width, animated: false })}
+        data={photos}
+        horizontal
+        pagingEnabled
+        initialScrollIndex={start}
+        // Sans ça, la photo 0 s'affiche une frame avant le saut
+        contentOffset={{ x: start * width, y: 0 }}
+        getItemLayout={(_, i) => ({ length: width, offset: width * i, index: i })}
+        keyExtractor={(p, i) => `${i}-${p.url}`}
+        showsHorizontalScrollIndicator={false}
+        onMomentumScrollEnd={(e) => setShown(Math.round(e.nativeEvent.contentOffset.x / width))}
+        renderItem={({ item }) => <Image source={{ uri: item.url }} style={{ width, height }} contentFit="contain" />}
+      />
+      <View style={[styles.viewerBar, { top: insets.top + 8 }]}>
+        {photos.length > 1 ? (
+          <View style={styles.counter}>
+            <Text style={styles.counterText}>
+              {shown + 1} / {photos.length}
+            </Text>
+          </View>
+        ) : (
+          <View />
+        )}
+        <IconButton name="x" label="Fermer" onPress={onClose} bg={DARK} color="#fff" />
+      </View>
+      {!!caption && (
+        <View style={[styles.caption, { paddingBottom: insets.bottom + 16 }]}>
+          <Text style={styles.captionText}>{caption}</Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
+const HERO_TOP = 20;
+// Le pied du verre est un peu sous le bas de sa boîte (perspective)
+const FOOT = 14;
+const HALO = require('@/assets/olympiades/halo.png');
+const FAISCEAU = require('@/assets/olympiades/faisceau.png');
+const SOCLE = require('@/assets/olympiades/socle.png');
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: C.deep },
-  center: { flex: 1, backgroundColor: C.deep, alignItems: 'center', justifyContent: 'center', padding: theme.s(6) },
-  muted: { color: C.muted, fontFamily: F.body, textAlign: 'center', fontSize: 15 },
-  retry: { marginTop: theme.s(4), paddingHorizontal: theme.s(5), paddingVertical: theme.s(3), borderRadius: theme.radius.pill, backgroundColor: C.coral },
-  retryText: { color: '#fff', fontFamily: F.bodyBold },
-  offline: { color: C.muted, fontFamily: F.body, fontSize: 12, textAlign: 'center', marginTop: theme.s(2) },
+  flex: { flex: 1, backgroundColor: c.deep },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  offline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginHorizontal: theme.gutter,
+    marginTop: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    backgroundColor: c.card,
+  },
+  offlineText: { flex: 1, color: c.muted, fontFamily: f.bodyBold, fontSize: 14, lineHeight: 19 },
 
-  hero: { alignItems: 'center', paddingTop: theme.s(4), paddingHorizontal: PAD, overflow: 'hidden' },
-  halo: { position: 'absolute', opacity: 0.06 },
-  stage: { paddingHorizontal: theme.s(12) },
-  heroYear: { color: C.text, fontFamily: F.serifBlack, fontSize: 44, lineHeight: 50, marginTop: theme.s(4) },
-  heroPlace: { color: C.muted, fontFamily: F.body, fontSize: 14, lineHeight: 20, textAlign: 'center', marginTop: theme.s(1) },
+  // Vitrine
+  hero: {
+    marginHorizontal: theme.gutter,
+    marginTop: 18,
+    alignItems: 'center',
+    paddingTop: HERO_TOP,
+    paddingBottom: 20,
+    paddingHorizontal: 16,
+    overflow: 'hidden',
+  },
+  backdrop: { position: 'absolute', alignSelf: 'center' },
+  stage: { paddingHorizontal: 48 },
+  hint: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  hintText: { color: c.muted, fontFamily: f.body, fontSize: 12 },
+  heroKicker: { fontFamily: f.bodyBold, fontSize: 12, letterSpacing: 3, textTransform: 'uppercase', marginTop: 10 },
+  heroYear: { color: c.text, fontFamily: f.serifBlack, fontSize: 44, lineHeight: 50, letterSpacing: -0.5 },
+  heroPlace: { color: c.muted, fontFamily: f.body, fontSize: 15, lineHeight: 21, textAlign: 'center', marginTop: 2 },
   winner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.s(2),
-    marginTop: theme.s(4),
-    paddingHorizontal: theme.s(4),
-    paddingVertical: theme.s(2.5),
+    gap: 8,
+    marginTop: 16,
+    minHeight: 44,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     borderRadius: theme.radius.pill,
-    backgroundColor: 'rgba(255,217,61,0.10)',
+    backgroundColor: c.raised,
     maxWidth: '100%',
   },
-  winnerText: { color: C.text, fontFamily: F.bodyBold, fontSize: 15, flexShrink: 1 },
-  winnerPts: { color: C.yellow, fontFamily: F.bodyBold, fontSize: 13 },
+  winnerText: { color: c.text, fontFamily: f.bodyBold, fontSize: 15, flexShrink: 1 },
+  winnerPts: { color: c.yellow, fontFamily: f.bodyBold, fontSize: 14 },
 
-  shelfWrap: { marginTop: theme.s(6) },
-  shelf: { flexGrow: 1, justifyContent: 'center', gap: theme.s(6), paddingHorizontal: PAD },
-  shelfItem: { alignItems: 'center', paddingTop: theme.s(1) },
-  shelfYear: { color: C.muted, fontFamily: F.bodyBold, fontSize: 13, marginTop: theme.s(2) },
-  shelfMark: { width: 18, height: 3, borderRadius: 2, marginTop: theme.s(1.5), backgroundColor: 'transparent' },
-  plank: { height: StyleSheet.hairlineWidth, backgroundColor: C.border, marginHorizontal: PAD, marginTop: theme.s(4) },
+  // Étagère
+  shelf: { flexGrow: 1, justifyContent: 'center', gap: 6, paddingHorizontal: theme.gutter, paddingTop: 12 },
+  shelfItem: { alignItems: 'center', paddingTop: 10, paddingBottom: 8, paddingHorizontal: 12, borderRadius: 18 },
+  shelfYear: { color: c.muted, fontFamily: f.bodyBold, fontSize: 13, marginTop: 6 },
 
-  tabsBar: {
-    flexDirection: 'row',
-    backgroundColor: C.deep,
-    paddingHorizontal: theme.s(2),
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: C.border,
-  },
-  // Largeur selon le libellé : « Classement » ne doit pas être coupé
-  tab: { flexGrow: 1, alignItems: 'center', paddingTop: theme.s(3.5), paddingHorizontal: theme.s(1) },
-  tabText: { color: C.muted, fontFamily: F.bodyMedium, fontSize: 13.5 },
-  tabTextOn: { color: C.text, fontFamily: F.bodyBold },
-  tabMark: { height: 3, borderRadius: 2, alignSelf: 'stretch', marginHorizontal: theme.s(1), marginTop: theme.s(3), backgroundColor: 'transparent' },
+  // Onglets collés en haut
+  tabsBar: { backgroundColor: c.deep, paddingVertical: 12 },
+  tabs: { paddingHorizontal: theme.gutter, gap: 8 },
+  tab: { height: 44, borderRadius: 22 },
 
-  content: { paddingHorizontal: PAD, paddingTop: theme.s(4) },
-  heading: { color: C.text, fontFamily: F.serif, fontSize: 20, marginTop: theme.s(8), marginBottom: theme.s(3) },
-  body: { color: 'rgba(255,255,255,0.86)', fontFamily: F.body, fontSize: 15, lineHeight: 23 },
-  small: { color: C.muted, fontFamily: F.body, fontSize: 13, lineHeight: 19 },
-  smallStrong: { color: C.text, fontFamily: F.bodyBold, fontSize: 14, lineHeight: 20 },
-  more: { marginTop: theme.s(2), alignSelf: 'flex-start' },
-  moreText: { color: C.coral, fontFamily: F.bodyBold, fontSize: 14 },
+  content: { paddingHorizontal: theme.gutter, paddingTop: 4 },
+  heading: { marginTop: 24, marginBottom: 10 },
+  body: { color: c.text, fontFamily: f.body, fontSize: 16, lineHeight: 23 },
+  small: { color: c.muted, fontFamily: f.body, fontSize: 14, lineHeight: 20 },
+  smallStrong: { color: c.text, fontFamily: f.bodyBold, fontSize: 14, lineHeight: 20 },
+  more: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' },
+  moreText: { color: c.coralSoft, fontFamily: f.bodyBold, fontSize: 15 },
   dot: { width: 10, height: 10, borderRadius: 5 },
-  teamInline: { flexDirection: 'row', alignItems: 'center', gap: theme.s(2), flexShrink: 1 },
-  teamInlineText: { color: C.text, fontFamily: F.bodyBold, fontSize: 14, flexShrink: 1 },
-  iconLine: { flexDirection: 'row', gap: theme.s(3), marginTop: theme.s(3) },
+  teamInline: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 },
+  teamInlineText: { color: c.text, fontFamily: f.bodyBold, fontSize: 14, flexShrink: 1 },
+  iconLine: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  iconBox: { width: 40, height: 40, borderRadius: 14, backgroundColor: c.raised, alignItems: 'center', justifyContent: 'center' },
+  listCard: { paddingHorizontal: 16 },
+  divider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.hairline },
 
-  rankRow: { flexDirection: 'row', gap: theme.s(4), paddingVertical: theme.s(3.5), borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.border },
-  rankPos: { color: C.muted, fontFamily: F.serifBlack, fontSize: 30, lineHeight: 34, width: 24, textAlign: 'center' },
-  rankHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: theme.s(3) },
-  rankName: { color: C.text, fontFamily: F.bodyBold, fontSize: 16, flexShrink: 1 },
-  rankPts: { color: C.text, fontFamily: F.serifBlack, fontSize: 22 },
-  rankUnit: { color: C.muted, fontFamily: F.body, fontSize: 12 },
-  barTrack: { height: 8, borderRadius: 4, backgroundColor: C.surface, marginTop: theme.s(2), marginBottom: theme.s(1.5), overflow: 'hidden' },
+  // Classement
+  rankCard: { flexDirection: 'row', gap: 14, padding: 16, marginBottom: 10 },
+  rankPos: { color: c.muted, fontFamily: f.serifBlack, fontSize: 30, lineHeight: 34, width: 24, textAlign: 'center' },
+  rankHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 },
+  rankName: { color: c.text, fontFamily: f.bodyBold, fontSize: 16, flexShrink: 1 },
+  rankPts: { color: c.text, fontFamily: f.serifBlack, fontSize: 22 },
+  rankUnit: { color: c.muted, fontFamily: f.body, fontSize: 13 },
+  barTrack: { height: 8, borderRadius: 4, backgroundColor: c.raised, marginTop: 8, marginBottom: 6, overflow: 'hidden' },
   bar: { height: 8, borderRadius: 4 },
-  adjRow: { flexDirection: 'row', gap: theme.s(2), marginBottom: theme.s(4) },
-  adjPts: { fontFamily: F.serifBlack, fontSize: 20, width: 34 },
-  absHead: { flexDirection: 'row', alignItems: 'center', gap: theme.s(3), flexWrap: 'wrap' },
+  adjRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14 },
+  adjPts: { fontFamily: f.serifBlack, fontSize: 20, width: 40 },
+  absHead: { flexDirection: 'row', alignItems: 'center', gap: 12, flexWrap: 'wrap' },
 
-  legend: { flexDirection: 'row', flexWrap: 'wrap', columnGap: theme.s(4), rowGap: theme.s(2), marginBottom: theme.s(2) },
-  legendText: { color: C.muted, fontFamily: F.bodyMedium, fontSize: 13 },
-  epRow: { paddingVertical: theme.s(4), borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.border },
-  epHead: { flexDirection: 'row', alignItems: 'center', gap: theme.s(3) },
-  epNum: { color: C.coral, fontFamily: F.serifBlack, fontSize: 18, width: 18 },
-  epName: { color: C.text, fontFamily: F.bodyBold, fontSize: 16, flex: 1 },
-  split: { flexDirection: 'row', height: 24, borderRadius: 6, overflow: 'hidden', marginTop: theme.s(3), gap: 2 },
+  // Épreuves
+  legend: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 16, rowGap: 8, marginBottom: 14 },
+  legendText: { color: c.muted, fontFamily: f.bodyMedium, fontSize: 14 },
+  epCard: { backgroundColor: c.card, borderRadius: theme.radius.card, padding: 16, marginBottom: 10 },
+  epHead: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 28 },
+  epNum: { color: c.muted, fontFamily: f.serifBlack, fontSize: 20, width: 22 },
+  epName: { color: c.text, fontFamily: f.bodyBold, fontSize: 16, lineHeight: 21, flex: 1 },
+  split: { flexDirection: 'row', height: 24, borderRadius: 8, overflow: 'hidden', marginTop: 12, gap: 2 },
   splitPart: { alignItems: 'center', justifyContent: 'center' },
-  splitText: { color: C.deep, fontFamily: F.bodyBold, fontSize: 12 },
-  epWinner: { flexDirection: 'row', alignItems: 'center', gap: theme.s(2), marginTop: theme.s(2) },
+  splitText: { color: c.ink, fontFamily: f.bodyBold, fontSize: 12 },
+  epWinner: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10 },
 
-  teamBlock: { borderLeftWidth: 3, paddingLeft: theme.s(4), paddingVertical: theme.s(1), marginBottom: theme.s(6) },
-  teamHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: theme.s(3) },
-  teamName: { color: C.text, fontFamily: F.serif, fontSize: 19, flexShrink: 1 },
-  teamRank: { fontFamily: F.serifBlack, fontSize: 18 },
+  // Équipes
+  teamCard: { padding: 16, marginBottom: 10 },
+  teamHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  teamDot: { width: 14, height: 14, borderRadius: 7 },
+  teamName: { color: c.text, fontFamily: f.serif, fontSize: 20, lineHeight: 25, flex: 1 },
+  teamRank: { color: c.muted, fontFamily: f.serifBlack, fontSize: 18 },
 
-  quote: { marginTop: theme.s(6), paddingLeft: theme.s(1) },
-  quoteMark: { color: C.coral, fontFamily: F.serifBlack, fontSize: 48, lineHeight: 44, height: 30 },
-  quoteText: { color: C.text, fontFamily: F.serif, fontSize: 18, lineHeight: 27, marginBottom: theme.s(2) },
-  quine: { borderWidth: 1, borderColor: C.border, borderRadius: theme.radius.md, padding: theme.s(4), marginTop: theme.s(3) },
-  quineTitle: { color: C.text, fontFamily: F.serif, fontSize: 16, marginBottom: theme.s(1) },
-  quineRow: { flexDirection: 'row', gap: theme.s(3), paddingVertical: theme.s(2), alignItems: 'flex-start' },
-  quineWinner: { color: C.teal, fontFamily: F.bodyBold, fontSize: 14, maxWidth: 100, textAlign: 'right' },
+  // Journée
+  factsCard: { padding: 16, gap: 12 },
+  quote: { marginTop: 12, padding: 16 },
+  quoteMark: { color: c.violet, fontFamily: f.serifBlack, fontSize: 48, lineHeight: 44, height: 30 },
+  quoteText: { color: c.text, fontFamily: f.serif, fontSize: 18, lineHeight: 27, marginBottom: 8 },
+  quine: { padding: 16, paddingBottom: 6, marginTop: 10 },
+  quineTitle: { color: c.text, fontFamily: f.bodyBold, fontSize: 16, lineHeight: 21, marginBottom: 4 },
+  quineRow: { flexDirection: 'row', gap: 12, paddingVertical: 10, alignItems: 'flex-start' },
+  quineWinner: { color: c.text, fontFamily: f.bodyBold, fontSize: 14, maxWidth: 110, textAlign: 'right' },
 
-  grid: { flexDirection: 'row', flexWrap: 'wrap' },
+  // Photos
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: GAP },
+  tile: { backgroundColor: c.card, borderRadius: 10, overflow: 'hidden' },
 
-  palma: { marginTop: theme.s(6), paddingTop: theme.s(2), borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: C.border },
-  palmaRow: { flexDirection: 'row', alignItems: 'center', gap: theme.s(4), paddingVertical: theme.s(3) },
-  palmaYear: { fontFamily: F.serifBlack, fontSize: 22, width: 60 },
+  // Palmarès
+  palmaRow: { marginBottom: 8 },
+  palmaYear: { fontFamily: f.serifBlack, fontSize: 22, width: 60 },
 
+  // Visionneuse
   viewer: { flex: 1, backgroundColor: '#000' },
-  viewerClose: { position: 'absolute', right: 20, zIndex: 10 },
+  viewerBar: { position: 'absolute', left: 16, right: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  counter: { paddingHorizontal: 12, height: 30, borderRadius: 15, backgroundColor: DARK, justifyContent: 'center' },
+  counterText: { color: '#fff', fontFamily: f.bodyBold, fontSize: 13 },
+  caption: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.6)', paddingHorizontal: theme.gutter, paddingTop: 16 },
+  captionText: { color: '#fff', fontFamily: f.bodyBold, fontSize: 15, lineHeight: 21, textAlign: 'center' },
 });

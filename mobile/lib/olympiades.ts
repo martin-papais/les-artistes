@@ -54,6 +54,14 @@ export type Edition = {
 };
 export type Olympiades = Record<string, Edition>;
 
+// Écocups déroulés à partir d'une vidéo du vrai verre (encre seule, fond transparent).
+// Un `verre` posé sur le site passe devant.
+const VERRES: Record<string, number> = {
+  '2025': require('@/assets/olympiades/verre-2025.png'),
+  '2026': require('@/assets/olympiades/verre-2026.png'),
+};
+export const verreArt = (year: string, d: Edition) => d.verre ?? VERRES[year];
+
 export type RankedTeam = Team & { totalPoints: number; classement: number };
 
 /** Classement et vainqueur de chaque épreuve, calculés comme sur le site. */

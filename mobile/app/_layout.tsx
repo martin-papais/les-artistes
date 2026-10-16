@@ -143,7 +143,7 @@ export default function RootLayout() {
         <Stack.Screen name="photos" options={{ title: 'Photos', headerShown: false }} />
         <Stack.Screen name="annuaire" options={{ title: 'Annuaire', headerShown: false }} />
         <Stack.Screen name="shop" options={{ title: 'Boutique', headerShown: false }} />
-        <Stack.Screen name="olympiades" options={{ title: 'Olympiades' }} />
+        <Stack.Screen name="olympiades" options={{ title: 'Olympiades', headerShown: false }} />
       </Stack>
       <StatusBar style="light" />
     </ThemeProvider>
