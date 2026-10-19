@@ -133,6 +133,7 @@ export function takeNotificationRoute(
   handledNotificationId = id;
   // Photos a quitté les onglets pour « Plus » ; les triggers envoient encore l'ancienne route
   if (route === '/(tabs)/photos') return '/photos';
+  if (route === '/(tabs)/jeux') return '/jeux';
   return route;
 }
 

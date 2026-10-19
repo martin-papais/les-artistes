@@ -144,6 +144,8 @@ export default function RootLayout() {
         <Stack.Screen name="annuaire" options={{ title: 'Annuaire', headerShown: false }} />
         <Stack.Screen name="shop" options={{ title: 'Boutique', headerShown: false }} />
         <Stack.Screen name="olympiades" options={{ title: 'Olympiades', headerShown: false }} />
+        <Stack.Screen name="jeux" options={{ title: 'Jeux', headerShown: false }} />
+        <Stack.Screen name="minijeux/[jeu]" options={{ title: 'Mini-jeux', headerShown: false, gestureEnabled: false }} />
       </Stack>
       <StatusBar style="light" />
     </ThemeProvider>

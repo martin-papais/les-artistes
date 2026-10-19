@@ -237,6 +237,7 @@ export default function JeuxScreen() {
   return (
     <View style={styles.flex}>
       <ScreenHeader
+        back
         title="Jeux"
         sub="L’atelier ludique du groupe"
         right={

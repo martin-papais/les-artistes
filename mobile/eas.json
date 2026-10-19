@@ -40,6 +40,10 @@
     "testflight": {
       "extends": "production",
       "channel": "refonte"
+    },
+    "test": {
+      "extends": "production",
+      "channel": "test"
     }
   },
   "submit": {
@@ -49,6 +53,11 @@
       }
     },
     "testflight": {
+      "ios": {
+        "ascAppId": "6819082593"
+      }
+    },
+    "test": {
       "ios": {
         "ascAppId": "6819082593"
       }
