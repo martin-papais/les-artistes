@@ -2,6 +2,7 @@ import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { requireOptionalNativeModule } from 'expo-modules-core';
 import type { ErrorBoundaryProps } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -41,7 +42,6 @@ import {
   ListRow,
   ScreenHeader,
   SectionTitle,
-  type FeatherName,
 } from '@/components/ui/kit';
 import {
   championOf,
@@ -56,7 +56,8 @@ import {
 } from '@/lib/olympiades';
 import { theme } from '@/lib/theme';
 
-type Tab = 'classement' | 'epreuves' | 'equipes' | 'journee' | 'photos';
+// Une seule page qu'on fait défiler, comme sur le site ; la barre de raccourcis saute à une partie
+type Section = 'recit' | 'verre' | 'classement' | 'equipes' | 'epreuves' | 'journee' | 'photos';
 
 const SPIN = 28; // degrés par seconde, au repos
 // Ecocup « Eco 30 » : bord Ø 7,4 cm, fond Ø 4,8, hauteur 11,8
@@ -89,12 +90,14 @@ export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
   );
 }
 
-function tabsOf(d: Edition): { key: Tab; label: string }[] {
-  const tabs: { key: Tab; label: string }[] = [];
-  if (!d.legacy) tabs.push({ key: 'classement', label: 'Classement' });
-  tabs.push({ key: 'epreuves', label: 'Épreuves' }, { key: 'equipes', label: 'Équipes' }, { key: 'journee', label: 'Journée' });
-  if (d.photos?.length) tabs.push({ key: 'photos', label: 'Photos' });
-  return tabs;
+function sectionsOf(d: Edition, year: string): { key: Section; label: string }[] {
+  const s: { key: Section; label: string }[] = [{ key: 'recit', label: 'Récit' }];
+  if (verreArt(year, d) !== undefined) s.push({ key: 'verre', label: 'Le verre' });
+  if (!d.legacy) s.push({ key: 'classement', label: 'Classement' });
+  s.push({ key: 'equipes', label: 'Équipes' }, { key: 'epreuves', label: 'Épreuves' });
+  if (d.loto?.quines.length || d.bbq || d.repas || d.anecdote) s.push({ key: 'journee', label: 'Journée' });
+  if (d.photos?.length) s.push({ key: 'photos', label: 'Photos' });
+  return s;
 }
 
 export default function OlympiadesScreen() {
@@ -102,13 +105,17 @@ export default function OlympiadesScreen() {
   const [failed, setFailed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [year, setYear] = useState<string | null>(null);
-  const [tab, setTab] = useState<Tab>('classement');
   const [viewer, setViewer] = useState<number | null>(null);
+  const [section, setSection] = useState<Section>('recit');
   // Le verre ne s'anime que s'il est à l'écran
-  const [heroVisible, setHeroVisible] = useState(true);
-  const [tabsY, setTabsY] = useState(0);
-  const scrollY = useRef(0);
+  const [verreVisible, setVerreVisible] = useState(false);
+  // Position de la barre de raccourcis, puis de chaque partie sous elle
+  const [barY, setBarY] = useState(0);
+  const pos = useRef<Partial<Record<Section, { y: number; h: number }>>>({});
   const scrollRef = useRef<ScrollView>(null);
+  // Le raccourci de la partie lue reste visible dans la barre
+  const barRef = useRef<ScrollView>(null);
+  const chipX = useRef<Partial<Record<Section, number>>>({});
   const insets = useSafeAreaInsets();
   const { height: windowH } = useWindowDimensions();
 
@@ -132,9 +139,7 @@ export default function OlympiadesScreen() {
   const years = useMemo(() => Object.keys(data ?? {}).sort(), [data]);
   const current = year && data?.[year] ? year : years[years.length - 1];
   const edition = current ? data?.[current] : undefined;
-  const tabs = edition ? tabsOf(edition) : [];
-  // Un onglet absent de l'édition (classement d'une archive) retombe sur le premier
-  const activeTab = tabs.some((t) => t.key === tab) ? tab : tabs[0]?.key;
+  const sections = edition && current ? sectionsOf(edition, current) : [];
 
   async function onRefresh() {
     setRefreshing(true);
@@ -145,23 +150,38 @@ export default function OlympiadesScreen() {
   function pick(y: string) {
     if (y === current) return;
     Haptics.selectionAsync().catch(() => {});
+    pos.current = {};
     setYear(y);
     setViewer(null);
+    setSection('recit');
   }
 
-  function chooseTab(t: Tab) {
+  function jump(s: Section) {
     Haptics.selectionAsync().catch(() => {});
-    if (t === activeTab) return;
-    setTab(t);
-    // La page ne bouge pas, sauf si on était plus bas que les onglets :
-    // on revient alors au début du nouvel onglet, onglets collés en haut
-    if (tabsY > 0 && scrollY.current > tabsY) scrollRef.current?.scrollTo({ y: tabsY, animated: false });
+    const p = pos.current[s];
+    if (p) scrollRef.current?.scrollTo({ y: barY + p.y, animated: true });
   }
+
+  const place = (s: Section) => (e: LayoutChangeEvent) => {
+    const { y, height } = e.nativeEvent.layout;
+    pos.current[s] = { y, h: height };
+  };
 
   function onScroll(ev: NativeSyntheticEvent<NativeScrollEvent>) {
-    scrollY.current = ev.nativeEvent.contentOffset.y;
-    const visible = scrollY.current < tabsY;
-    if (visible !== heroVisible) setHeroVisible(visible);
+    const top = ev.nativeEvent.contentOffset.y;
+    // La partie lue est la dernière dont le titre est passé sous la barre
+    let reading: Section = sections[0]?.key ?? 'recit';
+    for (const s of sections) {
+      const p = pos.current[s.key];
+      if (p && barY + p.y <= top + 80) reading = s.key;
+    }
+    if (reading !== section) {
+      setSection(reading);
+      barRef.current?.scrollTo({ x: Math.max(0, (chipX.current[reading] ?? 0) - theme.gutter), animated: true });
+    }
+    const v = pos.current.verre;
+    const seen = !!v && barY + v.y < top + windowH && barY + v.y + v.h > top;
+    if (seen !== verreVisible) setVerreVisible(seen);
   }
 
   if (!data || !current || !edition) {
@@ -184,9 +204,9 @@ export default function OlympiadesScreen() {
     );
   }
 
-  const n = years.length;
+  const art = verreArt(current, edition);
   return (
-    // Bande sombre sous la barre d'état : les onglets collés s'arrêtent dessous
+    // Bande sombre sous la barre d'état : les raccourcis collés s'arrêtent dessous
     <View style={[styles.flex, { paddingTop: insets.top }]}>
       <ScrollView
         ref={scrollRef}
@@ -196,40 +216,58 @@ export default function OlympiadesScreen() {
         scrollEventThrottle={64}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={c.teal} />}
       >
-        {/* La hauteur de ce bloc donne la position des onglets (une vue collante mesure 0 elle-même) */}
-        <View onLayout={(e: LayoutChangeEvent) => setTabsY(e.nativeEvent.layout.height)}>
-          <ScreenHeader
-            back
-            title="Olympiades"
-            sub={`${n} édition${n > 1 ? 's' : ''} depuis ${years[0]}`}
-            // La marge de l'encoche est déjà prise par la vue parente
-            style={{ paddingTop: 4 }}
-          />
+        {/* La hauteur de ce bloc donne la position de la barre (une vue collante mesure 0 elle-même) */}
+        <View onLayout={(e: LayoutChangeEvent) => setBarY(e.nativeEvent.layout.height)}>
+          <Cover key={current} year={current} edition={edition} onPhoto={setViewer} />
           {failed && (
             <View style={styles.offline}>
               <Icon name="wifi-off" size={18} color={c.muted} />
               <Text style={styles.offlineText}>Hors connexion : dernières données enregistrées.</Text>
             </View>
           )}
-          <Hero year={current} edition={edition} active={heroVisible && viewer === null} />
-          <Shelf years={years} data={data} current={current} onPick={pick} />
+          <Years years={years} current={current} onPick={pick} />
         </View>
 
-        <View style={styles.tabsBar} accessibilityRole="tablist">
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabs}>
-            {tabs.map((t) => (
-              <Chip key={t.key} label={t.label} active={t.key === activeTab} onPress={() => chooseTab(t.key)} style={styles.tab} />
+        <View style={styles.bar}>
+          <ScrollView ref={barRef} horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.barRow}>
+            {sections.map((s) => (
+              <View key={s.key} onLayout={(e: LayoutChangeEvent) => (chipX.current[s.key] = e.nativeEvent.layout.x)}>
+                <Chip label={s.label} active={s.key === section} onPress={() => jump(s.key)} style={styles.barChip} />
+              </View>
             ))}
           </ScrollView>
         </View>
 
-        {/* Hauteur minimale : un onglet court ne fait pas remonter la page */}
-        <View style={[styles.content, { minHeight: windowH }]}>
-          {activeTab === 'classement' && <Classement d={edition} />}
-          {activeTab === 'epreuves' && <Epreuves d={edition} />}
-          {activeTab === 'equipes' && <Equipes d={edition} />}
-          {activeTab === 'journee' && <Journee d={edition} />}
-          {activeTab === 'photos' && <Photos d={edition} onPhoto={setViewer} />}
+        <View style={styles.content}>
+          <View onLayout={place('recit')}>
+            <Recit year={current} d={edition} />
+          </View>
+          {art !== undefined && (
+            <View onLayout={place('verre')}>
+              <Heading>Le verre de l’édition</Heading>
+              <Vitrine year={current} edition={edition} art={art} active={verreVisible && viewer === null} />
+            </View>
+          )}
+          {!edition.legacy && (
+            <View onLayout={place('classement')}>
+              <Classement d={edition} />
+            </View>
+          )}
+          <View onLayout={place('equipes')}>
+            <Equipes d={edition} />
+          </View>
+          <View onLayout={place('epreuves')}>
+            <Epreuves d={edition} />
+          </View>
+          <View onLayout={place('journee')}>
+            <Journee d={edition} />
+          </View>
+          {!!edition.photos?.length && (
+            <View onLayout={place('photos')}>
+              <Heading count={edition.photos.length}>Photos</Heading>
+              <Photos d={edition} onPhoto={setViewer} />
+            </View>
+          )}
           <Palmares
             years={years}
             data={data}
@@ -246,9 +284,125 @@ export default function OlympiadesScreen() {
   );
 }
 
-// ─── Verre en vitrine : tourne seul, et se fait tourner du doigt ───
+// ─── En haut : les photos de l'édition, qu'on fait défiler du doigt ───
 
-function Hero({ year, edition, active }: { year: string; edition: Edition; active: boolean }) {
+function Cover({ year, edition, onPhoto }: { year: string; edition: Edition; onPhoto: (i: number) => void }) {
+  const { width, height: windowH } = useWindowDimensions();
+  const router = useRouter();
+  const [shown, setShown] = useState(0);
+  const photos = edition.photos ?? [];
+  const H = photos.length ? Math.round(Math.min(width * 1.1, windowH * 0.58)) : 280;
+  const accent = yearColor(year);
+  const champion = edition.legacy ? null : computeYear(edition).ranked[0];
+
+  return (
+    <View style={{ width, height: H, backgroundColor: c.card }}>
+      {photos.length ? (
+        <FlatList
+          data={photos}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          keyExtractor={(p, i) => `${i}-${p.url}`}
+          getItemLayout={(_, i) => ({ length: width, offset: width * i, index: i })}
+          onMomentumScrollEnd={(e) => setShown(Math.round(e.nativeEvent.contentOffset.x / width))}
+          renderItem={({ item, index }) => (
+            <Pressable
+              onPress={() => onPhoto(index)}
+              accessibilityRole="imagebutton"
+              accessibilityLabel={item.caption ? `Ouvrir la photo ${item.caption}` : `Ouvrir la photo ${index + 1}`}
+            >
+              <Image source={{ uri: item.url }} style={{ width, height: H }} contentFit="cover" transition={200} />
+            </Pressable>
+          )}
+        />
+      ) : (
+        // Pas de photo : la lueur de l'année tient lieu de fond
+        <Image source={HALO} contentFit="fill" tintColor={accent} style={[StyleSheet.absoluteFill, { opacity: 0.35 }]} />
+      )}
+
+      {/* Le texte reste lisible sur n'importe quelle photo */}
+      <View style={[styles.shade, { height: H * 0.62 }]} pointerEvents="none">
+        <Image source={OMBRE} contentFit="fill" style={StyleSheet.absoluteFill} />
+      </View>
+      <View style={styles.coverText} pointerEvents="box-none">
+        <Text style={[styles.coverKicker, { color: accent }]}>Olympiades</Text>
+        <Text style={styles.coverYear} accessibilityRole="header">
+          {year}
+        </Text>
+        <Text style={styles.coverPlace}>
+          {edition.date} · {edition.lieu}
+        </Text>
+        <View style={styles.winner}>
+          <Icon name="award" size={16} color={c.yellow} />
+          {champion ? (
+            <>
+              <View style={[styles.dot, { backgroundColor: colorHex(champion.couleur) }]} />
+              <Text style={styles.winnerText} numberOfLines={1}>
+                {champion.nom}
+              </Text>
+              <Text style={styles.winnerPts}>{champion.totalPoints} pts</Text>
+            </>
+          ) : (
+            <Text style={styles.winnerText} numberOfLines={1}>
+              {championOf(edition)}
+            </Text>
+          )}
+        </View>
+      </View>
+
+      <View style={styles.coverBar} pointerEvents="box-none">
+        <IconButton
+          name="chevron-left"
+          label="Retour"
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)/plus'))}
+          bg={DARK}
+          color="#fff"
+        />
+        {photos.length > 1 && (
+          <View style={styles.counter}>
+            <Icon name="image" size={13} color="#fff" />
+            <Text style={styles.counterText}>
+              {shown + 1} / {photos.length}
+            </Text>
+          </View>
+        )}
+      </View>
+    </View>
+  );
+}
+
+// ─── Les années, en gros boutons comme sur le site ───
+
+function Years({ years, current, onPick }: { years: string[]; current: string; onPick: (y: string) => void }) {
+  return (
+    <View style={styles.years} accessibilityRole="tablist">
+      {[...years].reverse().map((y) => {
+        const on = y === current;
+        return (
+          <Pressable
+            key={y}
+            onPress={() => onPick(y)}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: on }}
+            accessibilityLabel={`Olympiades ${y}`}
+            style={({ pressed }) => [
+              styles.year,
+              on && { backgroundColor: c.card, borderColor: yearColor(y) },
+              pressed && { opacity: 0.7 },
+            ]}
+          >
+            <Text style={[styles.yearText, on && { color: c.text }]}>{y}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+// ─── Le verre en vitrine : tourne seul, et se fait tourner du doigt ───
+
+function Vitrine({ year, edition, art, active }: { year: string; edition: Edition; art: string | number; active: boolean }) {
   const { width: screenW } = useWindowDimensions();
   const W = Math.min(180, screenW * 0.42);
   const H = W * TALL;
@@ -274,13 +428,6 @@ function Hero({ year, edition, active }: { year: string; edition: Edition; activ
   useEffect(() => {
     frame.setActive(active);
   }, [active, frame]);
-
-  // Un tour rapide quand on change d'année
-  const firstYear = useRef(year);
-  useEffect(() => {
-    if (year !== firstYear.current && !reduced) velocity.set(720);
-    firstYear.current = year;
-  }, [year, reduced, velocity]);
 
   // Valeur partagée plutôt qu'une ref : le React Compiler refuse une ref lue dans useMemo
   const lastDx = useSharedValue(0);
@@ -320,10 +467,8 @@ function Hero({ year, edition, active }: { year: string; edition: Edition; activ
   }
 
   const accent = yearColor(year);
-  const art = verreArt(year, edition);
-  const champion = edition.legacy ? null : computeYear(edition).ranked[0];
   return (
-    <Card style={styles.hero}>
+    <Card style={styles.vitrine}>
       {/* Vitrine : lueur de la couleur de l'année, faisceau venu d'en haut, socle éclairé */}
       <View style={StyleSheet.absoluteFill} pointerEvents="none">
         <Image
@@ -355,22 +500,13 @@ function Hero({ year, edition, active }: { year: string; edition: Edition; activ
         accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
         onAccessibilityAction={onA11y}
       >
-        {art !== undefined && VerreGL ? (
+        {VerreGL ? (
           // Vue plus large que le verre : la perspective déborde un peu
           <View style={{ marginHorizontal: -W * 0.25, marginVertical: -H * 0.165 }}>
             <VerreGL key={year} width={W * 1.5} height={H * 1.33} rotation={rotation} art={art} active={active} />
           </View>
         ) : (
-          <Verre3D
-            width={W}
-            height={H}
-            rotation={rotation}
-            art={art}
-            strips={48}
-            backStrips={24}
-            taper={TAPER}
-            tint={FROST}
-          >
+          <Verre3D width={W} height={H} rotation={rotation} art={art} strips={48} backStrips={24} taper={TAPER} tint={FROST}>
             <VerreDecor year={year} edition={edition} width={T / Math.PI} />
           </Verre3D>
         )}
@@ -385,80 +521,7 @@ function Hero({ year, edition, active }: { year: string; edition: Edition; activ
         <Icon name="rotate-cw" size={12} color={c.muted} />
         <Text style={styles.hintText}>Glisse pour tourner</Text>
       </Animated.View>
-      <Text style={[styles.heroKicker, { color: accent }]}>Édition</Text>
-      <Text style={styles.heroYear} accessibilityRole="header">
-        {year}
-      </Text>
-      <Text style={styles.heroPlace}>
-        {edition.date}, {edition.lieu.charAt(0).toLowerCase() + edition.lieu.slice(1)}
-      </Text>
-
-      <View style={styles.winner}>
-        <Icon name="award" size={18} color={c.yellow} />
-        {champion ? (
-          <>
-            <View style={[styles.dot, { backgroundColor: colorHex(champion.couleur) }]} />
-            <Text style={styles.winnerText} numberOfLines={1}>
-              {champion.nom}
-            </Text>
-            <Text style={styles.winnerPts}>{champion.totalPoints} pts</Text>
-          </>
-        ) : (
-          <Text style={styles.winnerText} numberOfLines={2}>
-            {championOf(edition)}
-          </Text>
-        )}
-      </View>
     </Card>
-  );
-}
-
-// ─── Étagère : un petit verre par édition, pour choisir l'année ───
-
-function Shelf({
-  years,
-  data,
-  current,
-  onPick,
-}: {
-  years: string[];
-  data: Olympiades;
-  current: string;
-  onPick: (y: string) => void;
-}) {
-  const still = useSharedValue(-24);
-  const W = 46;
-  return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.shelf}>
-      {years.map((y) => {
-        const on = y === current;
-        const art = verreArt(y, data[y]);
-        return (
-          <Pressable
-            key={y}
-            onPress={() => onPick(y)}
-            style={({ pressed }) => [styles.shelfItem, on && { backgroundColor: c.card }, pressed && { opacity: 0.7 }]}
-            accessibilityRole="button"
-            accessibilityState={{ selected: on }}
-            accessibilityLabel={`Olympiades ${y}`}
-          >
-            <View style={{ opacity: on ? 1 : 0.45 }}>
-              {art !== undefined && VerreGL ? (
-                // Même rendu que la vitrine, figé : une seule image, pas d'animation
-                <View style={{ marginHorizontal: -W * 0.25, marginVertical: -W * TALL * 0.165 }}>
-                  <VerreGL width={W * 1.5} height={W * TALL * 1.33} rotation={still} art={art} active={false} />
-                </View>
-              ) : (
-                <Verre3D width={W} height={W * TALL} rotation={still} art={art} strips={12} taper={TAPER} tint={FROST}>
-                  <VerreDecor year={y} edition={data[y]} width={decorWidth(W, TAPER) / Math.PI} />
-                </Verre3D>
-              )}
-            </View>
-            <Text style={[styles.shelfYear, on && { color: c.text }]}>{y}</Text>
-          </Pressable>
-        );
-      })}
-    </ScrollView>
   );
 }
 
@@ -502,50 +565,103 @@ function TeamName({ t, style }: { t?: RankedTeam; style?: object }) {
   );
 }
 
-function IconLine({ icon, children }: { icon: FeatherName; children: React.ReactNode }) {
+function Fact({ label, children, first }: { label: string; children: React.ReactNode; first?: boolean }) {
   return (
-    <View style={styles.iconLine}>
-      <View style={styles.iconBox}>
-        <Icon name={icon} size={20} color={c.text} />
-      </View>
-      <Text style={[styles.body, { flex: 1 }]}>{children}</Text>
+    <View style={[styles.fact, !first && styles.divider]}>
+      <Text style={styles.factLabel}>{label}</Text>
+      <Text style={styles.factValue}>{children}</Text>
     </View>
   );
 }
 
-// ─── Onglet Classement ───
+// ─── Le récit de l'édition et sa fiche ───
+
+function Recit({ year, d }: { year: string; d: Edition }) {
+  const participants = d.teams.reduce((sum, t) => sum + t.membres.length, 0);
+  const rows: [string, string][] = [];
+  if (d.meteo?.desc) rows.push(['Météo', d.meteo.desc]);
+  rows.push(['Date', d.date], ['Lieu', d.lieu]);
+  rows.push(['Équipes', `${d.teams.length} équipes${participants ? ` · ${participants} participants` : ''}`]);
+  rows.push(['Épreuves', `${d.epreuves.length} épreuves`]);
+  return (
+    <View>
+      <Text style={styles.title} accessibilityRole="header">
+        Olympiades {year}
+      </Text>
+      {!!d.resume && <Reading text={d.resume} lines={6} />}
+
+      {(d.citations ?? []).filter((q) => !!q.text).map((q, i) => (
+        <View key={i} style={styles.quote}>
+          <Text style={styles.quoteText}>{q.text.replace(/^"|"$/g, '')}</Text>
+          {!!q.auteur && <Text style={styles.small}>{q.auteur.replace(/^[—–-]\s*/, '')}</Text>}
+        </View>
+      ))}
+
+      <Card style={styles.facts}>
+        {rows.map(([k, v], i) => (
+          <Fact key={k} label={k} first={i === 0}>
+            {v}
+          </Fact>
+        ))}
+        <View style={styles.factWinner}>
+          <Icon name="award" size={18} color={c.yellow} />
+          <Text style={[styles.smallStrong, { flex: 1 }]}>{championOf(d)}</Text>
+        </View>
+      </Card>
+    </View>
+  );
+}
+
+// ─── Classement : podium, tableau, bonus et malus ───
+
+const STEP = [118, 92, 70, 50];
 
 function Classement({ d }: { d: Edition }) {
   const { ranked } = computeYear(d);
   const byId = Object.fromEntries(ranked.map((t) => [t.id, t]));
-  const max = Math.max(1, ...ranked.map((t) => t.totalPoints));
+  // Le premier au centre, comme un vrai podium
+  const order = [ranked[1], ranked[0], ranked[2], ranked[3]].filter(Boolean) as RankedTeam[];
   return (
     <View>
-      {ranked.map((t) => {
-        const first = t.classement === 1;
-        return (
-          <Card key={t.id} style={styles.rankCard}>
-            <Text style={[styles.rankPos, first && { color: c.yellow }]}>{t.classement}</Text>
+      <Heading>Classement</Heading>
+      <View style={styles.podium}>
+        {order.map((t) => {
+          const team = colorHex(t.couleur);
+          return (
+            <View key={t.id} style={styles.podiumCol}>
+              <Text style={styles.podiumName} numberOfLines={2}>
+                {t.nom}
+              </Text>
+              <Text style={styles.podiumPts}>{t.totalPoints} pts</Text>
+              <View
+                style={[
+                  styles.step,
+                  { height: STEP[t.classement - 1] ?? 40, borderColor: team, backgroundColor: `${team}33` },
+                  t.classement === 1 && { borderColor: c.yellow, backgroundColor: `${c.yellow}40` },
+                ]}
+              >
+                <Text style={[styles.stepNum, t.classement === 1 && { color: c.yellow }]}>{t.classement}</Text>
+              </View>
+            </View>
+          );
+        })}
+      </View>
+
+      <Card style={styles.listCard}>
+        {ranked.map((t, i) => (
+          <View key={t.id} style={[styles.rankRow, i > 0 && styles.divider]}>
+            <Text style={[styles.rankPos, t.classement === 1 && { color: c.yellow }]}>{t.classement}</Text>
             <View style={{ flex: 1, minWidth: 0 }}>
-              <View style={styles.rankHead}>
-                <Text style={[styles.rankName, first && { fontSize: 18 }]} numberOfLines={1}>
-                  {t.nom}
-                </Text>
-                <Text style={styles.rankPts}>
-                  {t.totalPoints}
-                  <Text style={styles.rankUnit}> pts</Text>
-                </Text>
-              </View>
-              <View style={styles.barTrack}>
-                <View
-                  style={[styles.bar, { width: `${(Math.max(0, t.totalPoints) / max) * 100}%`, backgroundColor: colorHex(t.couleur) }]}
-                />
-              </View>
+              <TeamName t={t} style={styles.rankName} />
               {!!t.capitaine && <Text style={styles.small}>Capitaine : {t.capitaine}</Text>}
             </View>
-          </Card>
-        );
-      })}
+            <Text style={styles.rankPts}>
+              {t.totalPoints}
+              <Text style={styles.rankUnit}> pts</Text>
+            </Text>
+          </View>
+        ))}
+      </Card>
 
       {!!d.extras?.length && (
         <>
@@ -570,91 +686,47 @@ function Classement({ d }: { d: Edition }) {
   );
 }
 
-// ─── Onglet Épreuves ───
-
-function Epreuves({ d }: { d: Edition }) {
-  const { ranked, winners } = useMemo(() => computeYear(d), [d]);
-  const byId = Object.fromEntries(ranked.map((t) => [t.id, t]));
-  const [open, setOpen] = useState<number | null>(null);
-
-  return (
-    <View>
-      {!d.legacy && (
-        <View style={styles.legend}>
-          {ranked.map((t) => (
-            <TeamName key={t.id} t={t} style={styles.legendText} />
-          ))}
-        </View>
-      )}
-      {d.epreuves.map((ep, i) => {
-        const expanded = open === i;
-        const total = ranked.reduce((sum, t) => sum + Math.max(0, ep.scores?.[t.id ?? ''] ?? 0), 0);
-        return (
-          <Pressable
-            key={i}
-            onPress={() => setOpen(expanded ? null : i)}
-            style={({ pressed }) => [styles.epCard, pressed && { opacity: 0.85 }]}
-            accessibilityRole="button"
-            accessibilityState={{ expanded }}
-            accessibilityHint={expanded ? 'Masquer les règles' : 'Afficher les règles'}
-          >
-            <View style={styles.epHead}>
-              <Text style={styles.epNum}>{ep.num ?? i + 1}</Text>
-              <Text style={styles.epName}>{ep.nom}</Text>
-              {!!ep.desc && <Icon name={expanded ? 'chevron-up' : 'chevron-down'} size={20} color={c.muted} />}
-            </View>
-
-            {!d.legacy && total > 0 && (
-              <>
-                {/* Points de l'épreuve : une barre, une part par équipe, dans l'ordre du classement */}
-                <View style={styles.split}>
-                  {ranked.map((t) => {
-                    const v = ep.scores?.[t.id ?? ''] ?? 0;
-                    return v > 0 ? (
-                      <View key={t.id} style={[styles.splitPart, { flex: v, backgroundColor: colorHex(t.couleur) }]}>
-                        <Text style={styles.splitText}>{v}</Text>
-                      </View>
-                    ) : null;
-                  })}
-                </View>
-                {!!winners[i] && (
-                  <View style={styles.epWinner}>
-                    <Text style={styles.small}>Gagnée par</Text>
-                    <TeamName t={byId[winners[i] ?? '']} style={styles.smallStrong} />
-                  </View>
-                )}
-              </>
-            )}
-            {expanded && !!ep.desc && <Text style={[styles.body, { marginTop: 12 }]}>{ep.desc}</Text>}
-          </Pressable>
-        );
-      })}
-    </View>
-  );
-}
-
-// ─── Onglet Équipes ───
+// ─── Équipes : membres en pastilles, capitaine en jaune ───
 
 function Equipes({ d }: { d: Edition }) {
   const { ranked } = computeYear(d);
   const byId = Object.fromEntries(ranked.map((t) => [t.id, t]));
-  const teams: (RankedTeam | (Edition['teams'][number] & { classement?: number }))[] = d.legacy ? d.teams : ranked;
+  const teams: (RankedTeam | (Edition['teams'][number] & { classement?: number; totalPoints?: number }))[] = d.legacy
+    ? d.teams
+    : ranked;
 
   return (
     <View>
-      {teams.map((t, i) => (
-        <Card key={t.id ?? i} style={styles.teamCard}>
-          <View style={styles.teamHead}>
-            {!d.legacy && <View style={[styles.teamDot, { backgroundColor: colorHex(t.couleur) }]} />}
-            <Text style={styles.teamName}>{d.legacy ? `Équipe ${i + 1}` : t.nom}</Text>
-            {d.legacy
-              ? t.vainqueur && <Badge label="Gagnante" style={{ alignSelf: 'center' }} />
-              : <Text style={[styles.teamRank, t.classement === 1 && { color: c.yellow }]}>{t.classement === 1 ? '1er' : `${t.classement}e`}</Text>}
-          </View>
-          {!!t.capitaine && <Text style={[styles.small, { marginTop: 2 }]}>Capitaine : {t.capitaine}</Text>}
-          <Text style={[styles.body, { marginTop: 8 }]}>{t.membres.join(', ')}</Text>
-        </Card>
-      ))}
+      <Heading count={teams.length}>Équipes</Heading>
+      {teams.map((t, i) => {
+        const team = d.legacy ? c.rail : colorHex(t.couleur);
+        return (
+          <Card key={t.id ?? i} style={[styles.teamCard, { borderTopColor: team }]}>
+            <View style={styles.teamHead}>
+              <Text style={styles.teamName}>{d.legacy ? `Équipe ${i + 1}` : t.nom}</Text>
+              {d.legacy
+                ? t.vainqueur && <Badge label="Gagnante" />
+                : <Badge label={`#${t.classement}`} color={t.classement === 1 ? c.yellow : c.raised} textColor={t.classement === 1 ? c.ink : c.text} />}
+            </View>
+            {!d.legacy && (
+              <Text style={styles.small}>
+                {t.totalPoints} points{t.capitaine ? ` · capitaine ${t.capitaine}` : ''}
+              </Text>
+            )}
+            <View style={styles.members}>
+              {t.membres.map((m, mi) => {
+                const cap = !!t.capitaine && m === t.capitaine;
+                return (
+                  <View key={mi} style={[styles.member, cap && styles.captain]}>
+                    {cap && <Icon name="award" size={13} color={c.yellow} />}
+                    <Text style={[styles.memberText, cap && { color: c.yellow }]}>{m}</Text>
+                  </View>
+                );
+              })}
+            </View>
+          </Card>
+        );
+      })}
 
       {!!d.absents?.length && (
         <>
@@ -685,33 +757,68 @@ function Equipes({ d }: { d: Edition }) {
   );
 }
 
-// ─── Onglet La journée ───
+// ─── Épreuves : règle, vainqueur, points de chaque équipe ───
 
-function Journee({ d }: { d: Edition }) {
-  const participants = d.teams.reduce((sum, t) => sum + t.membres.length, 0);
+function Epreuves({ d }: { d: Edition }) {
+  const { ranked, winners } = useMemo(() => computeYear(d), [d]);
+  const byId = Object.fromEntries(ranked.map((t) => [t.id, t]));
+
   return (
     <View>
-      <Card style={styles.factsCard}>
-        {!!d.meteo?.desc && <IconLine icon="thermometer">{d.meteo.desc}</IconLine>}
-        <IconLine icon="users">
-          {participants} participants, {d.teams.length} équipes, {d.epreuves.length} épreuves
-        </IconLine>
-      </Card>
+      <Heading count={d.epreuves.length}>Épreuves</Heading>
+      {d.epreuves.map((ep, i) => {
+        const won = d.legacy ? undefined : byId[winners[i] ?? ''];
+        const scored = !d.legacy && ranked.some((t) => ep.scores?.[t.id ?? ''] !== undefined);
+        return (
+          <Card key={i} style={styles.epCard}>
+            <View style={styles.epHead}>
+              <View style={styles.epNum}>
+                <Text style={styles.epNumText}>{ep.num ?? i + 1}</Text>
+              </View>
+              <Text style={styles.epName}>{ep.nom}</Text>
+            </View>
+            {!!ep.desc && (
+              <View style={{ marginTop: 8 }}>
+                <Reading text={ep.desc} lines={3} />
+              </View>
+            )}
+            {!!won && (
+              <View style={styles.epWinner}>
+                <Icon name="award" size={14} color={c.yellow} />
+                <Text style={styles.smallStrong}>{won.nom}</Text>
+              </View>
+            )}
+            {scored && (
+              <View style={styles.scores}>
+                {ranked.map((t) => {
+                  const best = t.id === winners[i];
+                  return (
+                    <View key={t.id} style={[styles.score, best && { borderColor: colorHex(t.couleur) }]}>
+                      <TeamName t={t} style={styles.scoreTeam} />
+                      <Text style={[styles.scorePts, { color: colorHex(t.couleur) }]}>{ep.scores?.[t.id ?? ''] ?? 0}</Text>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+          </Card>
+        );
+      })}
+    </View>
+  );
+}
 
-      {!!d.resume && (
+// ─── La journée : loto, barbecue, auberge espagnole, anecdote ───
+
+function Journee({ d }: { d: Edition }) {
+  return (
+    <View>
+      {!!d.bbq && (
         <>
-          <Heading>L’édition</Heading>
-          <Reading text={d.resume} />
+          <Heading>Le barbecue</Heading>
+          <Reading text={d.bbq} lines={4} />
         </>
       )}
-
-      {(d.citations ?? []).filter((q) => !!q.text).map((q, i) => (
-        <Card key={i} style={styles.quote}>
-          <Text style={styles.quoteMark}>“</Text>
-          <Text style={styles.quoteText}>{q.text.replace(/^"|"$/g, '')}</Text>
-          {!!q.auteur && <Text style={styles.small}>{q.auteur.replace(/^[—–-]\s*/, '')}</Text>}
-        </Card>
-      ))}
 
       {!!d.loto?.quines.length && (
         <>
@@ -733,7 +840,7 @@ function Journee({ d }: { d: Edition }) {
             </Card>
           ))}
           {!!d.superQuine && (
-            <Card style={styles.quine}>
+            <Card style={[styles.quine, styles.superQuine]}>
               <Badge label="Super Quine" style={{ marginBottom: 6 }} />
               <View style={styles.quineRow}>
                 <Text style={[styles.smallStrong, { flex: 1 }]}>{d.superQuine.lot}</Text>
@@ -744,12 +851,6 @@ function Journee({ d }: { d: Edition }) {
         </>
       )}
 
-      {!!d.bbq && (
-        <>
-          <Heading>Le barbecue</Heading>
-          <Reading text={d.bbq} lines={4} />
-        </>
-      )}
       {!!d.repas && (
         <>
           <Heading>L’auberge espagnole</Heading>
@@ -758,7 +859,7 @@ function Journee({ d }: { d: Edition }) {
       )}
       {!!d.anecdote && (
         <>
-          <Heading>À retenir</Heading>
+          <Heading>L’anecdote de l’édition</Heading>
           <Reading text={d.anecdote} />
         </>
       )}
@@ -766,7 +867,7 @@ function Journee({ d }: { d: Edition }) {
   );
 }
 
-// ─── Onglet Photos ───
+// ─── Galerie ───
 
 const GAP = 4;
 
@@ -791,7 +892,7 @@ function Photos({ d, onPhoto }: { d: Edition; onPhoto: (i: number) => void }) {
   );
 }
 
-// ─── Palmarès, sous chaque onglet ───
+// ─── Palmarès, en bas de page ───
 
 function Palmares({
   years,
@@ -903,6 +1004,7 @@ const FOOT = 14;
 const HALO = require('@/assets/olympiades/halo.png');
 const FAISCEAU = require('@/assets/olympiades/faisceau.png');
 const SOCLE = require('@/assets/olympiades/socle.png');
+const OMBRE = require('@/assets/olympiades/ombre.png');
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: c.deep },
@@ -920,51 +1022,59 @@ const styles = StyleSheet.create({
   },
   offlineText: { flex: 1, color: c.muted, fontFamily: f.bodyBold, fontSize: 14, lineHeight: 19 },
 
-  // Vitrine
-  hero: {
-    marginHorizontal: theme.gutter,
-    marginTop: 18,
+  // Photos en haut
+  shade: { position: 'absolute', left: 0, right: 0, bottom: 0 },
+  coverText: { position: 'absolute', left: theme.gutter, right: theme.gutter, bottom: 18 },
+  coverKicker: { fontFamily: f.bodyBold, fontSize: 12, letterSpacing: 3, textTransform: 'uppercase' },
+  coverYear: { color: '#fff', fontFamily: f.serifBlack, fontSize: 52, lineHeight: 58, letterSpacing: -0.5 },
+  coverPlace: { color: 'rgba(255,255,255,0.85)', fontFamily: f.bodyMedium, fontSize: 15, lineHeight: 21 },
+  coverBar: {
+    position: 'absolute',
+    top: 10,
+    left: 12,
+    right: 12,
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: HERO_TOP,
-    paddingBottom: 20,
-    paddingHorizontal: 16,
-    overflow: 'hidden',
+    justifyContent: 'space-between',
   },
-  backdrop: { position: 'absolute', alignSelf: 'center' },
-  stage: { paddingHorizontal: 48 },
-  hint: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  hintText: { color: c.muted, fontFamily: f.body, fontSize: 12 },
-  heroKicker: { fontFamily: f.bodyBold, fontSize: 12, letterSpacing: 3, textTransform: 'uppercase', marginTop: 10 },
-  heroYear: { color: c.text, fontFamily: f.serifBlack, fontSize: 44, lineHeight: 50, letterSpacing: -0.5 },
-  heroPlace: { color: c.muted, fontFamily: f.body, fontSize: 15, lineHeight: 21, textAlign: 'center', marginTop: 2 },
   winner: {
     flexDirection: 'row',
     alignItems: 'center',
+    alignSelf: 'flex-start',
     gap: 8,
-    marginTop: 16,
-    minHeight: 44,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    marginTop: 12,
+    minHeight: 38,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
     borderRadius: theme.radius.pill,
-    backgroundColor: c.raised,
+    backgroundColor: 'rgba(26,16,37,0.75)',
     maxWidth: '100%',
   },
   winnerText: { color: c.text, fontFamily: f.bodyBold, fontSize: 15, flexShrink: 1 },
   winnerPts: { color: c.yellow, fontFamily: f.bodyBold, fontSize: 14 },
 
-  // Étagère
-  shelf: { flexGrow: 1, justifyContent: 'center', gap: 6, paddingHorizontal: theme.gutter, paddingTop: 12 },
-  shelfItem: { alignItems: 'center', paddingTop: 10, paddingBottom: 8, paddingHorizontal: 12, borderRadius: 18 },
-  shelfYear: { color: c.muted, fontFamily: f.bodyBold, fontSize: 13, marginTop: 6 },
+  // Années
+  years: { flexDirection: 'row', gap: 8, paddingHorizontal: theme.gutter, paddingTop: 16 },
+  year: {
+    flex: 1,
+    height: 52,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: c.hairline,
+  },
+  yearText: { color: c.muted, fontFamily: f.serifBlack, fontSize: 20 },
 
-  // Onglets collés en haut
-  tabsBar: { backgroundColor: c.deep, paddingVertical: 12 },
-  tabs: { paddingHorizontal: theme.gutter, gap: 8 },
-  tab: { height: 44, borderRadius: 22 },
+  // Raccourcis collés en haut
+  bar: { backgroundColor: c.deep, paddingVertical: 12 },
+  barRow: { paddingHorizontal: theme.gutter, gap: 8 },
+  barChip: { height: 40, borderRadius: 20 },
 
   content: { paddingHorizontal: theme.gutter, paddingTop: 4 },
-  heading: { marginTop: 24, marginBottom: 10 },
-  body: { color: c.text, fontFamily: f.body, fontSize: 16, lineHeight: 23 },
+  heading: { marginTop: 32, marginBottom: 12 },
+  title: { color: c.text, fontFamily: f.serif, fontSize: 26, lineHeight: 32, marginTop: 8, marginBottom: 10 },
+  body: { color: c.text, fontFamily: f.body, fontSize: 16, lineHeight: 24 },
   small: { color: c.muted, fontFamily: f.body, fontSize: 14, lineHeight: 20 },
   smallStrong: { color: c.text, fontFamily: f.bodyBold, fontSize: 14, lineHeight: 20 },
   more: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' },
@@ -972,54 +1082,120 @@ const styles = StyleSheet.create({
   dot: { width: 10, height: 10, borderRadius: 5 },
   teamInline: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 },
   teamInlineText: { color: c.text, fontFamily: f.bodyBold, fontSize: 14, flexShrink: 1 },
-  iconLine: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   iconBox: { width: 40, height: 40, borderRadius: 14, backgroundColor: c.raised, alignItems: 'center', justifyContent: 'center' },
   listCard: { paddingHorizontal: 16 },
   divider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.hairline },
 
+  // Récit
+  quote: { marginTop: 16, paddingLeft: 14, borderLeftWidth: 3, borderLeftColor: c.violet, gap: 4 },
+  quoteText: { color: c.text, fontFamily: f.serif, fontSize: 17, lineHeight: 25, fontStyle: 'italic' },
+  facts: { marginTop: 20, paddingHorizontal: 16, paddingTop: 4, paddingBottom: 0, overflow: 'hidden' },
+  fact: { flexDirection: 'row', gap: 12, paddingVertical: 12 },
+  factLabel: { width: 76, color: c.muted, fontFamily: f.bodyBold, fontSize: 11, letterSpacing: 1.2, textTransform: 'uppercase', paddingTop: 2 },
+  factValue: { flex: 1, color: c.text, fontFamily: f.body, fontSize: 15, lineHeight: 21 },
+  factWinner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginHorizontal: -16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: 'rgba(255,217,61,0.10)',
+  },
+
+  // Verre
+  vitrine: {
+    alignItems: 'center',
+    paddingTop: HERO_TOP,
+    paddingBottom: 16,
+    paddingHorizontal: 16,
+    overflow: 'hidden',
+  },
+  backdrop: { position: 'absolute', alignSelf: 'center' },
+  stage: { paddingHorizontal: 48 },
+  hint: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  hintText: { color: c.muted, fontFamily: f.body, fontSize: 12 },
+
   // Classement
-  rankCard: { flexDirection: 'row', gap: 14, padding: 16, marginBottom: 10 },
-  rankPos: { color: c.muted, fontFamily: f.serifBlack, fontSize: 30, lineHeight: 34, width: 24, textAlign: 'center' },
-  rankHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 },
-  rankName: { color: c.text, fontFamily: f.bodyBold, fontSize: 16, flexShrink: 1 },
-  rankPts: { color: c.text, fontFamily: f.serifBlack, fontSize: 22 },
+  podium: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, marginBottom: 16 },
+  podiumCol: { flex: 1, alignItems: 'center' },
+  podiumName: { color: c.text, fontFamily: f.bodyBold, fontSize: 13, lineHeight: 17, textAlign: 'center', minHeight: 34 },
+  podiumPts: { color: c.muted, fontFamily: f.body, fontSize: 12, marginBottom: 6 },
+  step: {
+    alignSelf: 'stretch',
+    borderWidth: 1.5,
+    borderBottomWidth: 0,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+    alignItems: 'center',
+    paddingTop: 8,
+  },
+  stepNum: { color: c.text, fontFamily: f.serifBlack, fontSize: 26, lineHeight: 30 },
+  rankRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 12 },
+  rankPos: { color: c.muted, fontFamily: f.serifBlack, fontSize: 22, width: 20, textAlign: 'center' },
+  rankName: { fontSize: 15 },
+  rankPts: { color: c.text, fontFamily: f.serifBlack, fontSize: 20 },
   rankUnit: { color: c.muted, fontFamily: f.body, fontSize: 13 },
-  barTrack: { height: 8, borderRadius: 4, backgroundColor: c.raised, marginTop: 8, marginBottom: 6, overflow: 'hidden' },
-  bar: { height: 8, borderRadius: 4 },
   adjRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14 },
   adjPts: { fontFamily: f.serifBlack, fontSize: 20, width: 40 },
   absHead: { flexDirection: 'row', alignItems: 'center', gap: 12, flexWrap: 'wrap' },
 
-  // Épreuves
-  legend: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 16, rowGap: 8, marginBottom: 14 },
-  legendText: { color: c.muted, fontFamily: f.bodyMedium, fontSize: 14 },
-  epCard: { backgroundColor: c.card, borderRadius: theme.radius.card, padding: 16, marginBottom: 10 },
-  epHead: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 28 },
-  epNum: { color: c.muted, fontFamily: f.serifBlack, fontSize: 20, width: 22 },
-  epName: { color: c.text, fontFamily: f.bodyBold, fontSize: 16, lineHeight: 21, flex: 1 },
-  split: { flexDirection: 'row', height: 24, borderRadius: 8, overflow: 'hidden', marginTop: 12, gap: 2 },
-  splitPart: { alignItems: 'center', justifyContent: 'center' },
-  splitText: { color: c.ink, fontFamily: f.bodyBold, fontSize: 12 },
-  epWinner: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10 },
-
   // Équipes
-  teamCard: { padding: 16, marginBottom: 10 },
-  teamHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  teamDot: { width: 14, height: 14, borderRadius: 7 },
+  teamCard: { padding: 16, marginBottom: 10, borderTopWidth: 4 },
+  teamHead: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 2 },
   teamName: { color: c.text, fontFamily: f.serif, fontSize: 20, lineHeight: 25, flex: 1 },
-  teamRank: { color: c.muted, fontFamily: f.serifBlack, fontSize: 18 },
+  members: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 12 },
+  member: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: theme.radius.pill,
+    backgroundColor: c.raised,
+  },
+  captain: { backgroundColor: 'rgba(255,217,61,0.14)', borderWidth: 1, borderColor: 'rgba(255,217,61,0.5)' },
+  memberText: { color: c.text, fontFamily: f.bodyMedium, fontSize: 14 },
+
+  // Épreuves
+  epCard: { padding: 16, marginBottom: 10 },
+  epHead: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  epNum: { width: 30, height: 30, borderRadius: 15, backgroundColor: c.raised, alignItems: 'center', justifyContent: 'center' },
+  epNumText: { color: c.text, fontFamily: f.serifBlack, fontSize: 15 },
+  epName: { color: c.text, fontFamily: f.serif, fontSize: 18, lineHeight: 23, flex: 1 },
+  epWinner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 6,
+    marginTop: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: theme.radius.pill,
+    backgroundColor: 'rgba(255,217,61,0.12)',
+  },
+  scores: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 12 },
+  score: {
+    width: '48.5%',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: c.raised,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+    gap: 2,
+  },
+  scoreTeam: { color: c.muted, fontFamily: f.bodyMedium, fontSize: 12 },
+  scorePts: { fontFamily: f.serifBlack, fontSize: 20, lineHeight: 24 },
 
   // Journée
-  factsCard: { padding: 16, gap: 12 },
-  quote: { marginTop: 12, padding: 16 },
-  quoteMark: { color: c.violet, fontFamily: f.serifBlack, fontSize: 48, lineHeight: 44, height: 30 },
-  quoteText: { color: c.text, fontFamily: f.serif, fontSize: 18, lineHeight: 27, marginBottom: 8 },
   quine: { padding: 16, paddingBottom: 6, marginTop: 10 },
+  superQuine: { borderWidth: 1, borderColor: 'rgba(255,217,61,0.45)' },
   quineTitle: { color: c.text, fontFamily: f.bodyBold, fontSize: 16, lineHeight: 21, marginBottom: 4 },
   quineRow: { flexDirection: 'row', gap: 12, paddingVertical: 10, alignItems: 'flex-start' },
-  quineWinner: { color: c.text, fontFamily: f.bodyBold, fontSize: 14, maxWidth: 110, textAlign: 'right' },
+  quineWinner: { color: c.teal, fontFamily: f.bodyBold, fontSize: 14, maxWidth: 110, textAlign: 'right' },
 
-  // Photos
+  // Galerie
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: GAP },
   tile: { backgroundColor: c.card, borderRadius: 10, overflow: 'hidden' },
 
@@ -1030,7 +1206,16 @@ const styles = StyleSheet.create({
   // Visionneuse
   viewer: { flex: 1, backgroundColor: '#000' },
   viewerBar: { position: 'absolute', left: 16, right: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  counter: { paddingHorizontal: 12, height: 30, borderRadius: 15, backgroundColor: DARK, justifyContent: 'center' },
+  counter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: DARK,
+    justifyContent: 'center',
+  },
   counterText: { color: '#fff', fontFamily: f.bodyBold, fontSize: 13 },
   caption: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.6)', paddingHorizontal: theme.gutter, paddingTop: 16 },
   captionText: { color: '#fff', fontFamily: f.bodyBold, fontSize: 15, lineHeight: 21, textAlign: 'center' },
