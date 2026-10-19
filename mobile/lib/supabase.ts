@@ -148,6 +148,11 @@ export function parseDobInput(raw: string): string | null | false {
 }
 
 /** Date locale AAAA-MM-JJ (toISOString() donnerait la veille entre 0 h et 2 h à Paris). */
+/** Minuscules sans accents, pour chercher « des » et trouver « Dés ». */
+export function plain(t: string | null | undefined) {
+  return (t ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
 export function localDateString(d: Date = new Date()): string {
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;

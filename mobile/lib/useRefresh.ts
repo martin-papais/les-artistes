@@ -1,5 +1,5 @@
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 
 /**
@@ -39,4 +39,18 @@ export function useRefreshOnFocus(load: () => Promise<unknown> | void, minInterv
     });
     return () => sub.remove();
   }, [run]);
+}
+
+/** Tirer pour recharger : l'état de la roue et son déclencheur */
+export function usePullRefresh(load: () => Promise<unknown>) {
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await load();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [load]);
+  return { refreshing, onRefresh };
 }

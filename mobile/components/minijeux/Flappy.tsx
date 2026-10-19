@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useEffect, useMemo, useState } from 'react';
-import { type LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, {
   type SharedValue,
   useAnimatedStyle,
@@ -12,10 +12,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import { theme } from '@/lib/theme';
-
-const c = theme.colors;
-const f = theme.fonts;
+import { GameArea, gameStyles, HintPill } from '@/components/minijeux/GameArea';
 
 // Réglages exprimés en fraction de l'aire de jeu : même difficulté sur tous les écrans
 const BIRD = 56; // taille du dessin ; la boîte de collision est plus petite
@@ -43,17 +40,16 @@ const gapAt = (points: number) => {
   return Math.max(GAP_MIN, GAP_START - points * 0.003);
 };
 
+/** Hauteur du haut du trou, au hasard, sans coller au plafond ni au sol */
+const randomGap = (playH: number, gap: number) => {
+  'worklet';
+  const m = playH * 0.1;
+  return m + Math.random() * (playH - gap * playH - m * 2);
+};
+
 /** Touche pour battre des ailes ; un tuyau passé = un point. */
 export function Flappy({ onEnd }: { onEnd: (score: number) => void }) {
-  const [size, setSize] = useState<{ w: number; h: number } | null>(null);
-  return (
-    <View
-      style={styles.area}
-      onLayout={(e: LayoutChangeEvent) => setSize((s) => s ?? { w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}
-    >
-      {size && <Game w={size.w} h={size.h} onEnd={onEnd} />}
-    </View>
-  );
+  return <GameArea background="#1A1030">{(w, h) => <Game w={w} h={h} onEnd={onEnd} />}</GameArea>;
 }
 
 function Game({ w, h, onEnd }: { w: number; h: number; onEnd: (score: number) => void }) {
@@ -86,16 +82,24 @@ function Game({ w, h, onEnd }: { w: number; h: number; onEnd: (score: number) =>
   const p0 = useSharedValue(false);
   const p1 = useSharedValue(false);
   const p2 = useSharedValue(false);
+  // Regroupés une fois pour toutes : la boucle ne recrée pas de tableau à chaque image
+  const pipes = [
+    { x: x0, g: g0, h: h0, p: p0 },
+    { x: x1, g: g1, h: h1, p: p1 },
+    { x: x2, g: g2, h: h2, p: p2 },
+  ];
 
   const frame = useFrameCallback((fr) => {
     'worklet';
     const dt = Math.min(0.034, (fr.timeSincePreviousFrame ?? 16) / 1000);
     clock.set(clock.get() + dt);
     if (!alive.get()) {
-      // Il tombe jusqu'au sol après le choc
+      // Il tombe jusqu'au sol après le choc, puis plus rien ne bouge : la boucle s'arrête
       if (y.get() + HIT < playH) {
         vy.set(vy.get() + GRAVITY * playH * dt);
         y.set(Math.min(playH - HIT, y.get() + vy.get() * dt));
+      } else {
+        scheduleOnRN(halt);
       }
       return;
     }
@@ -111,31 +115,26 @@ function Game({ w, h, onEnd }: { w: number; h: number; onEnd: (score: number) =>
     vy.set(nvy);
     const ny = Math.max(-HIT, y.get() + nvy * dt);
     y.set(ny);
-    const xs = [x0, x1, x2];
-    const gs = [g0, g1, g2];
-    const hs = [h0, h1, h2];
-    const ps = [p0, p1, p2];
     // Boîte de collision au centre du dessin
     const top = ny + (BIRD - HIT) / 2;
     const left = birdX + (BIRD - HIT) / 2;
     let dead = top + HIT >= playH;
-    for (let i = 0; i < 3; i++) {
-      let px = xs[i].get() - speed * dt;
+    for (const pipe of pipes) {
+      let px = pipe.x.get() - speed * dt;
       if (px < -PIPE_W - 20) {
         px += w * SPACING * 3;
         const gap = gapAt(points.get());
-        hs[i].set(gap);
-        const m = playH * 0.1;
-        gs[i].set(m + Math.random() * (playH - gap * playH - m * 2));
-        ps[i].set(false);
+        pipe.h.set(gap);
+        pipe.g.set(randomGap(playH, gap));
+        pipe.p.set(false);
       }
-      xs[i].set(px);
-      const gy = gs[i].get();
-      const gh = hs[i].get() * playH;
+      pipe.x.set(px);
+      const gy = pipe.g.get();
+      const gh = pipe.h.get() * playH;
       const overlapX = left + HIT > px && left < px + PIPE_W;
       if (overlapX && (top < gy || top + HIT > gy + gh)) dead = true;
-      if (!ps[i].get() && px + PIPE_W < left) {
-        ps[i].set(true);
+      if (!pipe.p.get() && px + PIPE_W < left) {
+        pipe.p.set(true);
         points.set(points.get() + 1);
         scheduleOnRN(scored, points.get());
       }
@@ -157,10 +156,11 @@ function Game({ w, h, onEnd }: { w: number; h: number; onEnd: (score: number) =>
 
   function crash(final: number) {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
-    setTimeout(() => {
-      frame.setActive(false);
-      onEnd(final);
-    }, 1100);
+    setTimeout(() => onEnd(final), 1100);
+  }
+
+  function halt() {
+    frame.setActive(false);
   }
 
   useEffect(() => () => frame.setActive(false), [frame]);
@@ -229,21 +229,12 @@ function Game({ w, h, onEnd }: { w: number; h: number; onEnd: (score: number) =>
           </Animated.View>
         </Animated.View>
 
-        <Animated.Text style={[styles.score, popStyle]}>{score}</Animated.Text>
-        {!started && (
-          <View style={styles.hintBox} pointerEvents="none">
-            <Text style={styles.hint}>Touche pour t’envoler</Text>
-          </View>
-        )}
+        <Animated.Text style={[gameStyles.score, popStyle]}>{score}</Animated.Text>
+        {!started && <HintPill text="Touche pour t’envoler" at={{ top: '60%' }} />}
       </Animated.View>
       <Animated.View style={[StyleSheet.absoluteFill, styles.flash, flashStyle]} pointerEvents="none" />
     </Pressable>
   );
-}
-
-function randomGap(playH: number, gap: number) {
-  const m = playH * 0.1;
-  return m + Math.random() * (playH - gap * playH - m * 2);
 }
 
 /** Bande de décor qui se répète et défile à sa vitesse (parallaxe) */
@@ -297,35 +288,11 @@ function Pipe({ x, gap, gapH, playH }: { x: SharedValue<number>; gap: SharedValu
 }
 
 const styles = StyleSheet.create({
-  area: { flex: 1, overflow: 'hidden', backgroundColor: '#1A1030' },
   star: { position: 'absolute', borderRadius: 2, backgroundColor: '#fff' },
   moon: { position: 'absolute', width: 46, height: 46, borderRadius: 23, backgroundColor: '#FFE9C2', opacity: 0.9 },
   strip: { position: 'absolute', left: 0, flexDirection: 'row' },
   pipe: { position: 'absolute', left: 0, width: PIPE_W },
   cap: { position: 'absolute', left: -8, right: -8, height: 26 },
   bird: { position: 'absolute', top: 0, width: BIRD, height: BIRD },
-  score: {
-    position: 'absolute',
-    top: 28,
-    alignSelf: 'center',
-    color: '#fff',
-    fontFamily: f.serifBlack,
-    fontSize: 60,
-    lineHeight: 68,
-    textShadowColor: 'rgba(0,0,0,0.45)',
-    textShadowOffset: { width: 0, height: 3 },
-    textShadowRadius: 0,
-  },
   flash: { backgroundColor: '#fff' },
-  hintBox: { position: 'absolute', left: 0, right: 0, top: '60%', alignItems: 'center' },
-  hint: {
-    color: c.text,
-    fontFamily: f.bodyBold,
-    fontSize: 18,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    overflow: 'hidden',
-  },
 });

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Icon } from '@/components/ui/kit';
+import { gameStyles } from '@/components/minijeux/GameArea';
 import { theme } from '@/lib/theme';
 
 const c = theme.colors;
@@ -74,7 +75,7 @@ export function Reflexes({ onEnd }: { onEnd: (avgMs: number) => void }) {
   return (
     <Pressable
       onPressIn={onPressIn}
-      style={[styles.area, { backgroundColor: bg }]}
+      style={[gameStyles.card, styles.area, { backgroundColor: bg }]}
       accessibilityRole="button"
       accessibilityLabel={phase === 'go' ? 'Touche maintenant' : 'Attends que l’écran passe au vert'}
     >
@@ -109,7 +110,7 @@ export function Reflexes({ onEnd }: { onEnd: (avgMs: number) => void }) {
 }
 
 const styles = StyleSheet.create({
-  area: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, borderRadius: 28, margin: 16 },
+  area: { gap: 12 },
   dots: { position: 'absolute', top: 24, flexDirection: 'row', gap: 8 },
   dot: { width: 12, height: 12, borderRadius: 6, backgroundColor: c.rail },
   big: { color: c.text, fontFamily: f.serif, fontSize: 30, lineHeight: 36 },

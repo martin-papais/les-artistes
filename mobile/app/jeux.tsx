@@ -23,7 +23,7 @@ import {
   type JeuAlcool,
   type JeuSociete,
   type JeuSocieteVote,
-  type ProfileMini, sessionUser } from '@/lib/supabase';
+  type ProfileMini, plain, sessionUser } from '@/lib/supabase';
 import { theme } from '@/lib/theme';
 import { useRefreshOnFocus } from '@/lib/useRefresh';
 
@@ -38,11 +38,6 @@ const SOC_SORTS: { key: SocSort; label: string }[] = [
   { key: 'joueurs', label: 'Plus de joueurs' },
   { key: 'acheter', label: 'À acheter' },
 ];
-
-/** Minuscules sans accents, pour chercher « des » et trouver « Dés ». */
-function plain(t: string | null | undefined) {
-  return (t ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-}
 
 export default function JeuxScreen() {
   const router = useRouter();

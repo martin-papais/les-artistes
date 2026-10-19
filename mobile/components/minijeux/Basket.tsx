@@ -1,11 +1,12 @@
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useEffect, useRef, useState } from 'react';
-import { type LayoutChangeEvent, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useAnimatedStyle, useFrameCallback, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
+import { GameArea, HintPill } from '@/components/minijeux/GameArea';
 import { theme } from '@/lib/theme';
 
 const c = theme.colors;
@@ -27,15 +28,7 @@ type Shout = { text: string; color: string; key: number } | null;
 
 /** Un geste vers le haut lance le ballon ; trop mou il retombe, trop fort il passe au-dessus. */
 export function Basket({ onEnd }: { onEnd: (score: number) => void }) {
-  const [size, setSize] = useState<{ w: number; h: number } | null>(null);
-  return (
-    <View
-      style={styles.area}
-      onLayout={(e: LayoutChangeEvent) => setSize((s) => s ?? { w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}
-    >
-      {size && <Court w={size.w} h={size.h} onEnd={onEnd} />}
-    </View>
-  );
+  return <GameArea background="#140C22">{(w, h) => <Court w={w} h={h} onEnd={onEnd} />}</GameArea>;
 }
 
 function Court({ w, h, onEnd }: { w: number; h: number; onEnd: (score: number) => void }) {
@@ -85,7 +78,14 @@ function Court({ w, h, onEnd }: { w: number; h: number; onEnd: (score: number) =
     by.set(startY);
   }
 
-  useFrameCallback((fr) => {
+  function miss(why: 'over' | 'rim' | 'air' | 'short') {
+    'worklet';
+    streak.set(0);
+    scheduleOnRN(missed, why);
+  }
+
+  // La boucle ne tourne que si quelque chose bouge : un ballon en l'air ou l'arceau mobile
+  const loop = useFrameCallback((fr) => {
     'worklet';
     const dt = Math.min(0.034, (fr.timeSincePreviousFrame ?? 16) / 1000);
     // L'arceau se met à bouger à partir de 5 paniers, de plus en plus vite et loin
@@ -108,8 +108,7 @@ function Court({ w, h, onEnd }: { w: number; h: number; onEnd: (score: number) =
       const ball = R * 0.55;
       const overBoard = top.get() < rimY - h * 0.2;
       if (overBoard) {
-        streak.set(0);
-        scheduleOnRN(missed, 'over');
+        miss('over');
       } else if (Math.abs(dx) <= rimHalf - ball * 0.5) {
         const s = streak.get() + 1;
         streak.set(s);
@@ -133,11 +132,9 @@ function Court({ w, h, onEnd }: { w: number; h: number; onEnd: (score: number) =
           scheduleOnRN(rimJs);
           return;
         }
-        streak.set(0);
-        scheduleOnRN(missed, 'rim');
+        miss('rim');
       } else {
-        streak.set(0);
-        scheduleOnRN(missed, 'air');
+        miss('air');
       }
     }
     vy.set(nvy);
@@ -145,14 +142,16 @@ function Court({ w, h, onEnd }: { w: number; h: number; onEnd: (score: number) =
     by.set(ny);
     // Ballon retombé hors du jeu : on en redonne un
     if (ny > h + R || nx < -R * 2 || nx > w + R * 2 || (behind.get() && ny > rimY + h * 0.32)) {
-      if (!judged.get()) {
-        streak.set(0);
-        scheduleOnRN(missed, 'short');
-      }
+      if (!judged.get()) miss('short');
       reset();
       if (over.get()) scheduleOnRN(finish);
+      else if (made.get() < 5) scheduleOnRN(sleep);
     }
-  });
+  }, false);
+
+  function sleep() {
+    loop.setActive(false);
+  }
 
   function say(text: string, color: string) {
     setShout({ text, color, key: Date.now() });
@@ -177,6 +176,7 @@ function Court({ w, h, onEnd }: { w: number; h: number; onEnd: (score: number) =
   function finish() {
     if (done.current) return;
     done.current = true;
+    loop.setActive(false);
     onEnd(points.get());
   }
 
@@ -207,40 +207,33 @@ function Court({ w, h, onEnd }: { w: number; h: number; onEnd: (score: number) =
   }, [shout]);
 
   function launch() {
+    loop.setActive(true);
     if (!started) setStarted(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
   }
 
-  // Vitesse du doigt mesurée nous-mêmes : si le doigt s'arrête avant de se lever,
+  // Élan le plus fort du geste : si le doigt s'arrête avant de se lever,
   // la vitesse donnée à la fin du geste tombe à zéro
-  const fingerVx = useSharedValue(0);
-  const fingerVy = useSharedValue(0);
-  const prev = useSharedValue({ x: 0, y: 0, t: 0 });
+  const peakVx = useSharedValue(0);
+  const peakVy = useSharedValue(0);
   const pan = Gesture.Pan()
     .minDistance(12)
     .onBegin(() => {
       'worklet';
-      fingerVx.set(0);
-      fingerVy.set(0);
-      prev.set({ x: 0, y: 0, t: Date.now() });
+      peakVx.set(0);
+      peakVy.set(0);
     })
     .onUpdate((e) => {
       'worklet';
-      const now = Date.now();
-      const p = prev.get();
-      const dt = (now - p.t) / 1000;
-      if (dt < 0.008) return; // trop rapproché : la mesure serait un à-coup
-      const ivx = (e.translationX - p.x) / dt;
-      const ivy = (e.translationY - p.y) / dt;
-      // Moyenne glissante : on garde l'élan des derniers instants, pas un à-coup isolé
-      fingerVx.set(fingerVx.get() * 0.4 + ivx * 0.6);
-      fingerVy.set(Math.min(fingerVy.get() * 0.4 + ivy * 0.6, fingerVy.get()));
-      prev.set({ x: e.translationX, y: e.translationY, t: now });
+      if (e.velocityY < peakVy.get()) {
+        peakVy.set(e.velocityY);
+        peakVx.set(e.velocityX);
+      }
     })
     .onEnd((e) => {
       'worklet';
-      const evy = Math.min(e.velocityY, fingerVy.get());
-      const evx = Math.abs(e.velocityX) > Math.abs(fingerVx.get()) ? e.velocityX : fingerVx.get();
+      const evy = Math.min(e.velocityY, peakVy.get());
+      const evx = evy === e.velocityY ? e.velocityX : peakVx.get();
       if (flying.get() || over.get() || evy > -300) return;
       // La force du geste fixe la hauteur atteinte : il faut passer l'arceau sans dépasser la planche
       const k = Math.max(0, Math.min(1, (-evy - 600) / 3400));
@@ -256,11 +249,7 @@ function Court({ w, h, onEnd }: { w: number; h: number; onEnd: (score: number) =
       // Le geste vise : sa pente fixe où le ballon arrive à hauteur de l'arceau
       const aim = Math.max(-1.2, Math.min(1.2, evx / -evy));
       vx.set((aim * w * 0.55) / tc);
-      t.set(0);
-      top.set(startY);
-      judged.set(false);
-      touched.set(false);
-      behind.set(false);
+      reset();
       flying.set(true);
       scheduleOnRN(launch);
     });
@@ -291,6 +280,7 @@ function Court({ w, h, onEnd }: { w: number; h: number; onEnd: (score: number) =
   const netStyle = useAnimatedStyle(() => ({ transform: [{ scaleY: 1 + swish.get() * 0.35 }, { scaleX: 1 - swish.get() * 0.15 }] }));
   const barStyle = useAnimatedStyle(() => ({ width: `${timeLeft.get() * 100}%` }));
 
+  const hurry = started && left <= 5;
   const boardW = rimW * 2;
   const boardH = rimW * 1.25;
   const boardTop = rimY - boardH * 0.86;
@@ -313,14 +303,14 @@ function Court({ w, h, onEnd }: { w: number; h: number; onEnd: (score: number) =
         <View style={[styles.line, { top: h * 0.62 }]} />
 
         <View style={styles.timerTrack}>
-          <Animated.View style={[styles.timerBar, left <= 5 && started && { backgroundColor: c.coral }, barStyle]} />
+          <Animated.View style={[styles.timerBar, hurry && { backgroundColor: c.coral }, barStyle]} />
         </View>
         <View style={styles.hud}>
           <View>
             <Text style={styles.score}>{score}</Text>
             {onFire && <Text style={styles.fire}>En feu ×2</Text>}
           </View>
-          <Text style={[styles.timer, left <= 5 && started && { color: c.coral }]}>{left}s</Text>
+          <Text style={[styles.timer, hurry && { color: c.coral }]}>{left}s</Text>
         </View>
 
         <Animated.View style={[StyleSheet.absoluteFill, hoopStyle]} pointerEvents="none">
@@ -354,9 +344,7 @@ function Court({ w, h, onEnd }: { w: number; h: number; onEnd: (score: number) =
           </Text>
         )}
         {!started && (
-          <View style={styles.hintBox} pointerEvents="none">
-            <Text style={styles.hint}>Lance d’un geste vers le haut</Text>
-          </View>
+          <HintPill text="Lance d’un geste vers le haut" at={{ bottom: '30%' }} />
         )}
       </View>
     </GestureDetector>
@@ -364,7 +352,6 @@ function Court({ w, h, onEnd }: { w: number; h: number; onEnd: (score: number) =
 }
 
 const styles = StyleSheet.create({
-  area: { flex: 1, overflow: 'hidden', backgroundColor: '#140C22' },
   spot: { position: 'absolute', opacity: 0.18 },
   circle: { position: 'absolute', borderWidth: 3, borderColor: 'rgba(255,255,255,0.35)' },
   line: { position: 'absolute', left: 0, right: 0, height: 3, backgroundColor: 'rgba(255,255,255,0.18)' },
@@ -401,16 +388,5 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0,0,0,0.5)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 0,
-  },
-  hintBox: { position: 'absolute', left: 0, right: 0, bottom: '30%', alignItems: 'center', zIndex: 4 },
-  hint: {
-    color: c.text,
-    fontFamily: f.bodyBold,
-    fontSize: 17,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    overflow: 'hidden',
   },
 });

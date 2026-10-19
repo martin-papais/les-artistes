@@ -49,17 +49,25 @@ export function NiveauGauge({ niveau, size = 8 }: { niveau: string; size?: numbe
   );
 }
 
-export function SearchField({ value, onChangeText }: { value: string; onChangeText: (t: string) => void }) {
+export function SearchField({
+  value,
+  onChangeText,
+  placeholder = 'Chercher un jeu',
+}: {
+  value: string;
+  onChangeText: (t: string) => void;
+  placeholder?: string;
+}) {
   return (
     <View style={s.search}>
       <Feather name="search" size={18} color={c.muted} />
       <TextInput
         value={value}
         onChangeText={onChangeText}
-        placeholder="Chercher un jeu"
+        placeholder={placeholder}
         placeholderTextColor={c.muted}
         selectionColor={c.coral}
-        accessibilityLabel="Chercher un jeu"
+        accessibilityLabel={placeholder}
         returnKeyType="search"
         autoCorrect={false}
         style={s.searchInput}

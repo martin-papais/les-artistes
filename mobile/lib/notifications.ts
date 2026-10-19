@@ -131,10 +131,9 @@ export function takeNotificationRoute(
   const route = extractPayload(response)?.route;
   if (typeof route !== 'string' || !route) return null;
   handledNotificationId = id;
-  // Photos a quitté les onglets pour « Plus » ; les triggers envoient encore l'ancienne route
-  if (route === '/(tabs)/photos') return '/photos';
-  if (route === '/(tabs)/jeux') return '/jeux';
-  return route;
+  // Les triggers écrivent encore le groupe « (tabs) » ; Photos et Jeux l'ont quitté pour « Plus ».
+  // Le routeur trouve l'écran sans le groupe, qu'il soit un onglet ou non.
+  return route.replace(/^\/\(tabs\)(?=\/)/, '');
 }
 
 /**

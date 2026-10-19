@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -8,8 +9,10 @@ import { Basket } from '@/components/minijeux/Basket';
 import { Classement } from '@/components/minijeux/Classement';
 import { Flappy } from '@/components/minijeux/Flappy';
 import { Reflexes } from '@/components/minijeux/Reflexes';
-import { Button, EmptyState, Icon, IconButton } from '@/components/ui/kit';
-import { beats, fetchClassements, formatScore, jeuMeta, type Ligne, saveScore, verdict } from '@/lib/minijeux';
+import { Stack } from '@/components/minijeux/Stack';
+import { Stop10 } from '@/components/minijeux/Stop10';
+import { Button, EmptyState, IconButton } from '@/components/ui/kit';
+import { beats, fetchClassements, formatScore, type JeuId, jeuMeta, type Ligne, LOGOS, saveScore, verdict } from '@/lib/minijeux';
 import { sessionUser } from '@/lib/supabase';
 import { theme } from '@/lib/theme';
 
@@ -17,6 +20,14 @@ const c = theme.colors;
 const f = theme.fonts;
 
 type Phase = 'intro' | 'playing' | 'over';
+
+const GAMES: Record<JeuId, (p: { onEnd: (score: number) => void }) => React.ReactNode> = {
+  reflexes: Reflexes,
+  flappy: Flappy,
+  basket: Basket,
+  stack: Stack,
+  stop10: Stop10,
+};
 
 export default function MiniJeuScreen() {
   const { jeu: id } = useLocalSearchParams<{ jeu: string }>();
@@ -34,7 +45,7 @@ export default function MiniJeuScreen() {
   const load = useCallback(async () => {
     if (!jeu) return;
     try {
-      setLignes((await fetchClassements())[jeu.id]);
+      setLignes((await fetchClassements()).scores[jeu.id]);
     } catch {
       setLignes((cur) => cur ?? []);
     }
@@ -77,7 +88,7 @@ export default function MiniJeuScreen() {
   }
 
   const rank = lignes && me ? lignes.findIndex((l) => l.user_id === me) + 1 : 0;
-  const Game = jeu.id === 'reflexes' ? Reflexes : jeu.id === 'flappy' ? Flappy : Basket;
+  const Game = GAMES[jeu.id];
 
   return (
     <GestureHandlerRootView style={[styles.flex, { paddingTop: insets.top }]}>
@@ -99,9 +110,7 @@ export default function MiniJeuScreen() {
         <ScrollView contentContainerStyle={[styles.body, { paddingBottom: insets.bottom + 24 }]}>
           {phase === 'intro' ? (
             <View style={styles.hero}>
-              <View style={[styles.icon, { backgroundColor: jeu.color }]}>
-                <Icon name={jeu.icon} size={40} color={jeu.ink} />
-              </View>
+              <Image source={LOGOS[jeu.id]} style={styles.logo} />
               <Text style={styles.pitch}>{jeu.pitch}</Text>
               {myBest !== undefined && <Text style={styles.best}>Ton record : {formatScore(jeu, myBest)}</Text>}
             </View>
@@ -123,7 +132,11 @@ export default function MiniJeuScreen() {
           <Button label={phase === 'intro' ? 'Jouer' : 'Rejouer'} icon="play" onPress={play} style={styles.cta} />
 
           <Text style={styles.section}>Classement</Text>
-          {lignes ? <Classement jeu={jeu} lignes={lignes} me={me} /> : <ActivityIndicator color={c.teal} />}
+          {lignes ? (
+            <Classement lignes={lignes} me={me} value={(l) => formatScore(jeu, l.best)} />
+          ) : (
+            <ActivityIndicator color={c.teal} />
+          )}
         </ScrollView>
       )}
     </GestureHandlerRootView>
@@ -136,7 +149,7 @@ const styles = StyleSheet.create({
   title: { color: c.text, fontFamily: f.serif, fontSize: 20 },
   body: { paddingHorizontal: theme.gutter },
   hero: { alignItems: 'center', gap: 12, paddingTop: 24, paddingBottom: 8 },
-  icon: { width: 88, height: 88, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
+  logo: { width: 140, height: 140 },
   pitch: { color: c.text, fontFamily: f.body, fontSize: 17, lineHeight: 24, textAlign: 'center', maxWidth: 320 },
   best: { color: c.muted, fontFamily: f.bodyMedium, fontSize: 15 },
   kicker: { fontFamily: f.bodyBold, fontSize: 13, letterSpacing: 2.5, textTransform: 'uppercase' },
