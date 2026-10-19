@@ -1,9 +1,28 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
+import { Text } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { theme } from '@/lib/theme';
 
+// Avec une grande police système (fréquent sur Android), le libellé grossit avec elle :
+// on plafonne l'agrandissement et le texte rétrécit plutôt que d'être coupé
+function Label({ children, color }: { children: string; color: string }) {
+  return (
+    <Text
+      numberOfLines={1}
+      adjustsFontSizeToFit
+      minimumFontScale={0.75}
+      maxFontSizeMultiplier={1.2}
+      style={{ color, fontSize: 11, fontFamily: theme.fonts.bodyMedium, marginTop: 2 }}
+    >
+      {children}
+    </Text>
+  );
+}
+
 export default function TabLayout() {
+  const insets = useSafeAreaInsets();
   return (
     <Tabs
       screenOptions={{
@@ -15,8 +34,11 @@ export default function TabLayout() {
           borderTopColor: theme.colors.hairline,
           borderTopWidth: 1,
           paddingTop: 6,
+          // Hauteur fixée : la marge du haut ne doit pas manger la place du libellé
+          height: 62 + insets.bottom,
+          paddingBottom: insets.bottom + 6,
         },
-        tabBarLabelStyle: { fontSize: 11, fontFamily: theme.fonts.bodyMedium },
+        tabBarLabel: ({ color, children }) => <Label color={color}>{children}</Label>,
         sceneStyle: { backgroundColor: theme.colors.deep },
       }}
     >
