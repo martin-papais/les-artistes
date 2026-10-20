@@ -142,6 +142,9 @@ export function DuelScreen<P extends DuelPartie>({
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { p, me, busy, act, refresh, api } = duel;
+  const [viewH, setViewH] = useState(0);
+  const [contentH, setContentH] = useState(0);
+  const overflow = viewH > 0 && contentH > viewH + 1;
 
   if (p === undefined) {
     return (
@@ -219,7 +222,14 @@ export function DuelScreen<P extends DuelPartie>({
         <View style={{ width: 44 }} />
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 24, alignItems: 'center' }}>
+      {/* Le plateau ne doit pas bouger sous le doigt : défilement seulement si l'écran est trop petit */}
+      <ScrollView
+        scrollEnabled={overflow}
+        bounces={false}
+        onLayout={(e) => setViewH(e.nativeEvent.layout.height)}
+        onContentSizeChange={(_, h) => setContentH(h)}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 24, alignItems: 'center' }}
+      >
         <View style={styles.players}>
           {chip(1)}
           <Text style={styles.vs}>contre</Text>
