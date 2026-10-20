@@ -40,7 +40,7 @@ export function Stop10({ onEnd }: { onEnd: (ecartMs: number) => void }) {
     AccessibilityInfo.announceForAccessibility(
       t >= LIMITE
         ? 'Temps écoulé : 20 secondes, 10 secondes d’écart'
-        : `Arrêté à ${secondes(t)} secondes, ${ecart === 0 ? 'pile' : `${secondes(Math.abs(ecart))} secondes trop ${ecart > 0 ? 'tard' : 'tôt'}`}`,
+        : `Arrêté à ${secondes(t)} secondes, ${Math.round(ecart / 10) === 0 ? 'pile' : `${secondes(Math.abs(ecart))} secondes trop ${ecart > 0 ? 'tard' : 'tôt'}`}`,
     );
     setTimeout(() => onEnd(Math.min(TARGET, Math.abs(ecart))), 1800);
   }
@@ -114,7 +114,7 @@ export function Stop10({ onEnd }: { onEnd: (ecartMs: number) => void }) {
             style={[styles.ecart, { color: Math.abs(ecart) <= 200 ? c.teal : Math.abs(ecart) <= 1000 ? c.yellow : c.coral }]}
             maxFontSizeMultiplier={1.5}
           >
-            {ecart === 0 ? 'Pile !' : `${ecart > 0 ? '+' : '−'}${secondes(Math.abs(ecart))} s`}
+            {Math.round(ecart / 10) === 0 ? 'Pile !' : `${ecart > 0 ? '+' : '−'}${secondes(Math.abs(ecart))} s`}
           </Text>
           <Text style={styles.cta}>
             {final >= LIMITE ? 'Temps écoulé : arrêté à 20 s' : ecart > 0 ? 'Un peu trop tard' : ecart < 0 ? 'Un peu trop tôt' : 'Exactement 10 secondes'}

@@ -20,7 +20,15 @@ export function Reflexes({ onEnd }: { onEnd: (avgMs: number) => void }) {
   const [phase, setPhase] = useState<Phase>('wait');
   const [times, setTimes] = useState<number[]>([]);
   const startedAt = useRef(0);
+  // L'état lu au toucher : le bouton ne reçoit le nouvel état qu'un instant après l'affichage
+  // du vert, et un toucher rapide dans cet intervalle était compté « trop tôt »
+  const phaseNow = useRef<Phase>('wait');
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function go(p: Phase) {
+    phaseNow.current = p;
+    setPhase(p);
+  }
 
   function clear() {
     if (timer.current) clearTimeout(timer.current);
@@ -29,11 +37,11 @@ export function Reflexes({ onEnd }: { onEnd: (avgMs: number) => void }) {
 
   function arm() {
     clear();
-    setPhase('wait');
+    go('wait');
     timer.current = setTimeout(
       () => {
         startedAt.current = performance.now();
-        setPhase('go');
+        go('go');
         AccessibilityInfo.announceForAccessibility('Touche !');
       },
       1200 + Math.random() * 2800,
@@ -47,10 +55,11 @@ export function Reflexes({ onEnd }: { onEnd: (avgMs: number) => void }) {
   }, []);
 
   function onPressIn() {
+    const phase = phaseNow.current;
     if (phase === 'wait') {
       clear();
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
-      setPhase('early');
+      go('early');
       AccessibilityInfo.announceForAccessibility('Trop tôt, on recommence cet essai');
       timer.current = setTimeout(arm, 1100);
       return;
@@ -58,7 +67,7 @@ export function Reflexes({ onEnd }: { onEnd: (avgMs: number) => void }) {
     if (phase !== 'go') return;
     const ms = Math.round(performance.now() - startedAt.current);
     if (ms < HUMAN_MIN) {
-      setPhase('early');
+      go('early');
       AccessibilityInfo.announceForAccessibility('Trop tôt, on recommence cet essai');
       timer.current = setTimeout(arm, 1100);
       return;
@@ -66,7 +75,7 @@ export function Reflexes({ onEnd }: { onEnd: (avgMs: number) => void }) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     const next = [...times, Math.min(ms, 5000)];
     setTimes(next);
-    setPhase('shown');
+    go('shown');
     AccessibilityInfo.announceForAccessibility(`${Math.min(ms, 5000)} millisecondes, essai ${next.length} sur ${ROUNDS}`);
     timer.current = setTimeout(() => {
       if (next.length >= ROUNDS) {

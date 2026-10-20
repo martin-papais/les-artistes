@@ -79,7 +79,8 @@ export const LOGOS: Record<JeuId | DuelJeu | 'classement', number> = {
   classement: require('@/assets/minijeux/logos/classement.webp'),
 };
 
-export const secondes = (ms: number) => (ms / 1000).toFixed(2).replace('.', ',');
+/** « 10,02 », au centième le plus proche (toFixed seul arrondit 0,015 à 0,01) */
+export const secondes = (ms: number) => (Math.round(ms / 10) / 100).toFixed(2).replace('.', ',');
 
 /** « 3 victoires », « 1 nul » */
 export const plural = (n: number, mot: string) => `${n} ${mot}${n > 1 ? 's' : ''}`;
