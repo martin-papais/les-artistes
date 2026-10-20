@@ -1,9 +1,17 @@
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { AppState, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, { useAnimatedStyle, useFrameCallback, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
+import Animated, {
+  cancelAnimation,
+  Easing,
+  useAnimatedStyle,
+  useFrameCallback,
+  useSharedValue,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { GameArea, HintPill } from '@/components/minijeux/GameArea';
@@ -17,7 +25,7 @@ const DURATION = 30; // secondes, le chrono part au premier lancer
 const RIM_Y = 0.27; // × hauteur
 const START_Y = 0.8;
 const GRAVITY = 2.6; // × hauteur / s²
-const FIRE = 3; // paniers d'affilée pour passer « en feu » : chaque panier compte double
+const FIRE = 3; // paniers d'affilée pour passer « en feu » : chaque panier suivant vaut 2 points
 
 const BALLON = require('@/assets/minijeux/ballon.png');
 const FILET = require('@/assets/minijeux/filet.png');
@@ -42,9 +50,13 @@ function Court({ w, h, onEnd }: { w: number; h: number; onEnd: (score: number) =
   const [score, setScore] = useState(0);
   const [left, setLeft] = useState(DURATION);
   const [started, setStarted] = useState(false);
+  // L'appli passe en arrière-plan : le chrono s'arrête, le prochain lancer le relance
+  const [paused, setPaused] = useState(false);
   const [onFire, setOnFire] = useState(false);
   const [shout, setShout] = useState<Shout>(null);
   const done = useRef(false);
+  const deadline = useRef(0); // performance.now() de la fin du chrono
+  const restant = useRef(DURATION * 1000); // ms restantes, gardées pendant une pause
 
   const bx = useSharedValue(startX);
   const by = useSharedValue(startY);
@@ -180,25 +192,44 @@ function Court({ w, h, onEnd }: { w: number; h: number; onEnd: (score: number) =
     onEnd(points.get());
   }
 
-  // Chrono : à zéro, le ballon en l'air finit sa course avant le score final
+  // Chrono : calculé depuis l'échéance, pas en comptant les intervalles (qui prennent du retard).
+  // À zéro, le ballon en l'air finit sa course avant le score final.
   useEffect(() => {
-    if (!started) return;
-    timeLeft.set(withTiming(0, { duration: DURATION * 1000 }));
-    const id = setInterval(() => {
-      setLeft((s) => {
-        if (s <= 1) {
-          clearInterval(id);
-          over.set(true);
-          if (!flying.get()) setTimeout(finish, 0);
-          return 0;
-        }
-        if (s <= 6) Haptics.selectionAsync().catch(() => {});
-        return s - 1;
-      });
-    }, 1000);
-    return () => clearInterval(id);
+    if (!started || paused) return;
+    deadline.current = performance.now() + restant.current;
+    timeLeft.set(withTiming(0, { duration: restant.current, easing: Easing.linear }));
+    let shown = Math.ceil(restant.current / 1000);
+    const tick = () => {
+      const ms = Math.max(0, deadline.current - performance.now());
+      restant.current = ms;
+      const s = Math.ceil(ms / 1000);
+      if (s !== shown) {
+        shown = s;
+        setLeft(s);
+        if (s > 0 && s <= 5) Haptics.selectionAsync().catch(() => {});
+      }
+      if (ms <= 0) {
+        clearInterval(id);
+        over.set(true);
+        if (!flying.get()) finish();
+      }
+    };
+    const id = setInterval(tick, 200);
+    return () => {
+      clearInterval(id);
+      restant.current = Math.max(0, deadline.current - performance.now());
+      cancelAnimation(timeLeft);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [started]);
+  }, [started, paused]);
+
+  // Partie mise en pause (et non perdue) si l'appli passe en arrière-plan : appel, notification…
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state !== 'active' && started && !over.get()) setPaused(true);
+    });
+    return () => sub.remove();
+  }, [started, over]);
 
   useEffect(() => {
     if (!shout) return;
@@ -209,6 +240,7 @@ function Court({ w, h, onEnd }: { w: number; h: number; onEnd: (score: number) =
   function launch() {
     loop.setActive(true);
     if (!started) setStarted(true);
+    if (paused) setPaused(false);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
   }
 
@@ -306,11 +338,17 @@ function Court({ w, h, onEnd }: { w: number; h: number; onEnd: (score: number) =
           <Animated.View style={[styles.timerBar, hurry && { backgroundColor: c.coral }, barStyle]} />
         </View>
         <View style={styles.hud}>
-          <View>
-            <Text style={styles.score}>{score}</Text>
-            {onFire && <Text style={styles.fire}>En feu ×2</Text>}
+          <View accessible accessibilityLabel={`${score} point${score > 1 ? 's' : ''}${onFire ? ', en feu, 2 points par panier' : ''}`}>
+            <Text style={styles.score} maxFontSizeMultiplier={1.3}>
+              {score}
+            </Text>
+            <Text style={[styles.fire, !onFire && { color: c.muted }]} maxFontSizeMultiplier={1.5}>
+              {onFire ? 'En feu · 2 pts par panier' : score > 1 ? 'points' : 'point'}
+            </Text>
           </View>
-          <Text style={[styles.timer, hurry && { color: c.coral }]}>{left}s</Text>
+          <Text style={[styles.timer, hurry && { color: c.coral }]} maxFontSizeMultiplier={1.5} accessibilityLabel={`${left} secondes`}>
+            {left}s
+          </Text>
         </View>
 
         <Animated.View style={[StyleSheet.absoluteFill, hoopStyle]} pointerEvents="none">
@@ -343,9 +381,8 @@ function Court({ w, h, onEnd }: { w: number; h: number; onEnd: (score: number) =
             {shout.text}
           </Text>
         )}
-        {!started && (
-          <HintPill text="Lance d’un geste vers le haut" at={{ bottom: '30%' }} />
-        )}
+        {!started && <HintPill text="Lance d’un geste vers le haut" at={{ bottom: '30%' }} />}
+        {paused && <HintPill text="Pause : lance pour reprendre" at={{ bottom: '30%' }} />}
       </View>
     </GestureDetector>
   );

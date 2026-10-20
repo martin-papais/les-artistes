@@ -6,13 +6,22 @@ import { Platform } from 'react-native';
 import { sb } from './supabase';
 
 // Affichage des notifs même quand l'app est en foreground (sinon iOS les avale).
+// Écran ouvert en ce moment (une partie) : ses notifications ne s'affichent pas par-dessus
+let visibleRoute: string | null = null;
+export function setVisibleRoute(route: string | null) {
+  visibleRoute = route;
+}
+
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
+  handleNotification: async (n) => {
+    const shown = !visibleRoute || n.request.content.data?.route !== visibleRoute;
+    return {
+      shouldShowBanner: shown,
+      shouldShowList: shown,
+      shouldPlaySound: shown,
+      shouldSetBadge: false,
+    };
+  },
 });
 
 /**

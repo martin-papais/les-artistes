@@ -1,15 +1,15 @@
 import { Chess, type Square } from 'chess.js';
 import { FunctionsHttpError } from '@supabase/supabase-js';
 
-import { duelApi, type DuelPartie, rpc } from '@/lib/duel';
+import { DUEL_FIELDS, duelApi, type DuelPartie, rpc } from '@/lib/duel';
 import { invalidateClassements } from '@/lib/minijeux';
 import { sb } from '@/lib/supabase';
 
 // Échecs à deux : les règles viennent de chess.js (BSD). Le serveur rejoue chaque coup avec
 // la même bibliothèque (supabase/functions/echecs-jouer) avant de l'enregistrer
-// (supabase/15_minijeux_echecs.sql). Joueur 1 = blancs, joueur 2 = noirs.
+// (supabase/15_minijeux_echecs.sql, pendule : 17). Joueur 1 = blancs, joueur 2 = noirs.
 
-export type Fin = 'mat' | 'pat' | 'repetition' | 'materiel' | '50coups' | 'accord' | 'abandon';
+export type Fin = 'mat' | 'pat' | 'repetition' | 'materiel' | '50coups' | 'accord' | 'abandon' | 'temps' | 'absence' | 'expire';
 
 export type Partie = DuelPartie & {
   fen: string;
@@ -20,11 +20,7 @@ export type Partie = DuelPartie & {
   nulle_proposee: 1 | 2 | null;
 };
 
-export const echecs = duelApi<Partie>(
-  'echecs_parties',
-  'echecs',
-  'id,joueur1,joueur2,statut,fen,historique,tour,coups,dernier_coup,gagnant,fin,nulle_proposee,elo_delta,created_at,updated_at',
-);
+export const echecs = duelApi<Partie>('echecs_parties', 'echecs', `${DUEL_FIELDS},fen,historique,dernier_coup,nulle_proposee`);
 
 export const parse = (uci: string) => ({ from: uci.slice(0, 2) as Square, to: uci.slice(2, 4) as Square, promotion: uci[4] });
 
@@ -63,7 +59,8 @@ export const nulle = (partie: string, action: 'proposer' | 'accepter' | 'refuser
 const FR: Record<string, string> = { K: 'R', Q: 'D', R: 'T', B: 'F', N: 'C' };
 export const enFrancais = (san: string) => san.replace(/[KQRBN]/g, (l) => FR[l]);
 
-export const FIN_TEXTE: Record<Exclude<Fin, 'mat' | 'abandon'>, string> = {
+/** Fins propres aux échecs (le temps, l'absence et l'abandon sont communs aux jeux à deux) */
+export const FIN_TEXTE: Partial<Record<Fin, string>> = {
   pat: 'Pat : partie nulle',
   repetition: 'Nulle par répétition',
   materiel: 'Nulle : plus assez de pièces pour mater',

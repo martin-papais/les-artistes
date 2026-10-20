@@ -1,6 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { AccessibilityInfo, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Icon } from '@/components/ui/kit';
 import { gameStyles } from '@/components/minijeux/GameArea';
@@ -34,6 +34,7 @@ export function Reflexes({ onEnd }: { onEnd: (avgMs: number) => void }) {
       () => {
         startedAt.current = performance.now();
         setPhase('go');
+        AccessibilityInfo.announceForAccessibility('Touche !');
       },
       1200 + Math.random() * 2800,
     );
@@ -50,6 +51,7 @@ export function Reflexes({ onEnd }: { onEnd: (avgMs: number) => void }) {
       clear();
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
       setPhase('early');
+      AccessibilityInfo.announceForAccessibility('Trop tôt, on recommence cet essai');
       timer.current = setTimeout(arm, 1100);
       return;
     }
@@ -57,6 +59,7 @@ export function Reflexes({ onEnd }: { onEnd: (avgMs: number) => void }) {
     const ms = Math.round(performance.now() - startedAt.current);
     if (ms < HUMAN_MIN) {
       setPhase('early');
+      AccessibilityInfo.announceForAccessibility('Trop tôt, on recommence cet essai');
       timer.current = setTimeout(arm, 1100);
       return;
     }
@@ -64,17 +67,24 @@ export function Reflexes({ onEnd }: { onEnd: (avgMs: number) => void }) {
     const next = [...times, Math.min(ms, 5000)];
     setTimes(next);
     setPhase('shown');
+    AccessibilityInfo.announceForAccessibility(`${Math.min(ms, 5000)} millisecondes, essai ${next.length} sur ${ROUNDS}`);
     timer.current = setTimeout(() => {
-      if (next.length >= ROUNDS) onEnd(Math.round(next.reduce((a, b) => a + b, 0) / next.length));
-      else arm();
+      if (next.length >= ROUNDS) {
+        const avg = Math.round(next.reduce((a, b) => a + b, 0) / next.length);
+        AccessibilityInfo.announceForAccessibility(`Moyenne : ${avg} millisecondes`);
+        onEnd(avg);
+      } else arm();
     }, 900);
   }
 
   const last = times[times.length - 1];
   const bg = phase === 'go' ? c.teal : phase === 'early' ? c.coral : c.card;
   return (
+    // Le doigt agit dès qu'il touche ; le lecteur d'écran passe par l'action « activer »
     <Pressable
       onPressIn={onPressIn}
+      accessibilityActions={[{ name: 'activate' }]}
+      onAccessibilityAction={(e) => e.nativeEvent.actionName === 'activate' && onPressIn()}
       style={[gameStyles.card, styles.area, { backgroundColor: bg }]}
       accessibilityRole="button"
       accessibilityLabel={phase === 'go' ? 'Touche maintenant' : 'Attends que l’écran passe au vert'}
@@ -90,7 +100,11 @@ export function Reflexes({ onEnd }: { onEnd: (avgMs: number) => void }) {
           <Text style={styles.big}>Attends le vert…</Text>
         </>
       )}
-      {phase === 'go' && <Text style={[styles.huge, { color: c.tealInk }]}>Touche !</Text>}
+      {phase === 'go' && (
+        <Text style={[styles.huge, { color: c.tealInk }]} maxFontSizeMultiplier={1.4}>
+          Touche !
+        </Text>
+      )}
       {phase === 'early' && (
         <>
           <Text style={[styles.big, { color: '#fff' }]}>Trop tôt !</Text>
@@ -99,7 +113,9 @@ export function Reflexes({ onEnd }: { onEnd: (avgMs: number) => void }) {
       )}
       {phase === 'shown' && last !== undefined && (
         <>
-          <Text style={styles.huge}>{last} ms</Text>
+          <Text style={styles.huge} maxFontSizeMultiplier={1.4}>
+            {last} ms
+          </Text>
           <Text style={styles.small}>
             Essai {times.length} sur {ROUNDS}
           </Text>

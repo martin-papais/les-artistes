@@ -21,6 +21,7 @@ import 'react-native-reanimated';
 import { loadAvatars, resetAvatars } from '@/lib/avatars';
 import { resetBlocked } from '@/lib/moderation';
 import { registerPushToken, takeNotificationRoute } from '@/lib/notifications';
+import { startPresence, stopPresence } from '@/lib/presence';
 import { sb } from '@/lib/supabase';
 import { theme } from '@/lib/theme';
 
@@ -49,6 +50,7 @@ export default function RootLayout() {
         initialized.current = true;
         if (session?.user) {
           registerPushToken(session.user.id);
+          startPresence(session.user.id);
           loadAvatars();
         }
         return;
@@ -58,13 +60,17 @@ export default function RootLayout() {
         resetAvatars();
       }
       if (event === 'SIGNED_OUT' || !session) {
+        stopPresence();
         // Le token push est retiré avant signOut (signOutAndUnregister), plus ici :
         // à ce stade la session est déjà effacée et la RLS refuserait le delete.
         // On vide la pile : sinon « retour » depuis le login ramène aux onglets du compte précédent.
         if (router.canDismiss()) router.dismissAll();
         router.replace('/(auth)/login');
       } else if (event === 'SIGNED_IN') {
-        if (session.user) registerPushToken(session.user.id);
+        if (session.user) {
+          registerPushToken(session.user.id);
+          startPresence(session.user.id);
+        }
         loadAvatars();
         router.replace('/(tabs)/events');
       }

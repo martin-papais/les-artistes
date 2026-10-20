@@ -1,10 +1,13 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import type { DuelJeu } from '@/lib/duel';
-import { sb, type ProfileMini } from '@/lib/supabase';
+import { sb, sessionUser, type ProfileMini } from '@/lib/supabase';
 
 // Mini-jeux : chacun garde son meilleur score par jeu, le classement compare les records.
 // Puissance 4 et les échecs se jouent à deux et se classent à l'Elo. Le classement général additionne des points
 // de place sur tous les jeux.
-// Tables : minijeux_scores, vue minijeux_records, minijeux_elo (supabase/13 et 14).
+// Tables : minijeux_scores, vue minijeux_records, minijeux_elo (supabase/13 et 14) ; un score
+// passe par une session ouverte au début de la partie (supabase/18).
 
 export type JeuId = 'reflexes' | 'flappy' | 'basket' | 'stack' | 'stop10';
 
@@ -39,15 +42,15 @@ export const JEUX: JeuMeta[] = [
   {
     id: 'basket',
     nom: 'Basket',
-    pitch: 'Lance le ballon d’un geste vers le haut. 30 secondes, le panier bouge.',
+    pitch: 'Lance le ballon d’un geste vers le haut. 30 secondes, le panier bouge. Un panier vaut 1 point, 2 points dès le 4e d’affilée.',
     lowerIsBetter: false,
-    unit: ['panier', 'paniers'],
+    unit: ['point', 'points'],
     color: '#FF6B6B',
   },
   {
     id: 'stop10',
     nom: 'Stop à 10 secondes',
-    pitch: 'Arrête le chrono pile à 10,00 s. Il disparaît au bout de 3 secondes.',
+    pitch: 'Arrête le chrono pile à 10,00 s. Il disparaît au bout de 3 secondes, et s’arrête seul à 20 s.',
     lowerIsBetter: true,
     unit: ['', ''], // affiché en secondes d'écart (formatScore)
     color: '#FF9EBC',
@@ -128,8 +131,17 @@ export function verdict(jeu: JeuMeta, score: number): string | null {
 /** Vrai si a bat b */
 export const beats = (jeu: JeuMeta, a: number, b: number) => (jeu.lowerIsBetter ? a < b : a > b);
 
-export type Record_ = { jeu: JeuId; user_id: string; best: number; parties: number; last_played: string };
-export type Ligne = Record_ & { profile?: ProfileMini };
+export type Record_ = {
+  jeu: JeuId;
+  user_id: string;
+  best: number;
+  parties: number;
+  last_played: string;
+  /** Première partie où le record a été atteint : départage les égalités */
+  record_at: string;
+};
+/** rang : place au classement, partagée par les ex æquo */
+export type Ligne = Record_ & { profile?: ProfileMini; rang: number };
 export type EloLigne = {
   user_id: string;
   elo: number;
@@ -138,6 +150,7 @@ export type EloLigne = {
   nuls: number;
   updated_at: string;
   profile?: ProfileMini;
+  rang?: number;
 };
 
 export type Classements = { scores: Record<JeuId, Ligne[]>; elo: Record<DuelJeu, EloLigne[]> };
@@ -173,25 +186,41 @@ export function fetchClassements(): Promise<Classements> {
   return data;
 }
 
+/** Pose le rang de chaque ligne déjà triée : même rang que la précédente si elles sont à égalité */
+function classer<T extends { rang?: number }>(lignes: T[], egal: (a: T, b: T) => boolean) {
+  lignes.forEach((l, i) => {
+    (l as { rang?: number }).rang = i > 0 && egal(lignes[i - 1], l) ? (lignes[i - 1].rang ?? i) : i + 1;
+  });
+}
+
 async function loadClassements(): Promise<Classements> {
   const [rec, elo] = await Promise.all([
-    sb.from('minijeux_records').select('jeu,user_id,best,parties,last_played'),
+    sb.from('minijeux_records').select('jeu,user_id,best,parties,last_played,record_at'),
     sb.from('minijeux_elo').select('jeu,user_id,elo,parties,victoires,nuls,updated_at'),
   ]);
   if (rec.error) throw rec.error;
+  if (elo.error) throw elo.error;
   const rows = (rec.data ?? []) as Record_[];
   const elos = ((elo.data ?? []) as (EloLigne & { jeu: DuelJeu })[]).filter((e) => e.parties > 0);
   const byId = await fetchProfiles([...new Set([...rows.map((r) => r.user_id), ...elos.map((e) => e.user_id)])]);
   const scores = Object.fromEntries(JEUX.map((j) => [j.id, [] as Ligne[]])) as Record<JeuId, Ligne[]>;
-  for (const r of rows) scores[r.jeu]?.push({ ...r, profile: byId[r.user_id] });
+  for (const r of rows) scores[r.jeu]?.push({ ...r, profile: byId[r.user_id], rang: 0 });
   for (const j of JEUX) {
-    // À égalité, le dernier à avoir joué passe derrière
+    // À égalité, le premier à avoir atteint ce score passe devant : rejouer moins bien ne fait rien perdre
     scores[j.id].sort((a, b) =>
-      a.best === b.best ? a.last_played.localeCompare(b.last_played) : j.lowerIsBetter ? a.best - b.best : b.best - a.best,
+      a.best === b.best ? a.record_at.localeCompare(b.record_at) : j.lowerIsBetter ? a.best - b.best : b.best - a.best,
     );
+    classer(scores[j.id], (a, b) => a.best === b.best && a.record_at === b.record_at);
   }
-  const eloDe = (jeu: DuelJeu) =>
-    elos.filter((e) => e.jeu === jeu).map((e) => ({ ...e, profile: byId[e.user_id] })).sort((a, b) => b.elo - a.elo);
+  // Elo égal : même place ; dans l'affichage, celui qui a le plus joué d'abord
+  const eloDe = (jeu: DuelJeu) => {
+    const l = elos
+      .filter((e) => e.jeu === jeu)
+      .map((e) => ({ ...e, profile: byId[e.user_id] }))
+      .sort((a, b) => b.elo - a.elo || b.parties - a.parties);
+    classer(l, (a, b) => a.elo === b.elo);
+    return l;
+  };
   return { scores, elo: { puissance4: eloDe('puissance4'), echecs: eloDe('echecs') } };
 }
 
@@ -203,32 +232,128 @@ export type General = {
   user_id: string;
   profile?: ProfileMini;
   points: number;
-  /** Nombre de jeux où il est premier */
+  /** Nombre de jeux où il est premier (ex æquo compris) */
   titres: number;
   /** Place par jeu (1 = premier), pour le détail */
   places: Partial<Record<JeuId | DuelJeu, number>>;
+  /** Place au classement général, partagée à égalité de points et de titres */
+  rang: number;
 };
 
 export function classementGeneral(c: Classements): General[] {
   const out: Record<string, General> = {};
-  const add = (jeu: JeuId | DuelJeu, ids: { user_id: string; profile?: ProfileMini }[]) => {
+  // Des ex æquo ont la même place, donc les mêmes points
+  const add = (jeu: JeuId | DuelJeu, ids: { user_id: string; profile?: ProfileMini; rang?: number }[]) => {
     ids.forEach((l, i) => {
-      const g = (out[l.user_id] ??= { user_id: l.user_id, profile: l.profile, points: 0, titres: 0, places: {} });
-      g.points += POINTS[i] ?? 0;
-      if (i === 0) g.titres += 1;
-      g.places[jeu] = i + 1;
+      const rang = l.rang ?? i + 1;
+      const g = (out[l.user_id] ??= { user_id: l.user_id, profile: l.profile, points: 0, titres: 0, places: {}, rang: 0 });
+      g.points += POINTS[rang - 1] ?? 0;
+      if (rang === 1) g.titres += 1;
+      g.places[jeu] = rang;
     });
   };
   for (const j of JEUX) add(j.id, c.scores[j.id]);
   add('puissance4', c.elo.puissance4);
   add('echecs', c.elo.echecs);
-  return Object.values(out).sort((a, b) => b.points - a.points || b.titres - a.titres);
+  const rows = Object.values(out).sort((a, b) => b.points - a.points || b.titres - a.titres);
+  classer(rows, (a, b) => a.points === b.points && a.titres === b.titres);
+  return rows;
 }
 
-export async function saveScore(jeu: JeuId, score: number) {
-  const { error } = await sb.from('minijeux_scores').insert({ jeu, score: Math.round(score) });
-  invalidateClassements();
+// ─── Enregistrement d'un score ───
+// Le serveur ouvre la partie (minijeux_commencer) et mesure sa durée jusqu'à l'envoi du score
+// (minijeux_enregistrer). Un score qui n'a pas pu partir attend dans le téléphone et repart
+// tout seul ; la session ne sert qu'une fois, un renvoi ne fait donc jamais de doublon.
+
+/** Ouvre une partie côté serveur ; rend l'identifiant de session */
+export async function commencerPartie(jeu: JeuId): Promise<string> {
+  const { data, error } = await sb.rpc('minijeux_commencer', { jeu });
   if (error) throw error;
+  return data as string;
+}
+
+type EnAttente = { session: string; jeu: JeuId; score: number; at: number; /** compte qui a joué */ user?: string };
+const ATTENTE = 'minijeux_scores_en_attente';
+
+// Une seule lecture-modification-écriture de la file à la fois : un envoi et un renvoi
+// simultanés ne s'écrasent pas
+let verrou: Promise<unknown> = Promise.resolve();
+function enFile<T>(fn: () => Promise<T>): Promise<T> {
+  const next = verrou.then(fn, fn);
+  verrou = next.catch(() => {});
+  return next;
+}
+
+async function lireAttente(): Promise<EnAttente[]> {
+  try {
+    const raw = await AsyncStorage.getItem(ATTENTE);
+    return raw ? (JSON.parse(raw) as EnAttente[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+async function ecrireAttente(l: EnAttente[]) {
+  await (l.length ? AsyncStorage.setItem(ATTENTE, JSON.stringify(l)) : AsyncStorage.removeItem(ATTENTE)).catch(() => {});
+}
+
+/** Scores du compte connecté en attente d'envoi, par jeu */
+export async function scoresEnAttente(): Promise<Partial<Record<JeuId, number[]>>> {
+  const me = (await sessionUser())?.id;
+  const out: Partial<Record<JeuId, number[]>> = {};
+  for (const p of await lireAttente()) if (!p.user || p.user === me) (out[p.jeu] ??= []).push(p.score);
+  return out;
+}
+
+/** ok : enregistré ; refuse : le serveur n'en veut pas, inutile de renvoyer ; echec : réseau, à renvoyer */
+async function envoyer(p: EnAttente): Promise<'ok' | 'refuse' | 'echec'> {
+  try {
+    const { error } = await sb.rpc('minijeux_enregistrer', { session: p.session, score: p.score });
+    if (!error) return 'ok';
+    // Refus explicite de la fonction (partie inconnue, trop ancienne, score impossible)
+    return error.code === 'P0001' ? 'refuse' : 'echec';
+  } catch {
+    return 'echec';
+  }
+}
+
+export type Envoi = 'ok' | 'attente' | 'refuse';
+
+/** Envoie le score d'une partie ; s'il ne part pas, il est gardé pour plus tard */
+export async function saveScore(session: string, jeu: JeuId, score: number): Promise<Envoi> {
+  const p: EnAttente = { session, jeu, score: Math.round(score), at: Date.now(), user: (await sessionUser())?.id };
+  const r = await envoyer(p);
+  invalidateClassements();
+  if (r !== 'echec') return r;
+  await enFile(async () => ecrireAttente([...(await lireAttente()).filter((x) => x.session !== session), p]));
+  return 'attente';
+}
+
+type Renvoi = { restants: string[]; refuses: string[] };
+let envoiEnCours: Promise<Renvoi> | null = null;
+
+/** Renvoie les scores en attente ; rend les sessions encore en attente et celles refusées */
+export function renvoyerScores(): Promise<Renvoi> {
+  envoiEnCours ??= enFile(async () => {
+    const me = (await sessionUser())?.id;
+    const tous = await lireAttente();
+    // Les scores d'un autre compte (changement de compte sur ce téléphone) attendent leur propriétaire
+    const avant = tous.filter((p) => !p.user || p.user === me);
+    const autres = tous.filter((p) => p.user && p.user !== me);
+    const restants: EnAttente[] = [];
+    const refuses: string[] = [];
+    for (const p of avant) {
+      const r = await envoyer(p);
+      if (r === 'echec') restants.push(p);
+      else if (r === 'refuse') refuses.push(p.session);
+    }
+    await ecrireAttente([...autres, ...restants]);
+    if (restants.length < avant.length) invalidateClassements();
+    return { restants: restants.map((x) => x.session), refuses };
+  }).finally(() => {
+    envoiEnCours = null;
+  });
+  return envoiEnCours;
 }
 
 export const displayName = (p?: ProfileMini) => p?.prenom || p?.pseudo || 'Quelqu’un';

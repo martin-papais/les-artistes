@@ -22,7 +22,9 @@ export function GameArea({ background, children }: { background: string; childre
 export function HintPill({ text, at }: { text: string; at: Pick<ViewStyle, 'top' | 'bottom'> }) {
   return (
     <View style={[styles.hintBox, at]} pointerEvents="none">
-      <Text style={styles.hint}>{text}</Text>
+      <Text style={styles.hint} maxFontSizeMultiplier={1.5}>
+        {text}
+      </Text>
     </View>
   );
 }
@@ -47,7 +49,7 @@ export const gameStyles = StyleSheet.create({
 
 const styles = StyleSheet.create({
   area: { flex: 1, overflow: 'hidden' },
-  hintBox: { position: 'absolute', left: 0, right: 0, alignItems: 'center', zIndex: 4 },
+  hintBox: { position: 'absolute', left: 16, right: 16, alignItems: 'center', zIndex: 4 },
   hint: {
     color: '#fff',
     fontFamily: f.bodyBold,
@@ -57,5 +59,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: 'rgba(0,0,0,0.4)',
     overflow: 'hidden',
+    textAlign: 'center',
   },
 });

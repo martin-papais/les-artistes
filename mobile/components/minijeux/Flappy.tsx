@@ -206,7 +206,16 @@ function Game({ w, h, onEnd }: { w: number; h: number; onEnd: (score: number) =>
 
   const cityH = playH * 0.3;
   return (
-    <Pressable onPressIn={flap} style={StyleSheet.absoluteFill} accessibilityRole="button" accessibilityLabel="Battre des ailes">
+    // Le doigt agit dès qu'il touche ; le lecteur d'écran passe par l'action « activer »
+    <Pressable
+      onPressIn={flap}
+      accessibilityActions={[{ name: 'activate' }]}
+      onAccessibilityAction={(e) => e.nativeEvent.actionName === 'activate' && flap()}
+      style={StyleSheet.absoluteFill}
+      accessibilityRole="button"
+      accessibilityValue={{ text: `${score} tuyau${score > 1 ? 'x' : ''}` }}
+      accessibilityLabel="Battre des ailes"
+    >
       <Animated.View style={[StyleSheet.absoluteFill, shakeStyle]}>
         <Image source={CIEL} contentFit="fill" style={StyleSheet.absoluteFill} />
         {stars.map((s, i) => (
@@ -229,7 +238,7 @@ function Game({ w, h, onEnd }: { w: number; h: number; onEnd: (score: number) =>
           </Animated.View>
         </Animated.View>
 
-        <Animated.Text style={[gameStyles.score, popStyle]}>{score}</Animated.Text>
+        <Animated.Text style={[gameStyles.score, popStyle]} maxFontSizeMultiplier={1.3}>{score}</Animated.Text>
         {!started && <HintPill text="Touche pour t’envoler" at={{ top: '60%' }} />}
       </Animated.View>
       <Animated.View style={[StyleSheet.absoluteFill, styles.flash, flashStyle]} pointerEvents="none" />

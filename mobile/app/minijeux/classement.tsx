@@ -2,6 +2,7 @@ import { Image } from 'expo-image';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { ClassementErreur } from '@/components/minijeux/Classement';
 import { Card, Pastille, ScreenHeader } from '@/components/ui/kit';
 import { classementGeneral, displayName, fetchClassements, type General, invalidateClassements, JEUX, LOGOS, MEDALS, POINTS } from '@/lib/minijeux';
 import { sessionUser } from '@/lib/supabase';
@@ -22,25 +23,27 @@ const COLONNES = [
 export default function ClassementGeneral() {
   const [me, setMe] = useState<string | null>(null);
   const [rows, setRows] = useState<General[] | null>(null);
+  const [erreur, setErreur] = useState(false);
 
   const load = useCallback(async () => {
     const user = await sessionUser();
     setMe(user?.id ?? null);
     try {
       setRows(classementGeneral(await fetchClassements()));
+      setErreur(false);
     } catch {
-      setRows((cur) => cur ?? []);
+      // On garde le classement déjà affiché
+      setErreur(true);
     }
   }, []);
 
   useRefreshOnFocus(load, 0);
 
-  const { refreshing, onRefresh } = usePullRefresh(
-    useCallback(async () => {
-      invalidateClassements();
-      await load();
-    }, [load]),
-  );
+  const reload = useCallback(async () => {
+    invalidateClassements();
+    await load();
+  }, [load]);
+  const { refreshing, onRefresh } = usePullRefresh(reload);
 
   return (
     <ScrollView
@@ -58,22 +61,30 @@ export default function ClassementGeneral() {
       <Card style={styles.rules}>
         <Text style={styles.rulesText}>
           Sur chaque jeu, ta place rapporte des points : {POINTS.slice(0, 4).join(', ')}… jusqu’à 1 point pour le 8e. Pour les échecs et
-          Puissance 4, c’est la place au classement Elo.
+          Puissance 4, c’est la place au classement Elo. Des ex æquo ont la même place et les mêmes points.
         </Text>
       </Card>
 
+      {erreur && (
+        <View style={styles.error}>
+          <ClassementErreur onRetry={reload} stale={rows !== null} />
+        </View>
+      )}
+
       {rows === null ? (
-        <ActivityIndicator color={c.teal} style={{ marginTop: 24 }} />
+        !erreur && <ActivityIndicator color={c.teal} style={{ marginTop: 24 }} />
       ) : rows.length === 0 ? (
         <Text style={[styles.small, { paddingHorizontal: theme.gutter, marginTop: 20 }]}>Personne n’a encore joué.</Text>
       ) : (
-        rows.map((g, i) => (
+        rows.map((g) => (
           <Card key={g.user_id} style={[styles.row, g.user_id === me && styles.mine]}>
             <View style={styles.top}>
-              <Text style={[styles.rank, i < 3 && { color: MEDALS[i] }]}>{i + 1}</Text>
+              <Text style={[styles.rank, g.rang <= 3 && { color: MEDALS[g.rang - 1] }]} maxFontSizeMultiplier={1.6}>
+                {g.rang}
+              </Text>
               <Pastille id={g.user_id} name={displayName(g.profile)} size={40} />
               <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={styles.name} numberOfLines={1}>
+                <Text style={styles.name} numberOfLines={2}>
                   {g.user_id === me ? 'Toi' : displayName(g.profile)}
                 </Text>
                 {g.titres > 0 && (
@@ -82,7 +93,7 @@ export default function ClassementGeneral() {
                   </Text>
                 )}
               </View>
-              <Text style={styles.points}>
+              <Text style={styles.points} maxFontSizeMultiplier={1.5}>
                 {g.points}
                 <Text style={styles.unit}> pts</Text>
               </Text>
@@ -112,11 +123,12 @@ const styles = StyleSheet.create({
   row: { marginHorizontal: theme.gutter, marginTop: 10, padding: 14 },
   mine: { borderWidth: 1, borderColor: c.teal },
   top: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  rank: { width: 26, textAlign: 'center', color: c.muted, fontFamily: f.serifBlack, fontSize: 22 },
+  rank: { minWidth: 26, textAlign: 'center', color: c.muted, fontFamily: f.serifBlack, fontSize: 22 },
   name: { color: c.text, fontFamily: f.bodyBold, fontSize: 16 },
   small: { color: c.muted, fontFamily: f.body, fontSize: 13 },
   points: { color: c.text, fontFamily: f.serifBlack, fontSize: 24 },
   unit: { color: c.muted, fontFamily: f.body, fontSize: 13 },
+  error: { marginHorizontal: theme.gutter, marginTop: 8 },
   places: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10, marginLeft: 38 },
   place: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 12, backgroundColor: c.raised },
   dot: { width: 8, height: 8, borderRadius: 4 },

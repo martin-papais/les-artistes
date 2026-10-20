@@ -6,9 +6,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
-import { DuelScreen, duelStyles, statusText, useDuel } from '@/components/minijeux/Duel';
+import { DuelScreen, duelStyles, statusText, useBoardMax, useDuel } from '@/components/minijeux/Duel';
 import { Button } from '@/components/ui/kit';
-import { opponentOf, seat } from '@/lib/duel';
+import { apresCoup, opponentOf, seat } from '@/lib/duel';
 import { echecs, enFrancais, FIN_TEXTE, jouer, nulle, parse, PIECES, rejouer, VALEUR } from '@/lib/echecs';
 import { theme } from '@/lib/theme';
 
@@ -19,6 +19,7 @@ const LIGHT = '#EEE7FA';
 const DARK = '#8E7CC9';
 const FILES = 'abcdefgh';
 const PROMOTIONS = ['q', 'r', 'b', 'n'] as const;
+const NOMS: Record<string, string> = { k: 'Roi', q: 'Dame', r: 'Tour', b: 'Fou', n: 'Cavalier', p: 'Pion' };
 
 export default function EchiquierScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -60,6 +61,7 @@ export default function EchiquierScreen() {
       coups: partie.coups + 1,
       tour: mySeat === 1 ? 2 : 1,
       nulle_proposee: partie.nulle_proposee === mySeat ? mySeat : null,
+      ...apresCoup(partie, duel.now(0)),
     });
     setBusy(true);
     try {
@@ -89,7 +91,9 @@ export default function EchiquierScreen() {
     } else setSel(null);
   }
 
-  const boardW = Math.min(width - 24, 460);
+  // Chat ouvert : l'échiquier rétrécit pour tenir sous les joueurs, sans la liste des coups
+  const maxH = useBoardMax();
+  const boardW = Math.min(width - 24, 460, maxH ? maxH - 10 : Infinity);
   const size = (boardW - 8) / 8; // 4 px de cadre
   const flipped = mySeat === 2;
   const last = partie?.dernier_coup ? parse(partie.dernier_coup) : null;
@@ -111,7 +115,7 @@ export default function EchiquierScreen() {
         ? won
           ? 'Échec et mat : tu gagnes !'
           : `Échec et mat : ${opp} gagne`
-        : partie.fin && partie.fin !== 'abandon'
+        : partie.fin
           ? FIN_TEXTE[partie.fin]
           : undefined;
     status = statusText(duel, partie, enCours, fini);
@@ -175,7 +179,7 @@ export default function EchiquierScreen() {
       actions={actions}
     >
       {/* La consigne garde sa place quand c'est à l'adversaire : le plateau ne saute pas */}
-      {partie?.statut === 'en_cours' && partie.coups < 2 && (
+      {partie?.statut === 'en_cours' && partie.coups < 2 && !maxH && (
         <Text style={[duelStyles.tip, !myTurn && { opacity: 0 }]}>Touche une pièce, puis une des cases marquées</Text>
       )}
       {partie && (
@@ -206,7 +210,15 @@ export default function EchiquierScreen() {
                     zIndex: moved ? 2 : 0,
                   },
                 ]}
-                accessibilityLabel={sq}
+                accessibilityRole="button"
+                accessibilityLabel={[
+                  pc ? `${NOMS[pc.type]} ${pc.color === 'w' ? 'blanc' : 'noir'} en ${sq}` : `${sq}, vide`,
+                  sel === sq && 'sélectionné',
+                  target && (pc ? 'prise possible' : 'coup possible'),
+                  moved && 'dernier coup',
+                ]
+                  .filter(Boolean)
+                  .join(', ')}
               >
                 {(moved || last?.from === sq) && <View style={[StyleSheet.absoluteFill, styles.last]} />}
                 {sel === sq && <View style={[StyleSheet.absoluteFill, styles.selected]} />}
@@ -257,7 +269,7 @@ export default function EchiquierScreen() {
         </View>
       )}
 
-      {san.length > 0 && (
+      {san.length > 0 && !maxH && (
         <ScrollView
           ref={moves}
           horizontal

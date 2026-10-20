@@ -3,9 +3,10 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { Classement } from '@/components/minijeux/Classement';
+import { Classement, ClassementErreur } from '@/components/minijeux/Classement';
 import { Badge, Button, Card, Icon, Pastille, ScreenHeader } from '@/components/ui/kit';
 import {
+  beats,
   classementGeneral,
   type Classements,
   displayName,
@@ -13,8 +14,11 @@ import {
   formatScore,
   invalidateClassements,
   JEUX,
+  type JeuId,
   LOGOS,
   MEDALS,
+  renvoyerScores,
+  scoresEnAttente,
 } from '@/lib/minijeux';
 import { aFaire, type DuelJeu, type DuelPartie, ELO_DEPART } from '@/lib/duel';
 import { echecs } from '@/lib/echecs';
@@ -37,21 +41,23 @@ export default function MiniJeuxScreen() {
   const [me, setMe] = useState<string | null>(null);
   const [ranks, setRanks] = useState<Classements | null>(null);
   const [parties, setParties] = useState<Record<DuelJeu, DuelPartie[]>>({ puissance4: [], echecs: [] });
+  const [erreur, setErreur] = useState(false);
+  const [attente, setAttente] = useState<Partial<Record<JeuId, number[]>>>({});
 
   const load = useCallback(async () => {
     const user = await sessionUser();
     setMe(user?.id ?? null);
-    try {
-      const [cl, ps4, pse] = await Promise.all([
-        fetchClassements(),
-        user ? p4.fetchMesParties(user.id) : [],
-        user ? echecs.fetchMesParties(user.id) : [],
-      ]);
-      setRanks(cl);
-      setParties({ puissance4: ps4, echecs: pse });
-    } catch {
-      // Hors connexion : les jeux solo restent jouables, sans classement
-    }
+    // Les scores restés en attente d'envoi repartent avant de lire les classements
+    await renvoyerScores();
+    setAttente(await scoresEnAttente());
+    const [cl, ps] = await Promise.allSettled([
+      fetchClassements(),
+      Promise.all([user ? p4.fetchMesParties(user.id) : [], user ? echecs.fetchMesParties(user.id) : []]),
+    ]);
+    // Hors connexion : les jeux solo restent jouables, les classements connus restent affichés
+    if (cl.status === 'fulfilled') setRanks(cl.value);
+    setErreur(cl.status === 'rejected');
+    if (ps.status === 'fulfilled') setParties({ puissance4: ps.value[0], echecs: ps.value[1] });
   }, []);
 
   // Revenir d'une partie montre le nouveau classement (les classements sont en cache 20 s,
@@ -78,7 +84,11 @@ export default function MiniJeuxScreen() {
   );
 
   const general = ranks ? classementGeneral(ranks) : [];
-  const myGeneral = general.findIndex((g) => g.user_id === me);
+  const myGeneral = general.find((g) => g.user_id === me);
+  const retry = () => {
+    invalidateClassements();
+    load();
+  };
 
   return (
     <ScrollView
@@ -105,16 +115,16 @@ export default function MiniJeuxScreen() {
           <View style={{ flex: 1 }}>
             <Text style={styles.name}>Classement général</Text>
             <Text style={styles.pitch}>
-              {myGeneral >= 0 ? `Tu es ${myGeneral === 0 ? 'en tête' : `${myGeneral + 1}e`} avec ${general[myGeneral].points} pts` : 'Tous les jeux comptent'}
+              {myGeneral ? `Tu es ${myGeneral.rang === 1 ? 'en tête' : `${myGeneral.rang}e`} avec ${myGeneral.points} pts` : 'Tous les jeux comptent'}
             </Text>
           </View>
           <Icon name="chevron-right" size={20} color={c.muted} />
         </View>
         {general.length > 0 && (
           <View style={styles.podium}>
-            {general.slice(0, 3).map((g, i) => (
+            {general.slice(0, 3).map((g) => (
               <View key={g.user_id} style={styles.podiumItem}>
-                <Text style={[styles.podiumRank, { color: MEDALS[i] }]}>{i + 1}</Text>
+                <Text style={[styles.podiumRank, { color: MEDALS[g.rang - 1] }]}>{g.rang}</Text>
                 <Pastille id={g.user_id} name={displayName(g.profile)} size={36} />
                 <Text style={styles.podiumName} numberOfLines={1}>
                   {g.user_id === me ? 'Toi' : displayName(g.profile)}
@@ -125,6 +135,12 @@ export default function MiniJeuxScreen() {
           </View>
         )}
       </Card>
+
+      {erreur && (
+        <View style={styles.error}>
+          <ClassementErreur onRetry={retry} stale={!!ranks} />
+        </View>
+      )}
 
       {/* Jeux à deux : Elo */}
       {DUELS.map((d) => {
@@ -154,6 +170,9 @@ export default function MiniJeuxScreen() {
       {JEUX.map((j) => {
         const lignes = ranks?.scores[j.id] ?? [];
         const mine = lignes.find((l) => l.user_id === me);
+        // Meilleur score pas encore envoyé, s'il bat le record connu
+        const enAttente = (attente[j.id] ?? []).filter((x) => !mine || beats(j, x, mine.best));
+        const recordAttente = enAttente.reduce<number | undefined>((b, x) => (b === undefined || beats(j, x, b) ? x : b), undefined);
         const play = () => router.push({ pathname: '/minijeux/[jeu]', params: { jeu: j.id } });
         return (
           <Card key={j.id} style={styles.card}>
@@ -172,7 +191,15 @@ export default function MiniJeuxScreen() {
             )}
 
             <View style={styles.foot}>
-              <Text style={styles.mine}>{mine ? `Ton record : ${formatScore(j, mine.best)}` : 'Pas encore joué'}</Text>
+              <Text style={styles.mine}>
+                {recordAttente !== undefined
+                  ? `Record en attente d’envoi : ${formatScore(j, recordAttente)}`
+                  : mine
+                    ? `Ton record : ${formatScore(j, mine.best)}`
+                    : ranks
+                      ? 'Pas encore joué'
+                      : ''}
+              </Text>
               <Button label="Jouer" icon="play" onPress={play} height={44} style={styles.play} />
             </View>
           </Card>
@@ -199,4 +226,5 @@ const styles = StyleSheet.create({
   foot: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 12 },
   mine: { flex: 1, color: c.text, fontFamily: f.bodyMedium, fontSize: 14 },
   play: { paddingHorizontal: 22 },
+  error: { marginHorizontal: theme.gutter, marginTop: 12 },
 });

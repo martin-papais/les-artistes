@@ -4,8 +4,8 @@ import { useEffect } from 'react';
 import { Alert, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 
-import { DuelScreen, duelStyles, statusText, useDuel } from '@/components/minijeux/Duel';
-import { seat } from '@/lib/duel';
+import { DuelScreen, duelStyles, statusText, useBoardMax, useDuel } from '@/components/minijeux/Duel';
+import { apresCoup, seat } from '@/lib/duel';
 import { COLS, jouer, landingRow, p4, ROWS } from '@/lib/puissance4';
 import { theme } from '@/lib/theme';
 
@@ -37,6 +37,7 @@ export default function PartieScreen() {
       dernier_coup: idx,
       coups: partie.coups + 1,
       tour: mySeat === 1 ? 2 : 1,
+      ...apresCoup(partie, duel.now(0)),
     });
     setBusy(true);
     try {
@@ -51,8 +52,10 @@ export default function PartieScreen() {
     }
   }
 
-  const boardW = Math.min(width - 24, 460);
-  const cell = (boardW - 12) / COLS; // 6 px de bord de chaque côté
+  // Chat ouvert : le plateau rétrécit pour tenir sous les joueurs
+  const maxH = useBoardMax();
+  const cell = Math.min((Math.min(width - 24, 460) - 12) / COLS, maxH ? (maxH - 20) / ROWS : Infinity); // 6 px de bord
+  const boardW = cell * COLS + 12;
 
   return (
     <DuelScreen
@@ -65,7 +68,7 @@ export default function PartieScreen() {
       statusColor={myTurn ? COLOR[String(mySeat)] : undefined}
     >
       {/* La consigne garde sa place quand c'est à l'adversaire : le plateau ne saute pas */}
-      {partie?.statut === 'en_cours' && partie.coups < 2 && (
+      {partie?.statut === 'en_cours' && partie.coups < 2 && !maxH && (
         <Text style={[duelStyles.tip, !myTurn && { opacity: 0 }]}>Touche une colonne pour y lâcher ton jeton</Text>
       )}
       {partie && (
@@ -89,7 +92,8 @@ export default function PartieScreen() {
                   onPress={() => play(col)}
                   style={({ pressed }) => [{ flex: 1 }, pressed && { backgroundColor: 'rgba(255,255,255,0.08)' }]}
                   accessibilityRole="button"
-                  accessibilityLabel={`Jouer colonne ${col + 1}`}
+                  accessibilityLabel={`Colonne ${col + 1}, ${jetons(partie.plateau, col)} jetons sur ${ROWS}`}
+                  accessibilityHint={landingRow(partie.plateau, col) < 0 ? 'Colonne pleine' : 'Lâche ton jeton ici'}
                 />
               ))}
             </View>
@@ -99,6 +103,8 @@ export default function PartieScreen() {
     </DuelScreen>
   );
 }
+
+const jetons = (plateau: string, col: number) => Array.from({ length: ROWS }, (_, r) => plateau[r * COLS + col]).filter((v) => v !== '0').length;
 
 /** Une case : trou, jeton éventuel. Seuls le dernier jeton et la ligne gagnante sont animés. */
 function Cell({ i, v, size, drop, win }: { i: number; v: string; size: number; drop: boolean; win: boolean }) {

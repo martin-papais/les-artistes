@@ -1,4 +1,4 @@
-import { duelApi, type DuelPartie, rpc } from '@/lib/duel';
+import { DUEL_FIELDS, duelApi, type DuelPartie, rpc } from '@/lib/duel';
 import { invalidateClassements } from '@/lib/minijeux';
 
 // Puissance 4 à deux : le serveur garde la partie (supabase/14_minijeux_p4_elo.sql),
@@ -14,11 +14,7 @@ export type Partie = DuelPartie & {
   ligne_gagnante: number[] | null;
 };
 
-export const p4 = duelApi<Partie>(
-  'p4_parties',
-  'p4',
-  'id,joueur1,joueur2,statut,plateau,tour,coups,dernier_coup,gagnant,ligne_gagnante,elo_delta,created_at,updated_at',
-);
+export const p4 = duelApi<Partie>('p4_parties', 'p4', `${DUEL_FIELDS},plateau,dernier_coup,ligne_gagnante`);
 
 // Un coup peut finir la partie : l'Elo a pu changer
 export const jouer = (partie: string, colonne: number) => rpc<void>('p4_jouer', { partie, colonne }).finally(invalidateClassements);

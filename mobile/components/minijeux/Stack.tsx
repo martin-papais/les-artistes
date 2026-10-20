@@ -149,7 +149,16 @@ function Tower({ w, h, onEnd }: { w: number; h: number; onEnd: (score: number) =
   const shown = blocks.map((b, i) => ({ b, i })).filter(({ i }) => i >= level - visible - 4);
   const movingY = baseY - level * BH;
   return (
-    <Pressable onPressIn={place} style={StyleSheet.absoluteFill} accessibilityRole="button" accessibilityLabel="Poser le bloc">
+    // Le doigt agit dès qu'il touche ; le lecteur d'écran passe par l'action « activer »
+    <Pressable
+      onPressIn={place}
+      accessibilityActions={[{ name: 'activate' }]}
+      onAccessibilityAction={(e) => e.nativeEvent.actionName === 'activate' && place()}
+      style={StyleSheet.absoluteFill}
+      accessibilityRole="button"
+      accessibilityValue={{ text: `${score} étage${score > 1 ? 's' : ''}` }}
+      accessibilityLabel="Poser le bloc"
+    >
       <View style={[StyleSheet.absoluteFill, { backgroundColor: `hsl(${hue}, 35%, 12%)` }]} />
       <Image
         source={HALO}
@@ -185,8 +194,8 @@ function Tower({ w, h, onEnd }: { w: number; h: number; onEnd: (score: number) =
         ))}
       </Animated.View>
 
-      <Animated.Text style={[gameStyles.score, popStyle]}>{score}</Animated.Text>
-      {perfect >= 2 && !over && <Text style={styles.combo}>Parfait ×{perfect}</Text>}
+      <Animated.Text style={[gameStyles.score, popStyle]} maxFontSizeMultiplier={1.3}>{score}</Animated.Text>
+      {perfect >= 2 && !over && <Text style={styles.combo} maxFontSizeMultiplier={1.5}>Parfait ×{perfect}</Text>}
       {score === 0 && !over && <HintPill text="Touche pour poser le bloc" at={{ top: '22%' }} />}
     </Pressable>
   );
