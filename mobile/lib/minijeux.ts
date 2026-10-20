@@ -87,6 +87,9 @@ export const plural = (n: number, mot: string) => `${n} ${mot}${n > 1 ? 's' : ''
 /** Or, argent, bronze */
 export const MEDALS = ['#FFD93D', '#D9D4E2', '#E0A070'];
 
+/** Valeur comparée au classement : celle qu'on lit à l'écran (Stop à 10 s : au centième) */
+export const scoreAffiche = (jeu: JeuMeta, score: number) => (jeu.id === 'stop10' ? Math.round(score / 10) : score);
+
 export function formatScore(jeu: JeuMeta, score: number) {
   if (jeu.id === 'stop10') return `${secondes(score)} s d’écart`;
   return `${score} ${score > 1 ? jeu.unit[1] : jeu.unit[0]}`;
@@ -129,7 +132,11 @@ export function verdict(jeu: JeuMeta, score: number): string | null {
 }
 
 /** Vrai si a bat b */
-export const beats = (jeu: JeuMeta, a: number, b: number) => (jeu.lowerIsBetter ? a < b : a > b);
+/** a bat b, à la précision affichée (0,004 s ne bat pas 0,002 s : les deux s'affichent 0,00 s) */
+export const beats = (jeu: JeuMeta, a: number, b: number) => {
+  const [x, y] = [scoreAffiche(jeu, a), scoreAffiche(jeu, b)];
+  return jeu.lowerIsBetter ? x < y : x > y;
+};
 
 export type Record_ = {
   jeu: JeuId;
@@ -207,10 +214,11 @@ async function loadClassements(): Promise<Classements> {
   for (const r of rows) scores[r.jeu]?.push({ ...r, profile: byId[r.user_id], rang: 0 });
   for (const j of JEUX) {
     // Même score, même place (et mêmes points au général) ; dans la liste, le premier à l'avoir fait d'abord
+    const v = (l: Ligne) => scoreAffiche(j, l.best);
     scores[j.id].sort((a, b) =>
-      a.best === b.best ? a.record_at.localeCompare(b.record_at) : j.lowerIsBetter ? a.best - b.best : b.best - a.best,
+      v(a) === v(b) ? a.record_at.localeCompare(b.record_at) : j.lowerIsBetter ? v(a) - v(b) : v(b) - v(a),
     );
-    classer(scores[j.id], (a, b) => a.best === b.best);
+    classer(scores[j.id], (a, b) => v(a) === v(b));
   }
   // Elo égal : même place ; dans l'affichage, celui qui a le plus joué d'abord
   const eloDe = (jeu: DuelJeu) => {
