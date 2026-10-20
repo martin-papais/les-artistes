@@ -52,6 +52,13 @@
         }
       ],
       [
+        "expo-calendar",
+        {
+          "calendarPermission": "Les Artistes ajoute les événements du groupe à ton agenda.",
+          "remindersPermission": false
+        }
+      ],
+      [
         "expo-notifications",
         {
           "icon": "./assets/images/notification-icon.png",
