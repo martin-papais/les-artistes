@@ -38,7 +38,13 @@ export function rejouer(historique: string[]) {
 /** Joue un coup : la fonction Edge le vérifie, l'enregistre et finit la partie au besoin */
 export async function jouer(partie: string, coup: string) {
   try {
-    const { error } = await sb.functions.invoke('echecs-jouer', { body: { partie, coup } });
+    const send = () => sb.functions.invoke('echecs-jouer', { body: { partie, coup } });
+    let { error } = await send();
+    // Jeton de connexion expiré à l'instant (vu sur l'émulateur) : on le renouvelle et on rejoue une fois
+    if (error instanceof FunctionsHttpError && error.context.status === 401) {
+      await sb.auth.refreshSession();
+      ({ error } = await send());
+    }
     if (error instanceof FunctionsHttpError) {
       const body = await error.context.json().catch(() => null);
       throw new Error(body?.error ?? 'Coup refusé');
