@@ -206,11 +206,11 @@ async function loadClassements(): Promise<Classements> {
   const scores = Object.fromEntries(JEUX.map((j) => [j.id, [] as Ligne[]])) as Record<JeuId, Ligne[]>;
   for (const r of rows) scores[r.jeu]?.push({ ...r, profile: byId[r.user_id], rang: 0 });
   for (const j of JEUX) {
-    // À égalité, le premier à avoir atteint ce score passe devant : rejouer moins bien ne fait rien perdre
+    // Même score, même place (et mêmes points au général) ; dans la liste, le premier à l'avoir fait d'abord
     scores[j.id].sort((a, b) =>
       a.best === b.best ? a.record_at.localeCompare(b.record_at) : j.lowerIsBetter ? a.best - b.best : b.best - a.best,
     );
-    classer(scores[j.id], (a, b) => a.best === b.best && a.record_at === b.record_at);
+    classer(scores[j.id], (a, b) => a.best === b.best);
   }
   // Elo égal : même place ; dans l'affichage, celui qui a le plus joué d'abord
   const eloDe = (jeu: DuelJeu) => {
@@ -236,7 +236,7 @@ export type General = {
   titres: number;
   /** Place par jeu (1 = premier), pour le détail */
   places: Partial<Record<JeuId | DuelJeu, number>>;
-  /** Place au classement général, partagée à égalité de points et de titres */
+  /** Place au classement général, partagée à égalité de points */
   rang: number;
 };
 
@@ -255,8 +255,9 @@ export function classementGeneral(c: Classements): General[] {
   for (const j of JEUX) add(j.id, c.scores[j.id]);
   add('puissance4', c.elo.puissance4);
   add('echecs', c.elo.echecs);
+  // Même total, même place ; dans la liste, celui qui a le plus de premières places d'abord
   const rows = Object.values(out).sort((a, b) => b.points - a.points || b.titres - a.titres);
-  classer(rows, (a, b) => a.points === b.points && a.titres === b.titres);
+  classer(rows, (a, b) => a.points === b.points);
   return rows;
 }
 
