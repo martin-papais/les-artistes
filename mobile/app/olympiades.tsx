@@ -20,7 +20,9 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
+  Easing,
   useAnimatedStyle,
   useFrameCallback,
   useReducedMotion,
@@ -28,6 +30,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { scheduleOnRN } from 'react-native-worklets';
 
 import { decorWidth, Verre3D } from '@/components/olympiades/Verre3D';
 import { VerreDecor, yearColor } from '@/components/olympiades/VerreDecor';
@@ -207,7 +210,7 @@ export default function OlympiadesScreen() {
   const art = verreArt(current, edition);
   return (
     // Bande sombre sous la barre d'état : les raccourcis collés s'arrêtent dessous
-    <View style={[styles.flex, { paddingTop: insets.top }]}>
+    <GestureHandlerRootView style={[styles.flex, { paddingTop: insets.top }]}>
       <ScrollView
         ref={scrollRef}
         stickyHeaderIndices={[1]}
@@ -280,7 +283,7 @@ export default function OlympiadesScreen() {
         </View>
       </ScrollView>
       <PhotoViewer photos={edition.photos ?? []} index={viewer} onClose={() => setViewer(null)} />
-    </View>
+    </GestureHandlerRootView>
   );
 }
 
@@ -298,24 +301,7 @@ function Cover({ year, edition, onPhoto }: { year: string; edition: Edition; onP
   return (
     <View style={{ width, height: H, backgroundColor: c.card }}>
       {photos.length ? (
-        <FlatList
-          data={photos}
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          keyExtractor={(p, i) => `${i}-${p.url}`}
-          getItemLayout={(_, i) => ({ length: width, offset: width * i, index: i })}
-          onMomentumScrollEnd={(e) => setShown(Math.round(e.nativeEvent.contentOffset.x / width))}
-          renderItem={({ item, index }) => (
-            <Pressable
-              onPress={() => onPhoto(index)}
-              accessibilityRole="imagebutton"
-              accessibilityLabel={item.caption ? `Ouvrir la photo ${item.caption}` : `Ouvrir la photo ${index + 1}`}
-            >
-              <Image source={{ uri: item.url }} style={{ width, height: H }} contentFit="cover" transition={200} />
-            </Pressable>
-          )}
-        />
+        <Carrousel photos={photos} width={width} height={H} shown={shown} onShown={setShown} onPhoto={onPhoto} />
       ) : (
         // Pas de photo : la lueur de l'année tient lieu de fond
         <Image source={HALO} contentFit="fill" tintColor={accent} style={[StyleSheet.absoluteFill, { opacity: 0.35 }]} />
@@ -369,6 +355,76 @@ function Cover({ year, edition, onPhoto }: { year: string; edition: Edition; onP
         )}
       </View>
     </View>
+  );
+}
+
+/**
+ * Photos du haut, au doigt. Un FlatList horizontal dans la page qui défile verticalement
+ * perdait le geste dès que le doigt descendait un peu (la page, et le « tirer pour actualiser »
+ * juste au-dessus, le prenaient). Ici le glissé est à nous dès 8 px à l'horizontale, et
+ * laissé à la page s'il part d'abord à la verticale.
+ */
+function Carrousel({
+  photos,
+  width,
+  height,
+  shown,
+  onShown,
+  onPhoto,
+}: {
+  photos: { url: string; caption?: string }[];
+  width: number;
+  height: number;
+  shown: number;
+  onShown: (i: number) => void;
+  onPhoto: (i: number) => void;
+}) {
+  const index = useSharedValue(0);
+  const x = useSharedValue(0);
+  const last = photos.length - 1;
+
+  const pan = Gesture.Pan()
+    .activeOffsetX([-8, 8])
+    .failOffsetY([-14, 14])
+    .onUpdate((e) => {
+      const base = -index.get() * width;
+      let t = base + e.translationX;
+      // Au bout de la série, la photo résiste
+      if (t > 0) t /= 3;
+      if (t < -last * width) t = -last * width + (t + last * width) / 3;
+      x.set(t);
+    })
+    .onEnd((e) => {
+      let i = index.get();
+      if (e.translationX < -width / 4 || e.velocityX < -500) i += 1;
+      else if (e.translationX > width / 4 || e.velocityX > 500) i -= 1;
+      i = Math.max(0, Math.min(last, i));
+      index.set(i);
+      x.set(withTiming(-i * width, { duration: 260, easing: Easing.out(Easing.cubic) }));
+      scheduleOnRN(onShown, i);
+    });
+
+  const row = useAnimatedStyle(() => ({ transform: [{ translateX: x.get() }] }));
+
+  return (
+    <GestureDetector gesture={pan}>
+      <Animated.View style={[{ width, height }, row]}>
+        {/* Seules les photos voisines sont montées : une édition en compte des dizaines */}
+        {photos.map((p, i) =>
+          Math.abs(i - shown) > 1 ? null : (
+            <Pressable
+              key={`${i}-${p.url}`}
+              onPress={() => onPhoto(i)}
+              style={{ position: 'absolute', left: i * width, width, height }}
+              accessibilityRole="imagebutton"
+              accessibilityLabel={p.caption ? `Ouvrir la photo ${p.caption}` : `Ouvrir la photo ${i + 1}`}
+            >
+              <Image source={{ uri: p.url }} style={{ width, height }} contentFit="cover" transition={200} />
+            </Pressable>
+          ),
+        )}
+      </Animated.View>
+    </GestureDetector>
   );
 }
 
