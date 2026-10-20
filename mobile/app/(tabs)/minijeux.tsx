@@ -16,7 +16,9 @@ import {
   LOGOS,
   MEDALS,
 } from '@/lib/minijeux';
-import { aFaire, ELO_DEPART, fetchMesParties, type Partie, suivreMesParties } from '@/lib/puissance4';
+import { aFaire, type DuelJeu, type DuelPartie, ELO_DEPART } from '@/lib/duel';
+import { echecs } from '@/lib/echecs';
+import { p4 } from '@/lib/puissance4';
 import { sessionUser } from '@/lib/supabase';
 import { theme } from '@/lib/theme';
 import { usePullRefresh, useRefreshOnFocus } from '@/lib/useRefresh';
@@ -24,19 +26,29 @@ import { usePullRefresh, useRefreshOnFocus } from '@/lib/useRefresh';
 const c = theme.colors;
 const f = theme.fonts;
 
+// Jeux à deux, en tête de l'onglet
+const DUELS = [
+  { jeu: 'echecs', nom: 'Échecs', pitch: 'Défie un membre en direct, même sur plusieurs jours.', api: echecs, route: '/minijeux/echecs' },
+  { jeu: 'puissance4', nom: 'Puissance 4', pitch: 'Défie un membre en direct. Chaque partie fait bouger ton Elo.', api: p4, route: '/minijeux/puissance4' },
+] as const;
+
 export default function MiniJeuxScreen() {
   const router = useRouter();
   const [me, setMe] = useState<string | null>(null);
   const [ranks, setRanks] = useState<Classements | null>(null);
-  const [parties, setParties] = useState<Partie[]>([]);
+  const [parties, setParties] = useState<Record<DuelJeu, DuelPartie[]>>({ puissance4: [], echecs: [] });
 
   const load = useCallback(async () => {
     const user = await sessionUser();
     setMe(user?.id ?? null);
     try {
-      const [cl, ps] = await Promise.all([fetchClassements(), user ? fetchMesParties(user.id) : Promise.resolve([])]);
+      const [cl, ps4, pse] = await Promise.all([
+        fetchClassements(),
+        user ? p4.fetchMesParties(user.id) : [],
+        user ? echecs.fetchMesParties(user.id) : [],
+      ]);
       setRanks(cl);
-      setParties(ps);
+      setParties({ puissance4: ps4, echecs: pse });
     } catch {
       // Hors connexion : les jeux solo restent jouables, sans classement
     }
@@ -56,14 +68,17 @@ export default function MiniJeuxScreen() {
   useFocusEffect(
     useCallback(() => {
       if (!me) return;
-      return suivreMesParties(me, (np) => setParties((ps) => [np, ...ps.filter((p) => p.id !== np.id)]));
+      const stops = DUELS.map(({ jeu, api }) =>
+        api.suivreMesParties(me, (np: DuelPartie) =>
+          setParties((all) => ({ ...all, [jeu]: [np, ...all[jeu].filter((p) => p.id !== np.id)] })),
+        ),
+      );
+      return () => stops.forEach((stop) => stop());
     }, [me]),
   );
 
-  const p4Todo = aFaire(parties, me).length;
   const general = ranks ? classementGeneral(ranks) : [];
   const myGeneral = general.findIndex((g) => g.user_id === me);
-  const myElo = ranks?.p4.find((e) => e.user_id === me)?.elo;
 
   return (
     <ScrollView
@@ -111,23 +126,30 @@ export default function MiniJeuxScreen() {
         )}
       </Card>
 
-      {/* Puissance 4 : à deux, Elo */}
-      <Card style={styles.card} onPress={() => router.push('/minijeux/puissance4')} accessibilityLabel="Puissance 4">
-        <View style={styles.head}>
-          <Image source={LOGOS.puissance4} style={styles.logo} />
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Text style={styles.name}>Puissance 4</Text>
-              {p4Todo > 0 && <Badge label={String(p4Todo)} color={c.coral} textColor="#fff" />}
+      {/* Jeux à deux : Elo */}
+      {DUELS.map((d) => {
+        const todo = aFaire(parties[d.jeu], me).length;
+        const myElo = ranks?.elo[d.jeu].find((e) => e.user_id === me)?.elo;
+        const open = () => router.push(d.route);
+        return (
+          <Card key={d.jeu} style={styles.card} onPress={open} accessibilityLabel={d.nom}>
+            <View style={styles.head}>
+              <Image source={LOGOS[d.jeu]} style={styles.logo} />
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Text style={styles.name}>{d.nom}</Text>
+                  {todo > 0 && <Badge label={String(todo)} color={c.coral} textColor="#fff" />}
+                </View>
+                <Text style={styles.pitch}>{d.pitch}</Text>
+              </View>
             </View>
-            <Text style={styles.pitch}>Défie un membre en direct. Chaque partie fait bouger ton Elo.</Text>
-          </View>
-        </View>
-        <View style={styles.foot}>
-          <Text style={styles.mine}>{myElo ? `Ton Elo : ${myElo}` : `Elo de départ : ${ELO_DEPART}`}</Text>
-          <Button label={p4Todo > 0 ? 'À toi' : 'Jouer'} icon="users" onPress={() => router.push('/minijeux/puissance4')} height={44} style={styles.play} />
-        </View>
-      </Card>
+            <View style={styles.foot}>
+              <Text style={styles.mine}>{myElo ? `Ton Elo : ${myElo}` : `Elo de départ : ${ELO_DEPART}`}</Text>
+              <Button label={todo > 0 ? 'À toi' : 'Jouer'} icon="users" onPress={open} height={44} style={styles.play} />
+            </View>
+          </Card>
+        );
+      })}
 
       {JEUX.map((j) => {
         const lignes = ranks?.scores[j.id] ?? [];

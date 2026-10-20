@@ -11,8 +11,12 @@ import { usePullRefresh, useRefreshOnFocus } from '@/lib/useRefresh';
 const c = theme.colors;
 const f = theme.fonts;
 
-// Les jeux dans l'ordre de l'onglet, avec Puissance 4 en tête
-const COLONNES = [{ id: 'puissance4' as const, nom: 'Puissance 4', color: '#7B6CF0' }, ...JEUX.map((j) => ({ id: j.id, nom: j.nom, color: j.color }))];
+// Les jeux dans l'ordre de l'onglet, les jeux à deux en tête
+const COLONNES = [
+  { id: 'echecs' as const, nom: 'Échecs', color: '#4ECDC4' },
+  { id: 'puissance4' as const, nom: 'Puissance 4', color: '#7B6CF0' },
+  ...JEUX.map((j) => ({ id: j.id, nom: j.nom, color: j.color })),
+];
 
 /** Classement général : chaque jeu rapporte des points selon la place (10, 8, 6, 5, 4, 3, 2, 1). */
 export default function ClassementGeneral() {
@@ -53,8 +57,8 @@ export default function ClassementGeneral() {
 
       <Card style={styles.rules}>
         <Text style={styles.rulesText}>
-          Sur chaque jeu, ta place rapporte des points : {POINTS.slice(0, 4).join(', ')}… jusqu’à 1 point pour le 8e. Pour Puissance 4,
-          c’est la place au classement Elo.
+          Sur chaque jeu, ta place rapporte des points : {POINTS.slice(0, 4).join(', ')}… jusqu’à 1 point pour le 8e. Pour les échecs et
+          Puissance 4, c’est la place au classement Elo.
         </Text>
       </Card>
 

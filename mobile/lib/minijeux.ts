@@ -1,7 +1,8 @@
+import type { DuelJeu } from '@/lib/duel';
 import { sb, type ProfileMini } from '@/lib/supabase';
 
 // Mini-jeux : chacun garde son meilleur score par jeu, le classement compare les records.
-// Puissance 4 se joue à deux et se classe à l'Elo. Le classement général additionne des points
+// Puissance 4 et les échecs se jouent à deux et se classent à l'Elo. Le classement général additionne des points
 // de place sur tous les jeux.
 // Tables : minijeux_scores, vue minijeux_records, minijeux_elo (supabase/13 et 14).
 
@@ -64,13 +65,14 @@ export const JEUX: JeuMeta[] = [
 export const jeuMeta = (id: string) => JEUX.find((j) => j.id === id);
 
 // Logos dessinés par gpt-image-2.5 (scripts/minijeux_logos.py : direction artistique et prompts)
-export const LOGOS: Record<JeuId | 'puissance4' | 'classement', number> = {
+export const LOGOS: Record<JeuId | DuelJeu | 'classement', number> = {
   stack: require('@/assets/minijeux/logos/stack.webp'),
   flappy: require('@/assets/minijeux/logos/flappy.webp'),
   basket: require('@/assets/minijeux/logos/basket.webp'),
   stop10: require('@/assets/minijeux/logos/stop10.webp'),
   reflexes: require('@/assets/minijeux/logos/reflexes.webp'),
   puissance4: require('@/assets/minijeux/logos/puissance4.webp'),
+  echecs: require('@/assets/minijeux/logos/echecs.webp'),
   classement: require('@/assets/minijeux/logos/classement.webp'),
 };
 
@@ -138,7 +140,7 @@ export type EloLigne = {
   profile?: ProfileMini;
 };
 
-export type Classements = { scores: Record<JeuId, Ligne[]>; p4: EloLigne[] };
+export type Classements = { scores: Record<JeuId, Ligne[]>; elo: Record<DuelJeu, EloLigne[]> };
 
 export const defaites = (e: EloLigne) => e.parties - e.victoires - e.nuls;
 
@@ -150,8 +152,8 @@ export async function fetchProfiles(ids: string[]): Promise<Record<string, Profi
 }
 
 /** Elo de quelques joueurs (ceux qui n'ont jamais joué n'ont pas de ligne) */
-export async function fetchElo(ids: string[]): Promise<Record<string, number>> {
-  const { data } = await sb.from('minijeux_elo').select('user_id,elo').eq('jeu', 'puissance4').in('user_id', ids);
+export async function fetchElo(jeu: DuelJeu, ids: string[]): Promise<Record<string, number>> {
+  const { data } = await sb.from('minijeux_elo').select('user_id,elo').eq('jeu', jeu).in('user_id', ids);
   return Object.fromEntries(((data ?? []) as { user_id: string; elo: number }[]).map((e) => [e.user_id, e.elo]));
 }
 
@@ -162,7 +164,7 @@ export const invalidateClassements = () => {
   cache = null;
 };
 
-/** Records de tous les jeux et Elo de Puissance 4, classés du meilleur au moins bon */
+/** Records de tous les jeux et Elo des jeux à deux, classés du meilleur au moins bon */
 export function fetchClassements(): Promise<Classements> {
   if (cache && Date.now() - cache.at < 20_000) return cache.data;
   const data = loadClassements();
@@ -174,11 +176,11 @@ export function fetchClassements(): Promise<Classements> {
 async function loadClassements(): Promise<Classements> {
   const [rec, elo] = await Promise.all([
     sb.from('minijeux_records').select('jeu,user_id,best,parties,last_played'),
-    sb.from('minijeux_elo').select('user_id,elo,parties,victoires,nuls,updated_at').eq('jeu', 'puissance4'),
+    sb.from('minijeux_elo').select('jeu,user_id,elo,parties,victoires,nuls,updated_at'),
   ]);
   if (rec.error) throw rec.error;
   const rows = (rec.data ?? []) as Record_[];
-  const elos = ((elo.data ?? []) as EloLigne[]).filter((e) => e.parties > 0);
+  const elos = ((elo.data ?? []) as (EloLigne & { jeu: DuelJeu })[]).filter((e) => e.parties > 0);
   const byId = await fetchProfiles([...new Set([...rows.map((r) => r.user_id), ...elos.map((e) => e.user_id)])]);
   const scores = Object.fromEntries(JEUX.map((j) => [j.id, [] as Ligne[]])) as Record<JeuId, Ligne[]>;
   for (const r of rows) scores[r.jeu]?.push({ ...r, profile: byId[r.user_id] });
@@ -188,8 +190,9 @@ async function loadClassements(): Promise<Classements> {
       a.best === b.best ? a.last_played.localeCompare(b.last_played) : j.lowerIsBetter ? a.best - b.best : b.best - a.best,
     );
   }
-  const p4 = elos.map((e) => ({ ...e, profile: byId[e.user_id] })).sort((a, b) => b.elo - a.elo);
-  return { scores, p4 };
+  const eloDe = (jeu: DuelJeu) =>
+    elos.filter((e) => e.jeu === jeu).map((e) => ({ ...e, profile: byId[e.user_id] })).sort((a, b) => b.elo - a.elo);
+  return { scores, elo: { puissance4: eloDe('puissance4'), echecs: eloDe('echecs') } };
 }
 
 // ─── Classement général : des points de place sur chaque jeu, comme en Formule 1 ───
@@ -203,12 +206,12 @@ export type General = {
   /** Nombre de jeux où il est premier */
   titres: number;
   /** Place par jeu (1 = premier), pour le détail */
-  places: Partial<Record<JeuId | 'puissance4', number>>;
+  places: Partial<Record<JeuId | DuelJeu, number>>;
 };
 
 export function classementGeneral(c: Classements): General[] {
   const out: Record<string, General> = {};
-  const add = (jeu: JeuId | 'puissance4', ids: { user_id: string; profile?: ProfileMini }[]) => {
+  const add = (jeu: JeuId | DuelJeu, ids: { user_id: string; profile?: ProfileMini }[]) => {
     ids.forEach((l, i) => {
       const g = (out[l.user_id] ??= { user_id: l.user_id, profile: l.profile, points: 0, titres: 0, places: {} });
       g.points += POINTS[i] ?? 0;
@@ -217,7 +220,8 @@ export function classementGeneral(c: Classements): General[] {
     });
   };
   for (const j of JEUX) add(j.id, c.scores[j.id]);
-  add('puissance4', c.p4);
+  add('puissance4', c.elo.puissance4);
+  add('echecs', c.elo.echecs);
   return Object.values(out).sort((a, b) => b.points - a.points || b.titres - a.titres);
 }
 

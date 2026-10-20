@@ -148,6 +148,8 @@ export default function RootLayout() {
         <Stack.Screen name="minijeux/[jeu]" options={{ title: 'Mini-jeux', headerShown: false, gestureEnabled: false }} />
         <Stack.Screen name="minijeux/puissance4" options={{ title: 'Puissance 4', headerShown: false }} />
         <Stack.Screen name="minijeux/partie/[id]" options={{ title: 'Partie', headerShown: false }} />
+        <Stack.Screen name="minijeux/echecs" options={{ title: 'Échecs', headerShown: false }} />
+        <Stack.Screen name="minijeux/echiquier/[id]" options={{ title: 'Partie d’échecs', headerShown: false }} />
         <Stack.Screen name="minijeux/classement" options={{ title: 'Classement général', headerShown: false }} />
       </Stack>
       <StatusBar style="light" />

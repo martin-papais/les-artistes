@@ -45,6 +45,9 @@ LOGOS = {
     'with round coral (#FF6B6B) and yellow (#FFD93D) discs in the holes forming a diagonal line, '
     'one yellow disc dropping in from the top with a small motion trail. '
     'Signature color: indigo with coral and yellow accents.',
+    'echecs': 'Subject: a chunky glossy white chess king (ivory #F4EEFF) standing tall next to a smaller black knight '
+    '(deep plum #2A1F45 with violet rim light), both on a tilted corner of a checkerboard in teal (#4ECDC4) and dark purple squares. '
+    'Signature color: teal with ivory highlights.',
     'classement': 'Subject: a shiny golden trophy cup with two handles on a small dark pedestal, framed by a laurel '
     'wreath, with a few sparkles around it. Signature color: gold (#FFD93D) with warm highlights.',
 }
