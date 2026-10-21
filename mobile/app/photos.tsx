@@ -21,6 +21,7 @@ import { PhotoViewer } from '@/components/plus/PhotoViewer';
 import { Button, Fab, Icon, ScreenHeader } from '@/components/ui/kit';
 import { localDateString, sb, type PhotoRow, sessionUser } from '@/lib/supabase';
 import { getBlocked } from '@/lib/moderation';
+import { alerteChargement } from '@/lib/serveur';
 import { theme } from '@/lib/theme';
 import { useRefreshOnFocus } from '@/lib/useRefresh';
 
@@ -89,7 +90,7 @@ export default function PhotosScreen() {
     ]);
     if (error) {
       setLoading(false);
-      Alert.alert('Chargement impossible', 'Vérifie ta connexion puis tire vers le bas pour réessayer.');
+      alerteChargement();
       return;
     }
     // Pas de lecteur vidéo dans l'appli : on n'affiche que les photos (vidéos et fichiers restent sur le site)

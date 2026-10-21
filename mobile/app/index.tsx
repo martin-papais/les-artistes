@@ -1,8 +1,10 @@
+import { isAuthRetryableFetchError } from '@supabase/supabase-js';
 import * as Notifications from 'expo-notifications';
 import { Redirect, useRouter, type Href } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Platform, View } from 'react-native';
 
+import { Button, EmptyState } from '@/components/ui/kit';
 import { takeNotificationRoute } from '@/lib/notifications';
 import { sb } from '@/lib/supabase';
 import { theme } from '@/lib/theme';
@@ -12,9 +14,17 @@ export default function Index() {
   const [ready, setReady] = useState(false);
   const [hasSession, setHasSession] = useState(false);
   const [deeplink, setDeeplink] = useState<string | null>(null);
+  const [injoignable, setInjoignable] = useState(false);
+  const [essai, setEssai] = useState(0);
 
   useEffect(() => {
-    sb.auth.getSession().then(({ data }) => {
+    sb.auth.getSession().then(({ data, error }) => {
+      // Jeton à renouveler et serveur injoignable : la session reste sur le téléphone,
+      // ce n'est pas une déconnexion (sinon on renverrait vers l'écran de connexion)
+      if (!data.session && isAuthRetryableFetchError(error)) {
+        setInjoignable(true);
+        return;
+      }
       setHasSession(!!data.session);
       // App lancée par un tap sur une notification : on ouvre directement la bonne page
       // Pas de notifications push dans un navigateur (aperçu web) : la méthode y lève une erreur
@@ -23,7 +33,7 @@ export default function Index() {
       }
       setReady(true);
     });
-  }, []);
+  }, [essai]);
 
   // Photos, Notes, Boutique… ne sont pas des onglets : on pose les onglets dessous,
   // sinon le retour (bouton Android, geste iOS) n'a rien sur quoi revenir
@@ -33,6 +43,28 @@ export default function Index() {
     router.replace('/(tabs)/events');
     router.push(deeplink as Href);
   }, [ready, stackDeeplink, deeplink, router]);
+
+  if (injoignable) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', backgroundColor: theme.colors.deep }}>
+        <EmptyState
+          icon="wifi-off"
+          title="Serveur injoignable"
+          text="Vérifie ta connexion, puis réessaie."
+          action={
+            <Button
+              label="Réessayer"
+              height={48}
+              onPress={() => {
+                setInjoignable(false);
+                setEssai((n) => n + 1);
+              }}
+            />
+          }
+        />
+      </View>
+    );
+  }
 
   if (!ready || stackDeeplink) {
     return (

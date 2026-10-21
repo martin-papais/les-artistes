@@ -22,6 +22,7 @@ import {
   type ProfileMini, sessionUser } from '@/lib/supabase';
 import { getBlocked, ModerationButton } from '@/lib/moderation';
 import { KeyboardAware } from '@/lib/keyboard';
+import { alerteChargement } from '@/lib/serveur';
 import { theme } from '@/lib/theme';
 
 const c = theme.colors;
@@ -54,7 +55,7 @@ export default function NotesScreen() {
     ]);
     if (loadError) {
       setLoading(false);
-      Alert.alert('Chargement impossible', 'Vérifie ta connexion puis tire vers le bas pour réessayer.');
+      alerteChargement();
       return;
     }
     const rows = all ? all.filter((n) => !blocked.has(n.user_id)) : null;

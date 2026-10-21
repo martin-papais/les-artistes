@@ -2,6 +2,8 @@ import 'react-native-url-polyfill/auto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
 
+import { fetchAvecDelai } from '@/lib/serveur';
+
 const SUPABASE_URL = 'https://ldchxxkmvepvbvhdokot.supabase.co';
 const SUPABASE_ANON =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkY2h4eGttdmVwdmJ2aGRva290Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0NDQwNTMsImV4cCI6MjA4OTAyMDA1M30.HJw5-GsHCildEQ28HAB30_YKdiZOdeRJIml5wgLvHos';
@@ -13,6 +15,7 @@ export const sb = createClient(SUPABASE_URL, SUPABASE_ANON, {
     persistSession: true,
     detectSessionInUrl: false,
   },
+  global: { fetch: fetchAvecDelai },
 });
 
 export type Profile = {

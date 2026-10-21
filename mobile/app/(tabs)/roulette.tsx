@@ -3,7 +3,6 @@ import * as Haptics from 'expo-haptics';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Modal,
   Platform,
   Pressable,
@@ -30,6 +29,7 @@ import { Button, Chip, IconButton, Pastille, ScreenHeader, SectionTitle, Sheet }
 import { KeyboardAware } from '@/lib/keyboard';
 import { getBlocked } from '@/lib/moderation';
 import { sb, sessionUser } from '@/lib/supabase';
+import { alerteChargement } from '@/lib/serveur';
 import { theme } from '@/lib/theme';
 import { useRefreshOnFocus } from '@/lib/useRefresh';
 
@@ -117,10 +117,7 @@ export default function RouletteScreen() {
     ]);
     if (profRes.error || alcRes.error || socRes.error) {
       setLoading(false);
-      Alert.alert(
-        'Chargement impossible',
-        'Vérifie ta connexion puis tire vers le bas pour réessayer.',
-      );
+      alerteChargement();
       return;
     }
     const byLabel = (a: Entry, b: Entry) => a.label.localeCompare(b.label, 'fr');

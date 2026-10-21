@@ -21,6 +21,7 @@ import {
 } from '@/components/events/shared';
 import { EmptyState, Fab, Pastille, ScreenHeader, SectionTitle } from '@/components/ui/kit';
 import { sb, sessionUser, type EventRow, type EventVote, type ProfileMini } from '@/lib/supabase';
+import { alerteChargement } from '@/lib/serveur';
 import { theme } from '@/lib/theme';
 import { useRefreshOnFocus } from '@/lib/useRefresh';
 
@@ -96,7 +97,7 @@ export default function EventsScreen() {
     if (eventsRes.error || allProfilesRes.error) {
       // Sans ça, une erreur réseau ressemble à « aucun événement »
       setLoading(false);
-      Alert.alert('Chargement impossible', 'Vérifie ta connexion puis tire vers le bas pour réessayer.');
+      alerteChargement();
       return;
     }
     const rows = (eventsRes.data ?? []) as EventRow[];

@@ -18,6 +18,7 @@ import { useEffect, useRef } from 'react';
 import { AppState, Pressable } from 'react-native';
 import 'react-native-reanimated';
 
+import { ServeurSature } from '@/components/ServeurSature';
 import { loadAvatars, resetAvatars } from '@/lib/avatars';
 import { resetBlocked } from '@/lib/moderation';
 import { registerPushToken, takeNotificationRoute } from '@/lib/notifications';
@@ -158,6 +159,7 @@ export default function RootLayout() {
         <Stack.Screen name="minijeux/echiquier/[id]" options={{ title: 'Partie d’échecs', headerShown: false }} />
         <Stack.Screen name="minijeux/classement" options={{ title: 'Classement général', headerShown: false }} />
       </Stack>
+      <ServeurSature />
       <StatusBar style="light" />
     </ThemeProvider>
   );

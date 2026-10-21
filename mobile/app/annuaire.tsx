@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ContactCard, displayName, type ContactData } from '@/components/plus/ContactCard';
 import { Button, EmptyState, Field, FieldLabel, Icon, IconButton, Pastille, ScreenHeader, Sheet } from '@/components/ui/kit';
 import { parseDobInput, sb, type AnnuaireExtra, type Profile, sessionUser } from '@/lib/supabase';
+import { alerteChargement } from '@/lib/serveur';
 import { theme } from '@/lib/theme';
 
 const c = theme.colors;
@@ -60,7 +61,7 @@ export default function AnnuaireScreen() {
     if (profRes.error) {
       // Sans ça, une erreur réseau ressemble à un annuaire vide
       setLoading(false);
-      Alert.alert('Chargement impossible', 'Vérifie ta connexion puis tire vers le bas pour réessayer.');
+      alerteChargement();
       return;
     }
 
