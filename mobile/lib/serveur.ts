@@ -8,6 +8,9 @@ import { Alert, DevSettings } from 'react-native';
 // si Internet répond ailleurs, c'est la base : écran « Serveur plein » (components/ServeurSature).
 
 const DELAI_MS = 15_000;
+// Connexion et renouvellement de session : plus d'écritures côté serveur, et un abandon
+// trop tôt empêcherait de se connecter quand la base est lente sans être bloquée (22/10/2026)
+const DELAI_AUTH_MS = 45_000;
 // Page du site du groupe (GitHub Pages) : elle répond = le téléphone a Internet
 const TEMOIN = 'https://les--artistes.fr/index.html';
 
@@ -42,10 +45,13 @@ export async function fetchAvecDelai(input: RequestInfo | URL, init?: RequestIni
   if (appelant?.aborted) ctrl.abort();
   appelant?.addEventListener('abort', () => ctrl.abort());
   let expire = false;
-  const t = setTimeout(() => {
-    expire = true;
-    ctrl.abort();
-  }, DELAI_MS);
+  const t = setTimeout(
+    () => {
+      expire = true;
+      ctrl.abort();
+    },
+    url.includes('/auth/v1/') ? DELAI_AUTH_MS : DELAI_MS,
+  );
   try {
     return await fetch(input, { ...init, signal: ctrl.signal });
   } catch (e) {

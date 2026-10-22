@@ -46,7 +46,8 @@ function subscribe(l: () => void) {
 /** Recharge les avatars de tout le groupe. Sans les colonnes (SQL pas appliqué) : rien. */
 export function loadAvatars(): Promise<void> {
   if (loading) return loading;
-  if (loaded && Date.now() - loadedAt < FRAIS_MS) return Promise.resolve();
+  // Réponse vide comprise (écran de connexion, sans session) : sinon chaque abonné relance
+  if (loadedAt && Date.now() - loadedAt < FRAIS_MS) return Promise.resolve();
   loading = (async () => {
     try {
       const { data, error } = await sb.from('profiles').select('id, avatar_url, avatar_color');
@@ -58,10 +59,8 @@ export function loadAvatars(): Promise<void> {
       }
       avatars = next;
       loaded = data.length > 0;
-      if (loaded) {
-        loadedAt = Date.now();
-        ecrireCache('avatars', next);
-      }
+      loadedAt = Date.now();
+      if (loaded) ecrireCache('avatars', next);
       emit();
     } finally {
       loading = null;
