@@ -20,11 +20,16 @@ export async function lireCache<T>(cle: string): Promise<T | null> {
   }
 }
 
-export function ecrireCache(cle: string, valeur: unknown) {
+// Monte à chaque vidage : une réponse partie avant une déconnexion n'est plus gardée
+let generation = 0;
+
+export function ecrireCache(cle: string, valeur: unknown, gen = generation) {
+  if (gen !== generation) return;
   AsyncStorage.setItem(`${PREFIXE}${VERSION}:${cle}`, JSON.stringify(valeur)).catch(() => {});
 }
 
 export async function viderCache() {
+  generation++;
   try {
     const cles = (await AsyncStorage.getAllKeys()).filter((k) => k.startsWith(PREFIXE));
     if (cles.length) await AsyncStorage.multiRemove(cles);
@@ -42,6 +47,8 @@ export function usePageCache<T>(cle: string, montrer: (d: T) => void) {
   const affiche = useRef(false);
   const montrerRef = useRef(montrer);
   montrerRef.current = montrer;
+  // Compte au moment de l'ouverture de la page : ce qu'elle reçoit ensuite lui appartient
+  const gen = useRef(generation);
 
   useEffect(() => {
     lireCache<T>(cle).then((d) => {
@@ -56,7 +63,7 @@ export function usePageCache<T>(cle: string, montrer: (d: T) => void) {
       frais.current = true;
       affiche.current = true;
       montrerRef.current(d);
-      ecrireCache(cle, aGarder);
+      ecrireCache(cle, aGarder, gen.current);
     },
     [cle],
   );

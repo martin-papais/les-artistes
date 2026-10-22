@@ -8,7 +8,8 @@ import { sb } from './supabase';
 
 // Dernier token envoyé au serveur (membre + token, date)
 const ENREGISTRE = 'push:enregistre';
-const SEMAINE_MS = 7 * 24 * 3600_000;
+// Une fois par jour au plus : une ligne supprimée côté serveur revient vite
+const JOUR_MS = 24 * 3600_000;
 
 // Affichage des notifs même quand l'app est en foreground (sinon iOS les avale).
 // Écran ouvert en ce moment (une partie) : ses notifications ne s'affichent pas par-dessus
@@ -88,11 +89,11 @@ export async function registerPushToken(userId: string): Promise<string | null> 
   }
 
   // Le jeton change rarement : on ne le renvoie au serveur que s'il a changé, ou une fois
-  // par semaine (une requête de moins à chaque lancement, la base gratuite est lente)
+  // par jour (une requête de moins à chaque lancement, la base gratuite est lente)
   const cle = `${userId}:${token}`;
   try {
     const prev = JSON.parse((await AsyncStorage.getItem(ENREGISTRE)) ?? 'null') as { cle: string; at: number } | null;
-    if (prev?.cle === cle && Date.now() - prev.at < SEMAINE_MS) return token;
+    if (prev?.cle === cle && Date.now() - prev.at < JOUR_MS) return token;
   } catch {}
 
   // Upsert (unique sur user_id+token)
