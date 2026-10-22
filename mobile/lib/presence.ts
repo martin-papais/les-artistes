@@ -1,8 +1,11 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { useSyncExternalStore } from 'react';
 import { AppState } from 'react-native';
 
 import { sb } from '@/lib/supabase';
+
+const VU_CLE = 'presence:vu';
 
 // Qui a l'appli ouverte en ce moment : présence du temps réel de Supabase, sans table.
 // Chacun annonce son état tant que l'appli est au premier plan ; il disparaît de la liste
@@ -32,10 +35,19 @@ function read(ch: RealtimeChannel) {
   emit();
 }
 
+// Dernière écriture gardée d'un lancement à l'autre : rouvrir l'appli juste après l'avoir
+// quittée ne réécrit pas
+AsyncStorage.getItem(VU_CLE)
+  .then((s) => {
+    if (s) lastSeenWrite = Math.max(lastSeenWrite, Number(s) || 0);
+  })
+  .catch(() => {});
+
 /** Date de dernière présence ; pas plus d'une écriture toutes les 5 minutes, sauf en partant */
 function touchVu(force = false) {
   if (!me || (!force && Date.now() - lastSeenWrite < 5 * 60_000)) return;
   lastSeenWrite = Date.now();
+  AsyncStorage.setItem(VU_CLE, String(lastSeenWrite)).catch(() => {});
   sb.from('profiles')
     .update({ vu_le: new Date().toISOString() })
     .eq('id', me)
@@ -62,7 +74,8 @@ function join() {
       emit();
     }
   });
-  touchVu();
+  // Après le chargement de la page ouverte : la base gratuite traite les requêtes presque une à une
+  setTimeout(() => touchVu(), 5000);
 }
 
 function leave() {

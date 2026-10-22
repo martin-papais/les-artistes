@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { ecrireCache, lireCache } from '@/lib/cache';
 import type { DuelJeu } from '@/lib/duel';
 import { sb, sessionUser, type ProfileMini } from '@/lib/supabase';
 
@@ -185,12 +186,15 @@ export const invalidateClassements = () => {
   cache = null;
 };
 
+/** Derniers classements gardés sur le téléphone : affichés en attendant ceux du serveur */
+export const classementsGardes = () => lireCache<Classements>('classements');
+
 /** Records de tous les jeux et Elo des jeux à deux, classés du meilleur au moins bon */
 export function fetchClassements(): Promise<Classements> {
   if (cache && Date.now() - cache.at < 20_000) return cache.data;
   const data = loadClassements();
   cache = { at: Date.now(), data };
-  data.catch(invalidateClassements);
+  data.then((d) => ecrireCache('classements', d), invalidateClassements);
   return data;
 }
 
@@ -202,15 +206,19 @@ function classer<T extends { rang?: number }>(lignes: T[], egal: (a: T, b: T) =>
 }
 
 async function loadClassements(): Promise<Classements> {
-  const [rec, elo] = await Promise.all([
+  const [rec, elo, prof] = await Promise.all([
     sb.from('minijeux_records').select('jeu,user_id,best,parties,last_played,record_at'),
     sb.from('minijeux_elo').select('jeu,user_id,elo,parties,victoires,nuls,updated_at'),
+    // Tous les membres (une trentaine) dans le même aller-retour, plutôt que les seuls classés après
+    sb.from('profiles').select('id,prenom,nom,pseudo'),
   ]);
   if (rec.error) throw rec.error;
   if (elo.error) throw elo.error;
   const rows = (rec.data ?? []) as Record_[];
   const elos = ((elo.data ?? []) as (EloLigne & { jeu: DuelJeu })[]).filter((e) => e.parties > 0);
-  const byId = await fetchProfiles([...new Set([...rows.map((r) => r.user_id), ...elos.map((e) => e.user_id)])]);
+  const byId: Record<string, ProfileMini> = Object.fromEntries(
+    ((prof.data ?? []) as ProfileMini[]).map((p) => [p.id, p]),
+  );
   const scores = Object.fromEntries(JEUX.map((j) => [j.id, [] as Ligne[]])) as Record<JeuId, Ligne[]>;
   for (const r of rows) scores[r.jeu]?.push({ ...r, profile: byId[r.user_id], rang: 0 });
   for (const j of JEUX) {

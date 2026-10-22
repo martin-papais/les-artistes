@@ -22,6 +22,7 @@ import {
   PENDULE,
   seat,
 } from '@/lib/duel';
+import { usePageCache } from '@/lib/cache';
 import { defaites, displayName, type EloLigne, fetchClassements, invalidateClassements, LOGOS, plural } from '@/lib/minijeux';
 import { useEnLigne, vuIlYa } from '@/lib/presence';
 import { plain, sb, sessionUser, type ProfileMini } from '@/lib/supabase';
@@ -64,21 +65,27 @@ export function DuelLobby<P extends DuelPartie>({ jeu, titre, sub, api, route, f
   const [busy, setBusy] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
 
+  const montrer = useCallback((d: { me: string; parties: P[]; elo: EloLigne[]; members: Membre[] }) => {
+    setMe(d.me);
+    setParties(d.parties);
+    setElo(d.elo);
+    setMembers(d.members);
+  }, []);
+  const { garder } = usePageCache(`duel-${jeu}`, montrer);
+
   const load = useCallback(async () => {
     const user = await sessionUser();
     if (!user) return;
     setMe(user.id);
     try {
       const [ps, cl, all] = await Promise.all([api.fetchMesParties(user.id), fetchClassements(), fetchMembres()]);
-      setParties(ps);
-      setElo(cl.elo[jeu]);
-      setMembers(all);
+      garder({ me: user.id, parties: ps, elo: cl.elo[jeu], members: all });
       setFailed(false);
     } catch {
       // Hors ligne : on garde ce qui est affiché et on le dit
       setFailed(true);
     }
-  }, [api, jeu]);
+  }, [api, jeu, garder]);
 
   useRefreshOnFocus(load, 0);
   const { refreshing, onRefresh } = usePullRefresh(

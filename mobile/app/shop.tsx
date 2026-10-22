@@ -28,7 +28,7 @@ import {
   type SondageCandidat,
   type SondageVote, sessionUser } from '@/lib/supabase';
 import { KeyboardAware } from '@/lib/keyboard';
-import { alerteChargement } from '@/lib/serveur';
+import { usePageCache } from '@/lib/cache';
 import { theme } from '@/lib/theme';
 
 const c = theme.colors;
@@ -122,6 +122,14 @@ function Loading({ header }: { header: ReactNode }) {
 
 type ArticleCard = ShopArticle & { myOrders: ShopOrder[] };
 
+type SondageData = {
+  userId: string | null;
+  candidats: SondageCandidat[];
+  votes: SondageVote[];
+  deadline: string | null;
+  maxByCat: Record<string, number>;
+};
+
 function ArticlesView({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
@@ -138,9 +146,16 @@ function ArticlesView({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
     return () => clearInterval(t);
   }, []);
 
+  const montrer = useCallback((d: { userId: string | null; articles: ArticleCard[]; deadline: string | null }) => {
+    setUserId(d.userId);
+    setArticles(d.articles);
+    setDeadline(d.deadline ? new Date(d.deadline) : null);
+    setLoading(false);
+  }, []);
+  const { garder, echec } = usePageCache('boutique', montrer);
+
   const loadAll = useCallback(async () => {
     const user = await sessionUser();
-    setUserId(user?.id ?? null);
 
     const [artRes, ordRes, cfgRes] = await Promise.all([
       sb.from('shop_articles').select('*').order('created_at', { ascending: true }),
@@ -152,7 +167,7 @@ function ArticlesView({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
     if (artRes.error) {
       // Sans ça, une erreur réseau ressemble à une boutique vide
       setLoading(false);
-      alerteChargement();
+      echec();
       return;
     }
 
@@ -162,17 +177,16 @@ function ArticlesView({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
       list.push(o as ShopOrder);
     });
 
-    setArticles(
-      ((artRes.data ?? []) as ShopArticle[]).map((a) => ({
+    const cfg = cfgRes.data as ShopConfig | null;
+    garder({
+      userId: user?.id ?? null,
+      articles: ((artRes.data ?? []) as ShopArticle[]).map((a) => ({
         ...a,
         myOrders: ordersByArt[a.id] ?? [],
       })),
-    );
-
-    const cfg = cfgRes.data as ShopConfig | null;
-    setDeadline(cfg?.value ? new Date(cfg.value) : null);
-    setLoading(false);
-  }, []);
+      deadline: cfg?.value ?? null,
+    });
+  }, [garder, echec]);
 
   useEffect(() => {
     loadAll();
@@ -564,21 +578,32 @@ function SondageView({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
   const [refreshing, setRefreshing] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
 
+  const montrer = useCallback((d: SondageData) => {
+    setUserId(d.userId);
+    setCandidats(d.candidats);
+    setVotes(d.votes);
+    setDeadline(d.deadline ? new Date(d.deadline) : null);
+    setMaxByCat(d.maxByCat);
+    setLoading(false);
+  }, []);
+  const { garder, echec } = usePageCache('boutique-sondage', montrer);
+
   const loadAll = useCallback(async () => {
     const user = await sessionUser();
-    setUserId(user?.id ?? null);
 
     const [candRes, voteRes, cfgRes] = await Promise.all([
       sb.from('sondage_candidats').select('*').order('categorie').order('nom'),
       sb.from('sondage_votes').select('*'),
       sb.from('shop_config').select('*').in('key', ['sondage_deadline', 'sondage_votes_max_by_cat']),
     ]);
+    if (candRes.error || voteRes.error) {
+      setLoading(false);
+      echec();
+      return;
+    }
 
-    setCandidats((candRes.data ?? []) as SondageCandidat[]);
-    setVotes((voteRes.data ?? []) as SondageVote[]);
     const cfgs = (cfgRes.data ?? []) as ShopConfig[];
     const deadlineCfg = cfgs.find((x) => x.key === 'sondage_deadline');
-    setDeadline(deadlineCfg?.value ? new Date(deadlineCfg.value) : null);
     const maxCfg = cfgs.find((x) => x.key === 'sondage_votes_max_by_cat');
     let parsedMax: Record<string, number> = {};
     if (maxCfg?.value) {
@@ -587,9 +612,14 @@ function SondageView({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
         if (obj && typeof obj === 'object') parsedMax = obj;
       } catch {}
     }
-    setMaxByCat(parsedMax);
-    setLoading(false);
-  }, []);
+    garder({
+      userId: user?.id ?? null,
+      candidats: (candRes.data ?? []) as SondageCandidat[],
+      votes: (voteRes.data ?? []) as SondageVote[],
+      deadline: deadlineCfg?.value ?? null,
+      maxByCat: parsedMax,
+    });
+  }, [garder, echec]);
 
   useEffect(() => {
     loadAll();

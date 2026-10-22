@@ -18,6 +18,7 @@ import { AlcoolCard, CATEGORIES, SearchField, SocieteCardView, type SocieteCard 
 import { AlcoolDetail, SocieteDetail } from '@/components/jeux/JeuDetail';
 import { JeuForm } from '@/components/jeux/JeuForm';
 import { Chip, EmptyState, Pastille, ScreenHeader, Segmented } from '@/components/ui/kit';
+import { usePageCache } from '@/lib/cache';
 import {
   sb,
   type JeuAlcool,
@@ -30,6 +31,13 @@ import { useRefreshOnFocus } from '@/lib/useRefresh';
 const c = theme.colors;
 
 type Tab = 'alcool' | 'societe';
+
+type JeuxData = {
+  userId: string | null;
+  profiles: Record<string, ProfileMini>;
+  alcool: JeuAlcool[];
+  societe: SocieteCard[];
+};
 // Tris et filtre des jeux de société, comme sur le site
 type SocSort = 'recent' | 'note' | 'joueurs' | 'acheter';
 const SOC_SORTS: { key: SocSort; label: string }[] = [
@@ -62,57 +70,50 @@ export default function JeuxScreen() {
   const [socForm, setSocForm] = useState<'new' | JeuSociete | null>(null);
   const rating = useRef(false);
 
+  const montrer = useCallback((d: JeuxData) => {
+    setUserId(d.userId);
+    setMe(d.userId ? (d.profiles[d.userId] ?? null) : null);
+    setProfiles(d.profiles);
+    setAlcool(d.alcool);
+    setSociete(d.societe);
+    setLoading(false);
+  }, []);
+  const { garder, echec } = usePageCache('jeux', montrer);
+
   const loadAll = useCallback(async () => {
     const user = await sessionUser();
-    setUserId(user?.id ?? null);
 
-    const [alcRes, socRes, meRes] = await Promise.all([
+    // Notes des jeux et membres dans le même aller-retour que les jeux
+    const [alcRes, socRes, profRes] = await Promise.all([
       sb.from('jeux_alcool').select('*').order('created_at', { ascending: false }),
-      sb.from('jeux_societe').select('*').order('created_at', { ascending: false }),
-      // Pastille de l'en-tête
-      user
-        ? sb.from('profiles').select('id,prenom,nom,pseudo').eq('id', user.id).maybeSingle()
-        : Promise.resolve({ data: null }),
+      sb.from('jeux_societe').select('*,jeux_societe_votes(*)').order('created_at', { ascending: false }),
+      sb.from('profiles').select('id,prenom,nom,pseudo'),
     ]);
-    setMe((meRes.data as ProfileMini | null) ?? null);
-
-    const allUids = new Set<string>();
-    (alcRes.data ?? []).forEach((j) => j.created_by && allUids.add(j.created_by));
-    (socRes.data ?? []).forEach((j) => j.created_by && allUids.add(j.created_by));
-
-    const socIds = (socRes.data ?? []).map((j) => j.id);
-    const [profRes, voteRes] = await Promise.all([
-      allUids.size
-        ? sb.from('profiles').select('id,prenom,nom,pseudo').in('id', Array.from(allUids))
-        : Promise.resolve({ data: [] as ProfileMini[] }),
-      socIds.length
-        ? sb.from('jeux_societe_votes').select('*').in('jeu_id', socIds)
-        : Promise.resolve({ data: [] as JeuSocieteVote[] }),
-    ]);
+    if (alcRes.error || socRes.error) {
+      setLoading(false);
+      echec();
+      return;
+    }
 
     const pmap: Record<string, ProfileMini> = {};
     (profRes.data ?? []).forEach((p) => {
       pmap[p.id] = p as ProfileMini;
     });
-    setProfiles(pmap);
 
-    const votesByJeu: Record<string, JeuSocieteVote[]> = {};
-    (voteRes.data ?? []).forEach((v) => {
-      const list = votesByJeu[(v as JeuSocieteVote).jeu_id] ?? (votesByJeu[(v as JeuSocieteVote).jeu_id] = []);
-      list.push(v as JeuSocieteVote);
+    garder({
+      userId: user?.id ?? null,
+      profiles: pmap,
+      alcool: (alcRes.data ?? []) as JeuAlcool[],
+      societe: ((socRes.data ?? []) as (JeuSociete & { jeux_societe_votes: JeuSocieteVote[] })[]).map(
+        ({ jeux_societe_votes, ...j }) => {
+          const votes = jeux_societe_votes ?? [];
+          const mine = user ? votes.find((v) => v.user_id === user.id) : undefined;
+          const avg = votes.length ? votes.reduce((s, v) => s + v.note, 0) / votes.length : 0;
+          return { ...j, votes, myVote: mine ?? null, avg };
+        },
+      ),
     });
-
-    setAlcool((alcRes.data ?? []) as JeuAlcool[]);
-    setSociete(
-      ((socRes.data ?? []) as JeuSociete[]).map((j) => {
-        const votes = votesByJeu[j.id] ?? [];
-        const mine = user ? votes.find((v) => v.user_id === user!.id) : undefined;
-        const avg = votes.length ? votes.reduce((s, v) => s + v.note, 0) / votes.length : 0;
-        return { ...j, votes, myVote: mine ?? null, avg };
-      }),
-    );
-    setLoading(false);
-  }, []);
+  }, [garder, echec]);
 
   useRefreshOnFocus(loadAll);
 

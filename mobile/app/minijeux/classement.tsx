@@ -1,10 +1,10 @@
 import { Image } from 'expo-image';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ClassementErreur } from '@/components/minijeux/Classement';
 import { Card, Pastille, ScreenHeader } from '@/components/ui/kit';
-import { classementGeneral, displayName, fetchClassements, type General, invalidateClassements, JEUX, LOGOS, MEDALS, POINTS } from '@/lib/minijeux';
+import { classementGeneral, classementsGardes, displayName, fetchClassements, type General, invalidateClassements, JEUX, LOGOS, MEDALS, POINTS } from '@/lib/minijeux';
 import { sessionUser } from '@/lib/supabase';
 import { theme } from '@/lib/theme';
 import { usePullRefresh, useRefreshOnFocus } from '@/lib/useRefresh';
@@ -24,6 +24,13 @@ export default function ClassementGeneral() {
   const [me, setMe] = useState<string | null>(null);
   const [rows, setRows] = useState<General[] | null>(null);
   const [erreur, setErreur] = useState(false);
+
+  // Derniers classements gardés sur le téléphone, en attendant ceux du serveur
+  useEffect(() => {
+    classementsGardes().then((cl) => {
+      if (cl) setRows((r) => r ?? classementGeneral(cl));
+    });
+  }, []);
 
   const load = useCallback(async () => {
     const user = await sessionUser();

@@ -21,6 +21,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { BottomFade, commentTime, dayLabel, MoreButton } from '@/components/news/parts';
 import { EmptyState, IconButton, Pastille, ScreenHeader, SectionTitle } from '@/components/ui/kit';
+import { usePageCache } from '@/lib/cache';
 import {
   sb,
   type NewsComment,
@@ -40,6 +41,14 @@ type NewsLite = Omit<NewsRow, 'contenu'> & {
   likeCount: number;
   iLiked: boolean;
   commentCount: number;
+};
+
+type NewsData = {
+  userId: string | null;
+  items: NewsLite[];
+  hasMore: boolean;
+  consumed: number;
+  profiles: Record<string, ProfileMini>;
 };
 
 // Images insérées dans le texte depuis le site (bouton « image » de l'éditeur)
@@ -98,104 +107,81 @@ export default function NewsScreen() {
   const [openId, setOpenId] = useState<string | null>(null);
   const lastOpen = useRef<NewsLite | null>(null);
   const liking = useRef(new Set<string>());
-  const meLoaded = useRef(false);
   // Lignes déjà lues côté serveur, news masquées comprises (items.length les ignore)
   const offset = useRef(0);
 
   const fetchPage = useCallback(
     async (offset: number, currentUserId: string | null) => {
-      const lightSelect = 'id,titre,tags,cover_url,created_by,created_at';
-      const [{ data: page }, blocked] = await Promise.all([
+      // J'aime, nombre de commentaires et membres dans le même aller-retour que les news
+      const lightSelect = 'id,titre,tags,cover_url,created_by,created_at,news_likes(news_id,user_id),news_comments(count)';
+      const [{ data: page }, blocked, profRes] = await Promise.all([
         sb
           .from('news')
           .select(lightSelect)
           .order('created_at', { ascending: false })
           .range(offset, offset + PAGE_SIZE - 1),
         getBlocked(),
+        sb.from('profiles').select('id,prenom,nom,pseudo'),
       ]);
-      if (!page || page.length === 0) {
-        return { items: [] as NewsLite[], hasMore: false, consumed: 0 };
-      }
-      const pageFull = page.length === PAGE_SIZE;
-      // Les news des membres bloqués sont masquées
-      const rows = page.filter((r: { created_by: string }) => !blocked.has(r.created_by));
-      if (rows.length === 0) {
-        return { items: [] as NewsLite[], hasMore: pageFull, consumed: page.length };
-      }
-
-      const ids = rows.map((r: { id: string }) => r.id);
-      const uids = Array.from(
-        new Set(rows.map((r: { created_by: string }) => r.created_by).filter(Boolean)),
-      );
-      const [profRes, likeRes, commentRes] = await Promise.all([
-        uids.length
-          ? sb.from('profiles').select('id,prenom,nom,pseudo').in('id', uids)
-          : Promise.resolve({ data: [] as ProfileMini[] }),
-        sb.from('news_likes').select('news_id,user_id').in('news_id', ids),
-        sb.from('news_comments').select('news_id').in('news_id', ids),
-      ]);
-
       const pmap: Record<string, ProfileMini> = {};
       (profRes.data ?? []).forEach((p) => {
         pmap[p.id] = p as ProfileMini;
       });
       setProfiles((prev) => ({ ...prev, ...pmap }));
+      // page null = erreur réseau
+      if (!page || page.length === 0) {
+        return { ok: !!page, items: [] as NewsLite[], hasMore: false, consumed: 0, profiles: pmap };
+      }
+      const pageFull = page.length === PAGE_SIZE;
+      // Les news des membres bloqués sont masquées
+      const rows = page.filter((r: { created_by: string }) => !blocked.has(r.created_by));
 
-      const likesByNews: Record<string, NewsLike[]> = {};
-      (likeRes.data ?? []).forEach((l) => {
-        const list = likesByNews[(l as NewsLike).news_id] ?? (likesByNews[(l as NewsLike).news_id] = []);
-        list.push(l as NewsLike);
-      });
-      const commentCountByNews: Record<string, number> = {};
-      (commentRes.data ?? []).forEach((c) => {
-        commentCountByNews[c.news_id] = (commentCountByNews[c.news_id] ?? 0) + 1;
-      });
-
-      const cards: NewsLite[] = rows.map((r) => {
-        const likes = likesByNews[(r as NewsRow).id] ?? [];
+      const cards: NewsLite[] = rows.map(({ news_likes, news_comments, ...r }) => {
+        const likes = (news_likes ?? []) as NewsLike[];
         const mine = currentUserId ? likes.find((l) => l.user_id === currentUserId) : undefined;
         return {
           ...(r as Omit<NewsRow, 'contenu'>),
           author: pmap[(r as NewsRow).created_by] ?? null,
           likeCount: likes.length,
           iLiked: !!mine,
-          commentCount: commentCountByNews[(r as NewsRow).id] ?? 0,
+          commentCount: (news_comments as { count: number }[] | null)?.[0]?.count ?? 0,
         };
       });
-      return { items: cards, hasMore: pageFull, consumed: page.length };
+      return { ok: true, items: cards, hasMore: pageFull, consumed: page.length, profiles: pmap };
     },
     [],
   );
 
+  const montrer = useCallback((d: NewsData) => {
+    setUserId(d.userId);
+    setProfiles((prev) => ({ ...prev, ...d.profiles }));
+    // Ma pastille dans l'en-tête
+    if (d.userId && d.profiles[d.userId]) setMe(d.profiles[d.userId]);
+    offset.current = d.consumed;
+    setItems(d.items);
+    setHasMore(d.hasMore);
+    setLoading(false);
+  }, []);
+  const { garder, echec } = usePageCache('news', montrer);
+
   const loadInitial = useCallback(async () => {
     const user = await sessionUser();
     const uid = user?.id ?? null;
-    setUserId(uid);
-    // Ma pastille dans l'en-tête : un seul chargement par session de l'écran
-    const mineRes =
-      uid && !meLoaded.current
-        ? sb.from('profiles').select('id,prenom,nom,pseudo').eq('id', uid).maybeSingle()
-        : null;
-    const [{ items, hasMore, consumed }, mine] = await Promise.all([fetchPage(0, uid), mineRes]);
-    if (mine?.data) {
-      meLoaded.current = true;
-      setMe(mine.data as ProfileMini);
+    const { ok, items, hasMore, consumed, profiles } = await fetchPage(0, uid);
+    if (!ok) {
+      setLoading(false);
+      echec();
+      return;
     }
-    offset.current = consumed;
-    setItems(items);
-    setHasMore(hasMore);
-    setLoading(false);
-  }, [fetchPage]);
+    garder({ userId: uid, items, hasMore, consumed, profiles });
+  }, [fetchPage, garder, echec]);
 
   useRefreshOnFocus(loadInitial);
 
   async function onRefresh() {
     setRefreshing(true);
     try {
-      const { items, hasMore, consumed } = await fetchPage(0, userId);
-      offset.current = consumed;
-      setItems(items);
-      setHasMore(hasMore);
+      await loadInitial();
     } finally {
       setRefreshing(false);
     }

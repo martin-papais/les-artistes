@@ -21,7 +21,7 @@ import { PhotoViewer } from '@/components/plus/PhotoViewer';
 import { Button, Fab, Icon, ScreenHeader } from '@/components/ui/kit';
 import { localDateString, sb, type PhotoRow, sessionUser } from '@/lib/supabase';
 import { getBlocked } from '@/lib/moderation';
-import { alerteChargement } from '@/lib/serveur';
+import { usePageCache } from '@/lib/cache';
 import { theme } from '@/lib/theme';
 import { useRefreshOnFocus } from '@/lib/useRefresh';
 
@@ -81,25 +81,30 @@ export default function PhotosScreen() {
     }
   }
 
+  const montrer = useCallback((d: { userId: string | null; photos: PhotoRow[] }) => {
+    setUserId(d.userId);
+    setPhotos(d.photos);
+    setLoading(false);
+  }, []);
+  const { garder, echec } = usePageCache('photos', montrer);
+
   const loadPhotos = useCallback(async () => {
     const user = await sessionUser();
-    setUserId(user?.id ?? null);
     const [{ data, error }, blocked] = await Promise.all([
       sb.from('photos').select('*').order('date_media', { ascending: false }),
       getBlocked(),
     ]);
     if (error) {
       setLoading(false);
-      alerteChargement();
+      echec();
       return;
     }
     // Pas de lecteur vidéo dans l'appli : on n'affiche que les photos (vidéos et fichiers restent sur le site)
     const rows = ((data as PhotoRow[] | null) ?? []).filter(
       (p) => p.type === 'photo' && !!p.file_url && !blocked.has(p.created_by),
     );
-    setPhotos(rows);
-    setLoading(false);
-  }, []);
+    garder({ userId: user?.id ?? null, photos: rows });
+  }, [garder, echec]);
 
   useRefreshOnFocus(loadPhotos);
 

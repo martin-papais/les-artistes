@@ -3,6 +3,7 @@ import { useCallback, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Icon, Pastille, ScreenHeader, type FeatherName } from '@/components/ui/kit';
+import { usePageCache } from '@/lib/cache';
 import { sb, sessionUser, type ProfileMini } from '@/lib/supabase';
 import { theme } from '@/lib/theme';
 import { useRefreshOnFocus } from '@/lib/useRefresh';
@@ -38,6 +39,13 @@ export default function PlusScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   // Sous-titres vivants : en cas d'erreur, on garde le texte fixe
+  const montrer = useCallback((d: { me: ProfileMini | null; members: number | null; shop?: string | null }) => {
+    if (d.me) setMe(d.me);
+    if (d.members != null) setMembers(d.members);
+    if (d.shop !== undefined) setShop(d.shop);
+  }, []);
+  const { garder } = usePageCache('plus', montrer);
+
   const load = useCallback(async () => {
     const user = await sessionUser();
     const [profRes, countRes, cfgRes] = await Promise.all([
@@ -47,10 +55,12 @@ export default function PlusScreen() {
       sb.from('profiles').select('id', { count: 'exact', head: true }),
       sb.from('shop_config').select('*').eq('key', 'deadline').maybeSingle(),
     ]);
-    if (profRes.data) setMe(profRes.data as ProfileMini);
-    if (!countRes.error && countRes.count != null) setMembers(countRes.count);
-    if (!cfgRes.error) setShop(shopLabel(cfgRes.data?.value as string | null | undefined));
-  }, []);
+    garder({
+      me: (profRes.data as ProfileMini | null) ?? null,
+      members: countRes.error ? null : countRes.count,
+      shop: cfgRes.error ? undefined : shopLabel(cfgRes.data?.value as string | null | undefined),
+    });
+  }, [garder]);
 
   useRefreshOnFocus(load);
 

@@ -14,6 +14,7 @@ import { Stop10 } from '@/components/minijeux/Stop10';
 import { Button, EmptyState, IconButton } from '@/components/ui/kit';
 import {
   beats,
+  classementsGardes,
   commencerPartie,
   type Envoi,
   fetchClassements,
@@ -101,6 +102,14 @@ export default function MiniJeuScreen() {
     sessionUser().then((u) => setMe(u?.id ?? null));
     preparer();
   }, [preparer]);
+
+  // Dernier classement gardé sur le téléphone, en attendant celui du serveur
+  useEffect(() => {
+    if (!jeu) return;
+    classementsGardes().then((cl) => {
+      if (cl) setLignes((l) => l ?? cl.scores[jeu.id] ?? null);
+    });
+  }, [jeu]);
 
   // Au montage, au retour sur l'écran et au retour au premier plan
   useRefreshOnFocus(load, 0);

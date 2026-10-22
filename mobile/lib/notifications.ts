@@ -1,9 +1,14 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
 import { sb } from './supabase';
+
+// Dernier token envoyé au serveur (membre + token, date)
+const ENREGISTRE = 'push:enregistre';
+const SEMAINE_MS = 7 * 24 * 3600_000;
 
 // Affichage des notifs même quand l'app est en foreground (sinon iOS les avale).
 // Écran ouvert en ce moment (une partie) : ses notifications ne s'affichent pas par-dessus
@@ -82,6 +87,14 @@ export async function registerPushToken(userId: string): Promise<string | null> 
     return null;
   }
 
+  // Le jeton change rarement : on ne le renvoie au serveur que s'il a changé, ou une fois
+  // par semaine (une requête de moins à chaque lancement, la base gratuite est lente)
+  const cle = `${userId}:${token}`;
+  try {
+    const prev = JSON.parse((await AsyncStorage.getItem(ENREGISTRE)) ?? 'null') as { cle: string; at: number } | null;
+    if (prev?.cle === cle && Date.now() - prev.at < SEMAINE_MS) return token;
+  } catch {}
+
   // Upsert (unique sur user_id+token)
   const { error } = await sb.from('push_tokens').upsert(
     {
@@ -97,6 +110,7 @@ export async function registerPushToken(userId: string): Promise<string | null> 
     console.warn('[push] upsert push_tokens failed:', error.message);
     return null;
   }
+  AsyncStorage.setItem(ENREGISTRE, JSON.stringify({ cle, at: Date.now() })).catch(() => {});
   return token;
 }
 
@@ -105,6 +119,8 @@ export async function registerPushToken(userId: string): Promise<string | null> 
  * part sans session et la RLS (auth.uid() = user_id) ne supprime rien.
  */
 export async function unregisterPushToken() {
+  // Le token supprimé devra être renvoyé à la prochaine connexion
+  await AsyncStorage.removeItem(ENREGISTRE).catch(() => {});
   if (!Device.isDevice) return;
   const projectId =
     Constants.expoConfig?.extra?.eas?.projectId ??

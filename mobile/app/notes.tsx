@@ -22,7 +22,7 @@ import {
   type ProfileMini, sessionUser } from '@/lib/supabase';
 import { getBlocked, ModerationButton } from '@/lib/moderation';
 import { KeyboardAware } from '@/lib/keyboard';
-import { alerteChargement } from '@/lib/serveur';
+import { usePageCache } from '@/lib/cache';
 import { theme } from '@/lib/theme';
 
 const c = theme.colors;
@@ -45,57 +45,43 @@ export default function NotesScreen() {
   const [pickerFor, setPickerFor] = useState<string | null>(null);
   const insets = useSafeAreaInsets();
 
+  const montrer = useCallback((d: { userId: string | null; notes: NoteCard[] }) => {
+    setUserId(d.userId);
+    setNotes(d.notes);
+    setLoading(false);
+  }, []);
+  const { garder, echec } = usePageCache('notes', montrer);
+
   const loadAll = useCallback(async () => {
     const user = await sessionUser();
-    setUserId(user?.id ?? null);
 
-    const [{ data: all, error: loadError }, blocked] = await Promise.all([
-      sb.from('notes').select('*').order('created_at', { ascending: false }),
+    // Réactions et membres dans le même aller-retour que les notes
+    const [{ data: all, error: loadError }, blocked, profRes] = await Promise.all([
+      sb.from('notes').select('*,note_reactions(*)').order('created_at', { ascending: false }),
       getBlocked(),
+      sb.from('profiles').select('id,prenom,nom,pseudo'),
     ]);
     if (loadError) {
       setLoading(false);
-      alerteChargement();
+      echec();
       return;
     }
-    const rows = all ? all.filter((n) => !blocked.has(n.user_id)) : null;
-    if (!rows) {
-      setNotes([]);
-      setLoading(false);
-      return;
-    }
-
-    const uids = Array.from(new Set(rows.map((n) => n.user_id).filter(Boolean)));
-    const noteIds = rows.map((n) => n.id);
-    const [profRes, reacRes] = await Promise.all([
-      uids.length
-        ? sb.from('profiles').select('id,prenom,nom,pseudo').in('id', uids)
-        : Promise.resolve({ data: [] as ProfileMini[] }),
-      noteIds.length
-        ? sb.from('note_reactions').select('*').in('note_id', noteIds)
-        : Promise.resolve({ data: [] as NoteReaction[] }),
-    ]);
+    const rows = ((all ?? []) as (Note & { note_reactions: NoteReaction[] })[]).filter((n) => !blocked.has(n.user_id));
 
     const pmap: Record<string, ProfileMini> = {};
     (profRes.data ?? []).forEach((p) => {
       pmap[p.id] = p as ProfileMini;
     });
 
-    const reacByNote: Record<string, NoteReaction[]> = {};
-    (reacRes.data ?? []).forEach((r) => {
-      const list = reacByNote[(r as NoteReaction).note_id] ?? (reacByNote[(r as NoteReaction).note_id] = []);
-      list.push(r as NoteReaction);
-    });
-
-    setNotes(
-      (rows as Note[]).map((n) => ({
+    garder({
+      userId: user?.id ?? null,
+      notes: rows.map(({ note_reactions, ...n }) => ({
         ...n,
         author: pmap[n.user_id] ?? null,
-        reactions: reacByNote[n.id] ?? [],
+        reactions: note_reactions ?? [],
       })),
-    );
-    setLoading(false);
-  }, []);
+    });
+  }, [garder, echec]);
 
   useEffect(() => {
     loadAll();

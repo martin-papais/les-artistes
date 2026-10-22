@@ -47,43 +47,24 @@ function profileName(p: ProfileMini | undefined) {
 
 /** Sondages encore utiles : pas clos et au moins une date à venir. */
 export async function loadOpenSondages(): Promise<SondageFull[] | null> {
+  // Dates et votes dans la même requête : un seul aller-retour au lieu de trois
   const { data: rows, error } = await sb
     .from('date_sondages')
-    .select('*')
+    .select('*,date_sondage_options(id,sondage_id,date_option,date_sondage_votes(option_id,user_id,dispo))')
     .eq('closed', false)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .order('date_option', { referencedTable: 'date_sondage_options', ascending: true });
   if (error) return null;
-  const list = (rows ?? []) as DateSondage[];
-  if (list.length === 0) return [];
-  const { data: opts, error: optsError } = await sb
-    .from('date_sondage_options')
-    .select('id,sondage_id,date_option')
-    .in(
-      'sondage_id',
-      list.map((s) => s.id),
-    )
-    .order('date_option', { ascending: true });
-  // Sans les dates, tous les sondages seraient filtrés : on garde la liste affichée
-  if (optsError) return null;
-  const options = (opts ?? []) as DateSondageOption[];
-  const { data: vts, error: vtsError } = options.length
-    ? await sb
-        .from('date_sondage_votes')
-        .select('option_id,user_id,dispo')
-        .in(
-          'option_id',
-          options.map((o) => o.id),
-        )
-    : { data: [], error: null };
-  if (vtsError) return null;
-  const votes = (vts ?? []) as DateSondageVote[];
+  type Ligne = DateSondage & {
+    date_sondage_options: (DateSondageOption & { date_sondage_votes: DateSondageVote[] })[];
+  };
   const t0 = today();
-  return list
-    .map((s) => {
-      const o = options.filter((x) => x.sondage_id === s.id);
-      const ids = new Set(o.map((x) => x.id));
-      return { ...s, options: o, votes: votes.filter((v) => ids.has(v.option_id)) };
-    })
+  return ((rows ?? []) as Ligne[])
+    .map(({ date_sondage_options, ...s }) => ({
+      ...s,
+      options: date_sondage_options.map((o) => ({ id: o.id, sondage_id: o.sondage_id, date_option: o.date_option })),
+      votes: date_sondage_options.flatMap((o) => o.date_sondage_votes),
+    }))
     .filter((s) => s.options.some((o) => parseDay(o.date_option) >= t0));
 }
 

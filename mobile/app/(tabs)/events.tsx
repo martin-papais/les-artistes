@@ -20,13 +20,20 @@ import {
   type EventCard,
 } from '@/components/events/shared';
 import { EmptyState, Fab, Pastille, ScreenHeader, SectionTitle } from '@/components/ui/kit';
+import { usePageCache } from '@/lib/cache';
 import { sb, sessionUser, type EventRow, type EventVote, type ProfileMini } from '@/lib/supabase';
-import { alerteChargement } from '@/lib/serveur';
 import { theme } from '@/lib/theme';
 import { useRefreshOnFocus } from '@/lib/useRefresh';
 
 const c = theme.colors;
 const f = theme.fonts;
+
+type EventsData = {
+  userId: string | null;
+  rows: (EventRow & { event_votes: (EventVote & { id: string })[] })[];
+  profiles: (ProfileMini & { dob: string | null })[];
+  sondages: SondageFull[] | null;
+};
 
 type Compose =
   | 'new'
@@ -82,32 +89,13 @@ export default function EventsScreen() {
     }
   }
 
-  const loadAll = useCallback(async () => {
-    const user = await sessionUser();
-    setUserId(user?.id ?? null);
-
-    const [eventsRes, allProfilesRes, sondagesRes] = await Promise.all([
-      sb.from('events').select('*').order('date_event', { ascending: true }),
-      sb.from('profiles').select('id,prenom,nom,pseudo,dob'),
-      loadOpenSondages(),
-    ]);
+  // Calculs liés à la date du jour (anniversaires, passés) refaits à chaque affichage,
+  // y compris celui du contenu gardé sur le téléphone
+  const montrer = useCallback((d: EventsData) => {
+    setUserId(d.userId);
     // null = erreur (table absente, réseau) : on garde les sondages déjà affichés
-    if (sondagesRes) setSondages(sondagesRes);
-    // Sans profils, « Qui vient ? » afficherait des « ? » et personne en attente de réponse
-    if (eventsRes.error || allProfilesRes.error) {
-      // Sans ça, une erreur réseau ressemble à « aucun événement »
-      setLoading(false);
-      alerteChargement();
-      return;
-    }
-    const rows = (eventsRes.data ?? []) as EventRow[];
-
-    const ids = rows.map((r) => r.id);
-    const voteRes = ids.length
-      ? await sb.from('event_votes').select('id,event_id,user_id,present').in('event_id', ids)
-      : { data: [] as (EventVote & { id: string })[] };
-
-    const allProfiles = (allProfilesRes.data ?? []) as (ProfileMini & { dob: string | null })[];
+    if (d.sondages) setSondages(d.sondages);
+    const allProfiles = d.profiles;
     const pmap: Record<string, ProfileMini> = {};
     allProfiles.forEach((p) => {
       pmap[p.id] = p;
@@ -137,21 +125,39 @@ export default function EventsScreen() {
       .sort((a, b) => a.daysUntil - b.daysUntil);
     setBirthdays(annivs);
 
-    const vmap: Record<string, (EventVote & { id: string })[]> = {};
-    (voteRes.data ?? []).forEach((v) => {
-      const list = vmap[v.event_id] ?? (vmap[v.event_id] = []);
-      list.push(v as EventVote & { id: string });
-    });
-
-    const cards: EventCard[] = rows.map((e) => ({
+    const cards: EventCard[] = d.rows.map(({ event_votes, ...e }) => ({
       ...e,
       author: pmap[e.created_by] ?? null,
-      votes: vmap[e.id] ?? [],
+      votes: event_votes ?? [],
       isPast: new Date(e.date_event) < today,
     }));
     setEvents(cards);
     setLoading(false);
   }, []);
+  const { garder, echec } = usePageCache('events', montrer);
+
+  const loadAll = useCallback(async () => {
+    const user = await sessionUser();
+    // Votes dans la même requête que les événements : un aller-retour de moins
+    const [eventsRes, allProfilesRes, sondagesRes] = await Promise.all([
+      sb.from('events').select('*,event_votes(id,event_id,user_id,present)').order('date_event', { ascending: true }),
+      sb.from('profiles').select('id,prenom,nom,pseudo,dob'),
+      loadOpenSondages(),
+    ]);
+    // Sans profils, « Qui vient ? » afficherait des « ? » et personne en attente de réponse
+    if (eventsRes.error || allProfilesRes.error) {
+      // Sans ça, une erreur réseau ressemble à « aucun événement »
+      setLoading(false);
+      echec();
+      return;
+    }
+    garder({
+      userId: user?.id ?? null,
+      rows: (eventsRes.data ?? []) as EventsData['rows'],
+      profiles: (allProfilesRes.data ?? []) as EventsData['profiles'],
+      sondages: sondagesRes,
+    });
+  }, [garder, echec]);
 
   useRefreshOnFocus(loadAll);
 

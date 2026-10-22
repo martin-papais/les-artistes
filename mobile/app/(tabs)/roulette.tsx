@@ -29,7 +29,7 @@ import { Button, Chip, IconButton, Pastille, ScreenHeader, SectionTitle, Sheet }
 import { KeyboardAware } from '@/lib/keyboard';
 import { getBlocked } from '@/lib/moderation';
 import { sb, sessionUser } from '@/lib/supabase';
-import { alerteChargement } from '@/lib/serveur';
+import { usePageCache } from '@/lib/cache';
 import { theme } from '@/lib/theme';
 import { useRefreshOnFocus } from '@/lib/useRefresh';
 
@@ -106,6 +106,13 @@ export default function RouletteScreen() {
   const spinningRef = useRef(false);
   const pendingAll = useRef<Entry[] | null>(null);
 
+  const montrer = useCallback((next: Entry[]) => {
+    if (spinningRef.current) pendingAll.current = next;
+    else setAll(next);
+    setLoading(false);
+  }, []);
+  const { garder, echec } = usePageCache('roulette', montrer);
+
   const loadAll = useCallback(async () => {
     const user = await sessionUser();
     if (!user) return;
@@ -117,7 +124,7 @@ export default function RouletteScreen() {
     ]);
     if (profRes.error || alcRes.error || socRes.error) {
       setLoading(false);
-      alerteChargement();
+      echec();
       return;
     }
     const byLabel = (a: Entry, b: Entry) => a.label.localeCompare(b.label, 'fr');
@@ -152,11 +159,8 @@ export default function RouletteScreen() {
         detail: j.regles,
       }))
       .sort(byLabel);
-    const next = [...membres, ...alcool, ...societe];
-    if (spinningRef.current) pendingAll.current = next;
-    else setAll(next);
-    setLoading(false);
-  }, []);
+    garder([...membres, ...alcool, ...societe]);
+  }, [garder, echec]);
 
   useRefreshOnFocus(loadAll);
 

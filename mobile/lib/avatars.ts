@@ -7,6 +7,7 @@ import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import type * as ImagePicker from 'expo-image-picker';
 import { useSyncExternalStore } from 'react';
 
+import { ecrireCache, lireCache } from '@/lib/cache';
 import { sb } from '@/lib/supabase';
 
 export const AVATAR_COLORS = ['teal', 'yellow', 'pink', 'violet', 'coral'] as const;
@@ -16,7 +17,18 @@ export type Avatar = { url: string | null; color: AvatarColor | null };
 let avatars: Record<string, Avatar> = {};
 let loading: Promise<void> | null = null;
 let loaded = false;
+let loadedAt = 0;
 const listeners = new Set<() => void>();
+// Les photos changent rarement : pas plus d'un rechargement toutes les 10 minutes au retour
+// dans l'appli (la base gratuite est lente) ; celles gardées sur le téléphone s'affichent d'abord
+const FRAIS_MS = 10 * 60_000;
+
+lireCache<Record<string, Avatar>>('avatars').then((a) => {
+  if (a && !loaded) {
+    avatars = a;
+    emit();
+  }
+});
 
 function emit() {
   for (const l of listeners) l();
@@ -34,6 +46,7 @@ function subscribe(l: () => void) {
 /** Recharge les avatars de tout le groupe. Sans les colonnes (SQL pas appliqué) : rien. */
 export function loadAvatars(): Promise<void> {
   if (loading) return loading;
+  if (loaded && Date.now() - loadedAt < FRAIS_MS) return Promise.resolve();
   loading = (async () => {
     try {
       const { data, error } = await sb.from('profiles').select('id, avatar_url, avatar_color');
@@ -45,6 +58,10 @@ export function loadAvatars(): Promise<void> {
       }
       avatars = next;
       loaded = data.length > 0;
+      if (loaded) {
+        loadedAt = Date.now();
+        ecrireCache('avatars', next);
+      }
       emit();
     } finally {
       loading = null;
@@ -57,6 +74,7 @@ export function loadAvatars(): Promise<void> {
 export function resetAvatars() {
   avatars = {};
   loaded = false;
+  loadedAt = 0;
   emit();
 }
 
@@ -67,6 +85,7 @@ export function useAvatar(id: string | null | undefined): Avatar | undefined {
 function setLocal(id: string, patch: Partial<Avatar>) {
   const cur = avatars[id] ?? { url: null, color: null };
   avatars = { ...avatars, [id]: { ...cur, ...patch } };
+  ecrireCache('avatars', avatars);
   emit();
 }
 

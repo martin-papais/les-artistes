@@ -5,6 +5,7 @@ import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'r
 
 import { Classement, ClassementErreur } from '@/components/minijeux/Classement';
 import { Badge, Button, Card, Icon, Pastille, ScreenHeader } from '@/components/ui/kit';
+import { usePageCache } from '@/lib/cache';
 import {
   beats,
   classementGeneral,
@@ -44,6 +45,13 @@ export default function MiniJeuxScreen() {
   const [erreur, setErreur] = useState(false);
   const [attente, setAttente] = useState<Partial<Record<JeuId, number[]>>>({});
 
+  const montrer = useCallback((d: { me: string | null; ranks: Classements; parties: Record<DuelJeu, DuelPartie[]> }) => {
+    setMe(d.me);
+    setRanks(d.ranks);
+    setParties(d.parties);
+  }, []);
+  const { garder } = usePageCache('minijeux', montrer);
+
   const load = useCallback(async () => {
     const user = await sessionUser();
     setMe(user?.id ?? null);
@@ -55,10 +63,14 @@ export default function MiniJeuxScreen() {
       Promise.all([user ? p4.fetchMesParties(user.id) : [], user ? echecs.fetchMesParties(user.id) : []]),
     ]);
     // Hors connexion : les jeux solo restent jouables, les classements connus restent affichés
-    if (cl.status === 'fulfilled') setRanks(cl.value);
     setErreur(cl.status === 'rejected');
-    if (ps.status === 'fulfilled') setParties({ puissance4: ps.value[0], echecs: ps.value[1] });
-  }, []);
+    if (cl.status === 'fulfilled' && ps.status === 'fulfilled') {
+      garder({ me: user?.id ?? null, ranks: cl.value, parties: { puissance4: ps.value[0], echecs: ps.value[1] } });
+    } else {
+      if (cl.status === 'fulfilled') setRanks(cl.value);
+      if (ps.status === 'fulfilled') setParties({ puissance4: ps.value[0], echecs: ps.value[1] });
+    }
+  }, [garder]);
 
   // Revenir d'une partie montre le nouveau classement (les classements sont en cache 20 s,
   // vidé dès qu'un score ou un Elo change : pas de requête inutile)

@@ -15,7 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ContactCard, displayName, type ContactData } from '@/components/plus/ContactCard';
 import { Button, EmptyState, Field, FieldLabel, Icon, IconButton, Pastille, ScreenHeader, Sheet } from '@/components/ui/kit';
 import { parseDobInput, sb, type AnnuaireExtra, type Profile, sessionUser } from '@/lib/supabase';
-import { alerteChargement } from '@/lib/serveur';
+import { usePageCache } from '@/lib/cache';
 import { theme } from '@/lib/theme';
 
 const c = theme.colors;
@@ -50,9 +50,15 @@ export default function AnnuaireScreen() {
   const [query, setQuery] = useState('');
   const insets = useSafeAreaInsets();
 
+  const montrer = useCallback((d: { userId: string | null; cards: ContactData[] }) => {
+    setUserId(d.userId);
+    setCards(d.cards);
+    setLoading(false);
+  }, []);
+  const { garder, echec } = usePageCache('annuaire', montrer);
+
   const loadAll = useCallback(async () => {
     const user = await sessionUser();
-    setUserId(user?.id ?? null);
 
     const [profRes, extraRes] = await Promise.all([
       sb.from('profiles').select('*').order('nom', { ascending: true }),
@@ -61,7 +67,7 @@ export default function AnnuaireScreen() {
     if (profRes.error) {
       // Sans ça, une erreur réseau ressemble à un annuaire vide
       setLoading(false);
-      alerteChargement();
+      echec();
       return;
     }
 
@@ -70,18 +76,18 @@ export default function AnnuaireScreen() {
       extraMap[(e as AnnuaireExtra).user_id] = e as AnnuaireExtra;
     });
 
-    setCards(
-      ((profRes.data ?? []) as Profile[]).map((p) => {
-        const extra = extraMap[p.id];
-        return {
-          ...p,
-          addresses: parseAddresses(extra?.addresses ?? null),
-          rib: extra?.rib ?? null,
-        };
-      }),
-    );
-    setLoading(false);
-  }, []);
+    const cards: ContactData[] = ((profRes.data ?? []) as Profile[]).map((p) => {
+      const extra = extraMap[p.id];
+      return {
+        ...p,
+        addresses: parseAddresses(extra?.addresses ?? null),
+        rib: extra?.rib ?? null,
+      };
+    });
+    const d = { userId: user?.id ?? null, cards };
+    // Les RIB ne restent pas sur le téléphone : ils arrivent avec la réponse du serveur
+    garder(d, { ...d, cards: cards.map((ct) => ({ ...ct, rib: null })) });
+  }, [garder, echec]);
 
   useEffect(() => {
     loadAll();

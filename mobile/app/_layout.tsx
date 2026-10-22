@@ -20,6 +20,7 @@ import 'react-native-reanimated';
 
 import { ServeurSature } from '@/components/ServeurSature';
 import { loadAvatars, resetAvatars } from '@/lib/avatars';
+import { viderCache } from '@/lib/cache';
 import { resetBlocked } from '@/lib/moderation';
 import { registerPushToken, takeNotificationRoute } from '@/lib/notifications';
 import { startPresence, stopPresence } from '@/lib/presence';
@@ -59,6 +60,8 @@ export default function RootLayout() {
       if (event === 'SIGNED_OUT' || event === 'SIGNED_IN') {
         resetBlocked();
         resetAvatars();
+        // Contenu des pages gardé sur le téléphone : vidé avant d'ouvrir les pages du compte suivant
+        await viderCache();
       }
       if (event === 'SIGNED_OUT' || !session) {
         stopPresence();
